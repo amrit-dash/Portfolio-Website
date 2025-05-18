@@ -1,15 +1,6 @@
 {
   "hosting": [
     {
-      "target": "default",
-      "public": "public",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ]
-    },
-    {
       "target": "amritdash",
       "public": "public",
       "ignore": [
