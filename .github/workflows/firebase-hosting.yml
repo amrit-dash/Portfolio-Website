@@ -20,7 +20,7 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          firebase deploy --only hosting:amrit-dash-portfolio,amritdash --project ${{ secrets.PROJECT_ID }} --non-interactive
+          firebase deploy
 
       - name: Cleanup service account key
         if: always()
