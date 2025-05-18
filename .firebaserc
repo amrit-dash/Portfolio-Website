@@ -5,8 +5,12 @@
   "targets": {
     "amrit-dash-portfolio": {
       "hosting": {
-        "amrit-dash-portfolio": ["amrit-dash-portfolio"],
-        "amritdash": ["amritdash"]
+        "amrit-dash-portfolio": [
+          "amrit-dash-portfolio"
+        ],
+        "amritdash": [
+          "amritdash"
+        ]
       }
     }
   }
