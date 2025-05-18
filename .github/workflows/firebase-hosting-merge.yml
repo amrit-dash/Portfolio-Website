@@ -11,4 +11,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npx firebase deploy --only hosting:amrit-dash-portfolio,hosting:amritdash --token "${{ secrets.FIREBASE_TOKEN }}"
+      - run: npm install -g firebase-tools
+      - run: firebase deploy --only hosting:amrit-dash-portfolio,hosting:amritdash --token "${{ secrets.FIREBASE_TOKEN }}"
