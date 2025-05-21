@@ -2870,16 +2870,19 @@ img.u-pull-left {
     height : var(--circle-width);
     top    : calc(100vh - var(--circle-width));
     left   : calc(100% - 33vw);
+    z-index: 10;
+    pointer-events: none;
 }
 
 .s-pagewrap .circles span {
-    display       : block;
-    border        : 1px solid var(--color-1);
-    border-radius : 50%;
-    opacity       : .1;
-    transform     : translate(-50%, -50%);
-    left          : 50%;
-    top           : 50%;
+    display: block;
+    border: 1px solid var(--color-1);
+    border-radius: 50%;
+    opacity: .1;
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 50%;
+    pointer-events: auto;
 }
 
 .s-pagewrap .circles span:nth-child(1) {
@@ -4195,4 +4198,14 @@ img.u-pull-left {
     .modal-popup__buttons .btn {
         min-width: 110px;
     }
+}
+
+/* Circles hover effect - desktop only */
+@media (hover: hover) and (pointer: fine) {
+  .circles--hoverable span:hover,
+  .circles--hoverable span.circle--active {
+    border: 2px solid var(--color-1);
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
 }

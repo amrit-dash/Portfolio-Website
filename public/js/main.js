@@ -51,7 +51,24 @@
             {opacity: [0, .3]},
             {opacity: [.3, .1], delay: anime.stagger(100, {direction: 'reverse'})}
         ],
-        delay: anime.stagger(100, {direction: 'reverse'})
+        delay: anime.stagger(100, {direction: 'reverse'}),
+        complete: function(anim) {
+            // Enable hover effect after animation
+            var circles = document.querySelector('.circles');
+            if (circles) {
+                circles.classList.add('circles--hoverable');
+                // Add hover listeners to each span
+                var spans = circles.querySelectorAll('span');
+                spans.forEach(function(span, idx) {
+                    span.addEventListener('mouseenter', function() {
+                        span.classList.add('circle--active');
+                    });
+                    span.addEventListener('mouseleave', function() {
+                        span.classList.remove('circle--active');
+                    });
+                });
+            }
+        }
     })
     .add({
         targets: '.intro-social li',
