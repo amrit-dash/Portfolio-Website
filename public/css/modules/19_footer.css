@@ -78,9 +78,8 @@
     border-color     : white;
 }
 
-.ss-go-top a:focus svg path,
 .ss-go-top a:hover svg path {
-    fill : black;
+    stroke: var(--color-black);
 }
 
 .ss-go-top svg {
@@ -90,7 +89,7 @@
 }
 
 .ss-go-top svg path {
-    fill : white;
+    stroke: var(--color-white);
 }
 
 /* ------------------------------------------------------------------- 

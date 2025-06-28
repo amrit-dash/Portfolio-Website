@@ -27,7 +27,7 @@
  * ## intro social
  * -------------------------------------------------------------------- */
 .intro-social {
-    z-index          : 1;
+    z-index          : 11;
     list-style       : none;
     display          : flex;
     font-size        : 1rem;
@@ -60,6 +60,7 @@
  * ## intro scrolldown
  * -------------------------------------------------------------------- */
 .intro-scrolldown {
+    z-index         : 11;
     display         : block;
     height          : var(--vspace-1);
     width           : var(--vspace-1);
