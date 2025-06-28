@@ -363,6 +363,83 @@
     }; // end ssMoveTo
 
 
+   /* Theme Toggle Logic */
+    const themeToggle = function() {
+        const html = document.documentElement;
+        const btnDesktop = document.getElementById('theme-toggle');
+        const btnMobile = document.getElementById('theme-toggle-mobile');
+        const iconSun = '<svg width="24" height="24"><use href="images/icons/icon-sun.svg#icon"/></svg>';
+        const iconMoon = '<svg width="24" height="24"><use href="images/icons/icon-moon.svg#icon"/></svg>';
+        const iconSunRaw = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"5\"/><line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"/><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"/><line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"/><line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"/><line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"/><line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"/><line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"/><line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"/></svg>`;
+        const iconMoonRaw = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z\"/></svg>`;
+
+        function setIcon(isLight) {
+            const icon = isLight ? iconMoonRaw : iconSunRaw;
+            document.querySelectorAll('.theme-toggle-icon').forEach(el => {
+                el.innerHTML = icon;
+            });
+        }
+
+        function setAboutPhoto(isLight) {
+            const img = document.querySelector('.about-info__pic');
+            if (!img) return;
+            const darkSrc = 'images/about-photo.jpg';
+            const darkSrc2x = 'images/about-photo@2x.jpg';
+            const lightSrc = 'images/about-photo-white.jpg';
+            const lightSrc2x = 'images/about-photo-white@2x.jpg';
+            const newSrc = isLight ? lightSrc : darkSrc;
+            const newSrcSet = isLight ? `${lightSrc} 1x, ${lightSrc2x} 2x` : `${darkSrc} 1x, ${darkSrc2x} 2x`;
+            // Crossfade
+            img.style.transition = 'opacity 0.4s';
+            img.style.opacity = 0;
+            setTimeout(() => {
+                img.src = newSrc;
+                img.srcset = newSrcSet;
+                img.style.opacity = 1;
+            }, 200);
+        }
+
+        function radialFadeFromButton(btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const x = rect.left + rect.width/2;
+            const y = rect.top + rect.height/2;
+            const fade = document.createElement('div');
+            fade.className = 'theme-radial-fade';
+            fade.style.left = `${x}px`;
+            fade.style.top = `${y}px`;
+            document.body.appendChild(fade);
+            setTimeout(() => fade.classList.add('active'), 10);
+            setTimeout(() => fade.remove(), 600);
+        }
+
+        function setTheme(isLight, animateFromBtn) {
+            if (isLight) {
+                html.classList.add('light-mode');
+            } else {
+                html.classList.remove('light-mode');
+            }
+            setIcon(isLight);
+            setAboutPhoto(isLight);
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            if (animateFromBtn) radialFadeFromButton(animateFromBtn);
+        }
+
+        function toggleTheme(e) {
+            const isLight = !html.classList.contains('light-mode');
+            setTheme(isLight, e.currentTarget);
+        }
+
+        // Load theme on page load
+        const saved = localStorage.getItem('theme');
+        const isLight = saved === 'light';
+        setTheme(isLight, null);
+
+        if (btnDesktop) btnDesktop.addEventListener('click', toggleTheme);
+        if (btnMobile) btnMobile.addEventListener('click', toggleTheme);
+    };
+
+
    /* Initialize
     * ------------------------------------------------------ */
     (function ssInit() {
@@ -375,6 +452,7 @@
         ssLightbox();
         ssAlertBoxes();
         ssMoveTo();
+        themeToggle();
 
     })();
 

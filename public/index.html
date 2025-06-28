@@ -16,7 +16,16 @@
     <!-- CSS
     ================================================== -->
     <link rel="stylesheet" href="css/vendor.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/intro.css">
+    <link rel="stylesheet" href="css/about.css">
+    <link rel="stylesheet" href="css/works.css">
+    <link rel="stylesheet" href="css/contact.css">
+    <link rel="stylesheet" href="css/footer.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/theme.css">
 
     <!-- favicons
     ================================================== -->
@@ -56,18 +65,26 @@
         <header class="s-header">
 
             <div class="header-mobile">
-                <span class="mobile-home-link"><a href="index.html">Amrit Dash</a></span>
+                <span class="mobile-home-link" style="font-weight: 800;"><a href="index.html">AMrit DAsh</span>
                 <a class="mobile-menu-toggle" href="#0"><span>Menu</span></a>
+                <button id="theme-toggle-mobile" class="theme-toggle-btn" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
+                    <span class="theme-toggle-icon"></span>
+                </button>
             </div>
 
             <div class="row wide main-nav-wrap">
                 <nav class="column lg-12 main-nav">
                     <ul>
-                        <li><a href="index.html" class="home-link">Amrit Dash</a></li>
+                        <li><a href="index.html" class="home-link" style="font-size: 1.25rem; font-weight: 1000;">AMrit.</a></li>
                         <li class="current"><a href="#intro" class="smoothscroll">Intro</a></li>
                         <li><a href="#about" class="smoothscroll">About</a></li>
                         <li><a href="#works" class="smoothscroll">Projects</a></li>
                         <li><a href="#contact" class="smoothscroll">Contact</a></li>
+                        <li>
+                            <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
+                                <span class="theme-toggle-icon"></span>
+                            </button>
+                        </li>
                     </ul>
                 </nav>
             </div>
@@ -99,7 +116,7 @@
                         </h1>
                     </div>
 
-                    <ul class="intro-social">
+                    <ul class="intro-social" style="z-index: 500;">
                         <li><a href="mailto:amrit.dash60@gmail.com">Email</a></li>
                         <li><a href="https://linkedin.com/in/amritdash60" target="_blank">LinkedIn</a></li>
                         <li><a href="https://github.com/the-AoG-guy" target="_blank">GitHub</a></li>
@@ -108,7 +125,7 @@
 
                 </div> <!-- end intro content -->
 
-                <a href="#about" class="intro-scrolldown smoothscroll">
+                <a href="#about" class="intro-scrolldown smoothscroll" style="z-index: 500;">
                     <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd"><path d="M11 21.883l-6.235-7.527-.765.644 7.521 9 7.479-9-.764-.645-6.236 7.529v-21.884h-1v21.883z"/></svg>
                 </a>
 

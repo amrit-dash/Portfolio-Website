@@ -1,0 +1,125 @@
+/* ===================================================================
+ * theme.css: Light/dark mode styles, theme toggle, transitions
+ * ------------------------------------------------------------------- */
+
+/* Circles hover effect - desktop only */
+@media (hover: hover) and (pointer: fine) {
+    .circles--hoverable span:hover,
+    .circles--hoverable span.circle--active {
+        border: 2px solid var(--color-1);
+        opacity: 1;
+        transition: opacity 0.2s;
+    }
+}
+
+/* Light mode overrides */
+html.light-mode {
+    --color-body: #fff;
+    --color-text-dark: #000;
+    --color-btn: var(--color-gray-1);
+    --color-btn-hover: var(--color-gray-3);
+    --color-btn-primary: var(--color-1-light);
+    --color-btn-primary-hover: var(--color-1-lighter);
+    --color-border: rgba(0,0,0,0.05);
+    --color-preloader-bg: var(--color-gray-1);
+    --color-loader: #000;
+    --color-loader-light: rgba(0,0,0,0.1);
+}
+
+/* Theme transitions */
+html, body, .s-header, .s-pagewrap, main, .about-info__pic, .about-info__text, .folio-list__item, .modal-popup, .contact-top, .contact-bottom, .s-footer {
+    transition: background-color 0.4s, color 0.4s;
+}
+
+/* Theme Toggle Button Styles */
+.theme-toggle-btn {
+    background: none;
+    border: none;
+    outline: none;
+    width: 100%;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+    transition: background 0.2s;
+}
+
+.theme-toggle-btn:focus {
+    outline: none;
+    background-color: transparent;
+}
+
+.theme-toggle-btn:hover {
+    outline: none;
+    background-color: transparent;
+}
+
+.theme-toggle-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-gray-7);
+    transition: color 0.2s;
+}
+
+/* Dark mode: icon gray, hover accent green */
+html:not(.light-mode) .theme-toggle-icon {
+    color: var(--color-gray-7);
+}
+
+html:not(.light-mode) .theme-toggle-btn:hover .theme-toggle-icon,
+html:not(.light-mode) .theme-toggle-btn:active .theme-toggle-icon {
+    color: var(--color-1);
+}
+
+/* Light mode: icon always accent green */
+html.light-mode .theme-toggle-icon {
+    color: var(--color-1);  
+}
+
+html.light-mode .theme-toggle-btn:hover .theme-toggle-icon,
+html.light-mode .theme-toggle-btn:active .theme-toggle-icon {
+    color: var(--color-1);
+}
+
+/* Remove any circle or border highlight */
+.theme-toggle-btn:focus,
+.theme-toggle-btn:active {
+    outline: none;
+    box-shadow: none;
+    border: none;
+    background-color: transparent;
+}
+
+/* Radial Fade Animation for Theme Switch */
+.theme-radial-fade {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.08) 60%, transparent 100%);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    transition: opacity 0.6s, transform 0.6s;
+}
+
+html.light-mode .theme-radial-fade {
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.12) 60%, transparent 100%);
+}
+
+.theme-radial-fade.active {
+    width: 200vw;
+    height: 200vw;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    transition: opacity 0.6s, transform 0.6s;
+} 

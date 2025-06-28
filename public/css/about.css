@@ -1,0 +1,177 @@
+/* ===================================================================
+ * about.css: About section with info, expertise, and timeline
+ * ------------------------------------------------------------------- */
+
+.s-about {
+    padding-top    : var(--vspace-4);
+    padding-bottom : var(--vspace-3);
+}
+
+/* About info */
+.about-info {
+    --gutter    : 0;
+    width       : 100%;
+    align-items : center;
+}
+
+.about-info__pic {
+    object-fit     : cover;
+    margin         : 0;
+    vertical-align : bottom;
+}
+
+.about-info__text {
+    padding     : var(--vspace-3_5) 10vw var(--vspace-2) 0;
+    margin-left : -4rem;
+}
+
+.about-info__text .text-pretitle {
+    margin-bottom : var(--vspace-1);
+}
+
+.about-info__text .btn {
+    margin-top    : var(--vspace-1);
+    margin-bottom : 0;
+}
+
+/* About expertise */
+.about-expertise {
+    padding-top : calc(6 * var(--space));
+}
+
+.about-expertise .skills-list {
+    list-style  : none;
+    margin-top  : var(--vspace-1);
+    margin-left : 0;
+}
+
+.about-expertise .skills-list li {
+    display      : inline-block;
+    padding-left : 0;
+}
+
+.about-expertise .skills-list li:not(:last-child)::after {
+    content : ", ";
+}
+
+/* About timelines */
+.about-timelines {
+    --timeline-left-padding : var(--vspace-1_75);
+    --timeline-top-adjust   : var(--vspace-0_5);
+    padding-top             : var(--vspace-3);
+}
+
+.about-timelines .text-pretitle {
+    margin-left : var(--timeline-left-padding);
+}
+
+.timeline {
+    margin-top    : var(--vspace-1_25);
+    padding-right : 1vw;
+    position      : relative;
+}
+
+.timeline::before {
+    content          : "";
+    display          : block;
+    width            : 1px;
+    height           : calc(100% - var(--timeline-top-adjust));
+    background-color : var(--color-border);
+    position         : absolute;
+    top              : var(--timeline-top-adjust);
+    left             : 3px;
+}
+
+.timeline__block {
+    padding-left   : var(--timeline-left-padding);
+    padding-bottom : var(--vspace-0_5);
+    position       : relative;
+}
+
+.timeline__block:last-child {
+    padding-bottom : 0;
+}
+
+.timeline__bullet {
+    display          : block;
+    height           : 8px;
+    width            : 8px;
+    border-radius    : 50%;
+    background-color : var(--color-1);
+    position         : absolute;
+    top              : var(--timeline-top-adjust);
+    left             : 0;
+}
+
+.timeline__title {
+    font-family   : var(--font-1);
+    font-weight   : 500;
+    font-size     : var(--text-lg);
+    margin-top    : 0;
+    margin-bottom : var(--vspace-0_125);
+}
+
+.timeline__meta {
+    font-family   : var(--font-1);
+    font-weight   : 300;
+    font-size     : calc(var(--text-size) * 1.1053);
+    margin-top    : 0;
+    margin-bottom : var(--vspace-0_125);
+}
+
+.timeline__timeframe {
+    font-size      : var(--text-xs);
+    line-height    : var(--vspace-0_75);
+    text-transform : uppercase;
+    letter-spacing : .2em;
+    color          : var(--color-text-light);
+    margin-top     : -.2rem;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 1300px) {
+    .about-info__text {
+        padding : var(--vspace-2) 8rem var(--vspace-1_5) 0;
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .about-info {
+        --gutter  : 1.6rem;
+        width     : 92%;
+        max-width : 800px;
+    }
+
+    .about-info__text {
+        padding     : var(--vspace-1) 0 0 0;
+        margin-left : 0;
+    }
+}
+
+@media screen and (max-width: 1000px) {
+    .about-timelines {
+        --timeline-left-padding : var(--vspace-1_25);
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .about-timelines {
+        --timeline-left-padding : var(--vspace-1_5);
+    }
+
+    .about-timelines .column+.column {
+        margin-top : var(--vspace-1_5);
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .about-info {
+        width : 100%;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .about-timelines {
+        --timeline-left-padding : var(--vspace-1);
+    }
+} 

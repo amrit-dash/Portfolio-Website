@@ -1,0 +1,387 @@
+/* ===================================================================
+ * works.css: Works/portfolio section with project gallery and modal
+ * ------------------------------------------------------------------- */
+
+.s-works {
+    padding-top    : var(--vspace-5);
+    padding-bottom : var(--vspace-3_5);
+}
+
+.s-works .h1 {
+    margin-top : 0;
+}
+
+/* Portfolio list */
+.folio-list {
+    --item-min-height : var(--vspace-4_5);
+    list-style        : none;
+    margin-top        : var(--vspace-4);
+    margin-bottom     : var(--vspace-1);
+    margin-left       : 0;
+}
+
+.folio-list__item {
+    margin-bottom : var(--vspace-1);
+    position      : relative;
+}
+
+.folio-list__item-link {
+    display             : block;
+    width               : 100%;
+    padding-left        : calc(5.5 * var(--space));
+    color               : white;
+    transition-duration : .5s;
+    position            : relative;
+}
+
+.folio-list__item-link:focus,
+.folio-list__item-link:hover {
+    color   : var(--color-1);
+    outline : 0;
+}
+
+.folio-list__item-link:focus .folio-list__item-pic::before,
+.folio-list__item-link:hover .folio-list__item-pic::before {
+    opacity    : 1;
+    visibility : visible;
+}
+
+.folio-list__item-link:focus .folio-list__item-pic::after,
+.folio-list__item-link:hover .folio-list__item-pic::after {
+    opacity    : 1;
+    visibility : visible;
+    transform  : scale(1);
+}
+
+.folio-list__item-link:focus .folio-list__item-text::before,
+.folio-list__item-link:hover .folio-list__item-text::before {
+    width : 100%;
+}
+
+.folio-list__item-pic {
+    display  : block;
+    position : absolute;
+    top      : 0;
+    left     : 0;
+}
+
+.folio-list__item-pic img {
+    vertical-align : bottom;
+    object-fit     : cover;
+    width          : var(--item-min-height);
+    height         : var(--item-min-height);
+    margin         : 0;
+}
+
+.folio-list__item-pic::before,
+.folio-list__item-pic::after {
+    transition : all, 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.folio-list__item-pic::before {
+    z-index          : 1;
+    content          : "";
+    display          : block;
+    background-color : rgba(255, 255, 255, 0.75);
+    position         : absolute;
+    top              : 0;
+    left             : 0;
+    right            : 0;
+    bottom           : 0;
+    width            : 100%;
+    height           : 100%;
+    opacity          : 0;
+    visibility       : hidden;
+}
+
+.folio-list__item-pic::after {
+    z-index     : 2;
+    display     : block;
+    content     : "+";
+    font-family : var(--font-1);
+    font-weight : 300;
+    font-size   : 2.2rem;
+    color       : black;
+    text-align  : center;
+    height      : var(--vspace-1);
+    width       : var(--vspace-1);
+    line-height : var(--vspace-1);
+    transform   : scale(0.2);
+    opacity     : 0;
+    visibility  : hidden;
+    position    : absolute;
+    top         : calc(50% - var(--vspace-0_5));
+    left        : calc(50% - var(--vspace-0_5));
+}
+
+.folio-list__item-text::before,
+.folio-list__item-title,
+.folio-list__item-cat {
+    transition : all, 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.folio-list__item-text {
+    padding-top : var(--vspace-0_5);
+    border-top  : 1px solid var(--color-border);
+    min-height  : var(--item-min-height);
+    position    : relative;
+}
+
+.folio-list__item-text::before {
+    content          : "";
+    display          : block;
+    width            : 0;
+    height           : 1px;
+    background-color : var(--color-text-light);
+    position         : absolute;
+    top              : 0;
+    left             : 0;
+}
+
+.folio-list__item-title {
+    font-family : var(--font-1);
+    font-weight : 500;
+    font-size   : var(--text-lg);
+}
+
+.folio-list__item-cat {
+    font-size   : var(--text-sm);
+    color       : var(--color-text-light);
+    line-height : var(--vspace-0_75);
+    margin-left : .2rem;
+}
+
+.folio-list__proj-link {
+    display  : block;
+    height   : var(--vspace-1);
+    width    : var(--vspace-1);
+    position : absolute;
+    top      : .8rem;
+    right    : var(--vspace-0_75);
+}
+
+.folio-list__proj-link svg {
+    height    : var(--vspace-0_5);
+    width     : var(--vspace-0_5);
+    transform : translate(-50%, -50%) rotate(-45deg);
+    position  : absolute;
+    top       : 50%;
+    left      : 50%;
+}
+
+.folio-list__proj-link svg path {
+    fill : white;
+}
+
+.folio-list__proj-link:hover {
+    transform : scale(1.2);
+}
+
+/* Modal popup */
+.modal-popup {
+    max-width        : 750px;
+    background-color : white;
+    font-size        : calc(var(--text-size) * 0.9447);
+    line-height      : var(--vspace-0_875);
+    color            : rgba(0, 0, 0, 0.75);
+    overflow-y       : visible;
+    position         : relative;
+}
+
+.modal-popup img {
+    margin-bottom : var(--vspace-0_75);
+}
+
+.modal-popup h5 {
+    font-family   : var(--font-1);
+    font-size     : var(--text-size);
+    line-height   : var(--vspace-1);
+    font-weight   : 500;
+    margin-top    : 0;
+    margin-bottom : var(--vspace-0_25);
+    color         : black;
+}
+
+.modal-popup__desc {
+    padding : 0 var(--vspace-1_25) var(--vspace-0_25);
+}
+
+.modal-popup__cat {
+    list-style   : none;
+    margin-left  : 0;
+    font-size    : var(--text-sm);
+    line-height  : var(--vspace-0_5);
+    color        : rgba(0, 0, 0, 0.6);
+    padding-left : calc(0.875 * var(--space));
+    position     : relative;
+}
+
+.modal-popup__cat::before {
+    content             : "";
+    display             : block;
+    height              : calc(0.625 * var(--space));
+    width               : calc(0.625 * var(--space));
+    background-repeat   : no-repeat;
+    background-position : center;
+    background-size     : contain;
+    background-image    : url(../images/icons/icon-tag.svg);
+    position            : absolute;
+    left                : 0;
+    top                 : -0.15em;
+}
+
+.modal-popup__cat li {
+    display      : inline;
+    padding-left : 0;
+}
+
+.modal-popup__cat li::after {
+    content : ", ";
+}
+
+.modal-popup__cat li:last-child::after {
+    display : none;
+}
+
+.modal-popup__details {
+    background-color : rgba(0, 0, 0, 0.3);
+    font-size        : var(--text-xs);
+    line-height      : var(--vspace-1_25);
+    color            : white;
+    padding          : 0 1.2rem;
+    position         : absolute;
+    top              : var(--vspace-1);
+    left             : var(--vspace-1);
+}
+
+.modal-popup__details:focus,
+.modal-popup__details:hover {
+    background-color : var(--color-body);
+    color            : white;
+}
+
+.modal-popup__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    justify-content: flex-start;
+}
+
+.modal-popup__buttons .btn {
+    flex: 0 0 auto;
+    min-width: 150px;
+    text-align: center;
+    line-height: 1;
+    padding: 1.5rem 1.75rem;
+    background-color: var(--color-2);
+    color: var(--color-body);
+    transition: all 0.3s ease-in-out;
+    font-size: 1rem;
+    height: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modal-popup__buttons .btn:hover {
+    background-color: var(--color-1);
+    color: white;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 1200px) {
+    .folio-list__item-title {
+        font-size   : var(--text-md);
+        line-height : var(--vspace-0_875);
+    }
+
+    .folio-list__item-cat {
+        font-size : var(--text-xs);
+    }
+}
+
+@media screen and (max-width: 1000px) {
+    .folio-list__item-title {
+        font-size   : var(--text-lg);
+        line-height : var(--vspace-1);
+    }
+
+    .folio-list__item-cat {
+        font-size : var(--text-sm);
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .s-works {
+        padding-top    : var(--vspace-4);
+        padding-bottom : var(--vspace-3);
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .folio-list__item-title {
+        font-size   : var(--text-md);
+        line-height : var(--vspace-0_875);
+    }
+
+    .folio-list__proj-link {
+        right : var(--vspace-0_5);
+    }
+
+    .modal-popup__buttons {
+        justify-content: center;
+    }
+    
+    .modal-popup__buttons .btn {
+        min-width: 110px;
+    }
+}
+
+@media screen and (max-width: 500px) {
+    .folio-list {
+        --item-min-height : var(--vspace-3_5);
+    }
+
+    .folio-list__item {
+        margin-bottom : var(--vspace-0_75);
+    }
+
+    .folio-list__item-link {
+        padding-left : calc(4.25 * var(--space));
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .folio-list .column {
+        flex  : none;
+        width : 50%;
+    }
+
+    .folio-list__item {
+        margin-bottom : 0;
+    }
+
+    .folio-list__item-link {
+        padding-left : 0;
+    }
+
+    .folio-list__item-pic {
+        position : static;
+    }
+
+    .folio-list__item-pic img {
+        max-width : 100%;
+        width     : 100%;
+        height    : auto;
+    }
+
+    .folio-list__item-text,
+    .folio-list__proj-link {
+        display : none;
+    }
+
+    .modal-popup__desc {
+        padding : 0 var(--vspace-1) var(--vspace-0_25);
+    }
+} 
