@@ -1,0 +1,177 @@
+/* ===================================================================
+ * # FORM
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+fieldset {
+    border : none;
+}
+
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="text"],
+input[type="tel"],
+input[type="url"],
+input[type="password"],
+textarea,
+select {
+    --input-height      : var(--vspace-2);
+    --input-line-height : var(--vspace-1);
+    --input-vpadding    : calc((var(--input-height) - var(--input-line-height)) / 2);
+    display             : block;
+    height              : var(--input-height);
+    padding             : var(--input-vpadding) 0 calc(var(--input-vpadding) - 1px);
+    border              : 0;
+    outline             : 0;
+    color               : var(--color-text-light);
+    font-family         : var(--font-1);
+    font-size           : calc(var(--text-size) * 0.7778);
+    line-height         : var(--input-line-height);
+    max-width           : 100%;
+    background          : transparent;
+    border-bottom       : 1px solid var(--color-border);
+    transition          : all .3s ease-in-out;
+}
+
+.ss-custom-select {
+    position : relative;
+    padding  : 0;
+}
+
+.ss-custom-select select {
+    -webkit-appearance : none;
+    -moz-appearance    : none;
+    appearance         : none;
+    text-indent        : 0.01px;
+    text-overflow      : '';
+    margin             : 0;
+    vertical-align     : middle;
+    line-height        : var(--vspace-1);
+}
+
+.ss-custom-select select option {
+    padding-left     : 2rem;
+    padding-right    : 2rem;
+    background-color : var(--color-body);
+}
+
+.ss-custom-select select::-ms-expand {
+    display : none;
+}
+
+.ss-custom-select::after {
+    border-bottom    : 1px solid white;
+    border-right     : 1px solid white;
+    content          : '';
+    display          : block;
+    height           : 8px;
+    width            : 8px;
+    margin-top       : -7px;
+    pointer-events   : none;
+    position         : absolute;
+    right            : 2.4rem;
+    top              : 50%;
+    transition       : all 0.15s ease-in-out;
+    transform-origin : 66% 66%;
+    transform        : rotate(45deg);
+}
+
+textarea {
+    min-height : calc(8 * var(--space));
+}
+
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="text"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+    color         : var(--color-text);
+    border-bottom : 1px solid var(--color-1);
+}
+
+label,
+legend {
+    font-family   : var(--font-1);
+    font-weight   : 600;
+    font-size     : var(--text-sm);
+    line-height   : var(--vspace-0_5);
+    margin-bottom : var(--vspace-0_5);
+    color         : var(--color-text-dark);
+    display       : block;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    display : inline;
+}
+
+label>.label-text {
+    display     : inline-block;
+    margin-left : 1rem;
+    font-family : var(--font-1);
+    line-height : inherit;
+}
+
+label>input[type="checkbox"],
+label>input[type="radio"] {
+    margin   : 0;
+    position : relative;
+    top      : 2px;
+}
+
+/* ------------------------------------------------------------------- 
+ * ## style placeholder text
+ * ------------------------------------------------------------------- */
+::-webkit-input-placeholder {
+    /* WebKit, Blink, Edge */
+    color : var(--color-placeholder);
+}
+
+:-moz-placeholder {
+    /* Mozilla Firefox 4 to 18 */
+    color   : var(--color-placeholder);
+    opacity : 1;
+}
+
+::-moz-placeholder {
+    /* Mozilla Firefox 19+ */
+    color   : var(--color-placeholder);
+    opacity : 1;
+}
+
+:-ms-input-placeholder {
+    /* Internet Explorer 10-11 */
+    color : var(--color-placeholder);
+}
+
+::-ms-input-placeholder {
+    /* Microsoft Edge */
+    color : var(--color-placeholder);
+}
+
+::placeholder {
+    /* Most modern browsers support this now. */
+    color : var(--color-placeholder);
+}
+
+/* ------------------------------------------------------------------- 
+ * ## change autocomplete styles in Chrome
+ * ------------------------------------------------------------------- */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+    -webkit-text-fill-color : var(--color-1);
+    transition              : background-color 5000s ease-in-out 0s;
+} 

@@ -1,0 +1,85 @@
+/* ===================================================================
+ * # CONTACT
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+.contact-top {
+    padding-top : var(--vspace-5);
+    border-top  : 1px solid var(--color-border);
+}
+
+.contact-top .h1 {
+    margin-top : 0;
+}
+
+.contact-bottom {
+    padding-bottom : var(--vspace-3);
+    margin-top     : var(--vspace-3);
+    border-bottom  : 1px solid var(--color-border);
+}
+
+.contact-bottom .text-pretitle {
+    margin-bottom : var(--vspace-0_125);
+}
+
+.contact-links,
+.contact-social {
+    font-size   : var(--text-md);
+    font-weight : 300;
+    line-height : var(--vspace-1_25);
+    color       : var(--color-text-light);
+}
+
+.contact-links a,
+.contact-social a {
+    color : var(--color-text-light);
+}
+
+.contact-links a:focus,
+.contact-links a:hover,
+.contact-social a:focus,
+.contact-social a:hover {
+    color : var(--color-1);
+}
+
+.contact-social {
+    list-style  : none;
+    margin-left : 0;
+}
+
+.contact-social li {
+    display      : inline-block;
+    padding-left : 0;
+}
+
+.contact-social li::after {
+    content : ",  ";
+}
+
+.contact-social li:last-child::after {
+    display : none;
+}
+
+.contact-btn {
+    margin-left  : auto;
+    margin-right : 5vw;
+}
+
+/* ------------------------------------------------------------------- 
+ * responsive:
+ * contact
+ * ------------------------------------------------------------------- */
+@media screen and (max-width: 1200px) {
+    .contact-btn {
+        margin-top   : var(--vspace-0_5);
+        margin-left  : 0;
+        margin-right : 0;
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .contact-top {
+        padding-top : var(--vspace-4);
+    }
+}

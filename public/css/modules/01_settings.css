@@ -1,0 +1,236 @@
+/* ===================================================================
+ * # SETTINGS
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------- 
+ * ## fonts 
+ * ------------------------------------------------------------------- */
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Serif+Text:ital@0;1&family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap");
+
+:root {
+
+    --font-1 : "Public Sans", sans-serif;
+    --font-2 : "DM Serif Display", serif;
+
+    /* monospace
+    */
+    --font-mono : Consolas, "Andale Mono", Courier, "Courier New", monospace;
+}
+
+/* ------------------------------------------------------------------- 
+ * ## colors
+ * ------------------------------------------------------------------- */
+:root {
+
+    /* color-1(accent-1): green */
+    --color-1 : #9BBB59;  /* accent green #9BBB59 */
+    
+    /* color-2(accent-2): light grey */
+    --color-2 : hsla(0, 0%, 80%, 1);
+
+    /* color-1 variations */
+    --color-1-lighter : #CAD9A5; /* lighter green */
+    --color-1-light   : #B0CA7D; /* light green */
+    --color-1-dark    : #829B42; /* darker green */
+    --color-1-darker  : #677D2F; /* darkest green */
+
+    /* theme color variations
+     */
+    --color-2-lighter : hsla(168, 62%, 56%, 1);
+    --color-2-light   : hsla(168, 62%, 46%, 1);
+    --color-2-dark    : hsla(168, 62%, 26%, 1);
+    --color-2-darker  : hsla(168, 62%, 16%, 1);
+
+    /* feedback colors
+     * color-error(#ffd1d2), color-success(#c8e675), 
+     * color-info(#d7ecfb), color-notice(#fff099)
+     */
+    --color-error           : hsla(359, 100%, 91%, 1);
+    --color-success         : hsla(76, 69%, 68%, 1);
+    --color-info            : hsla(205, 82%, 91%, 1);
+    --color-notice          : hsla(51, 100%, 80%, 1);
+    --color-error-content   : hsla(359, 50%, 50%, 1);
+    --color-success-content : hsla(76, 29%, 28%, 1);
+    --color-info-content    : hsla(205, 32%, 31%, 1);
+    --color-notice-content  : hsla(51, 30%, 30%, 1);
+
+    /* shades 
+     * generated using 
+     * Tint & Shade Generator 
+     * (https://maketintsandshades.com/)
+     */
+    --color-black   : #000000;
+    --color-gray-19 : #020202;
+    --color-gray-18 : #040404;
+    --color-gray-17 : #060607;
+    --color-gray-16 : #080809;
+    --color-gray-15 : #0a0b0b;
+    --color-gray-14 : #0c0d0d;
+    --color-gray-13 : #0e0f0f;
+    --color-gray-12 : #101112;
+    --color-gray-11 : #121314;
+    --color-gray-10 : #141516;
+    --color-gray-9  : #2c2c2d;
+    --color-gray-8  : #434445;
+    --color-gray-7  : #5b5b5c;
+    --color-gray-6  : #727373;
+    --color-gray-5  : #8a8a8b;
+    --color-gray-4  : #a1a1a2;
+    --color-gray-3  : #b9b9b9;
+    --color-gray-2  : #d0d0d0;
+    --color-gray-1  : #e8e8e8;
+    --color-white   : #ffffff;
+
+    /* text
+     */
+    --color-text        : var(--color-gray-4);
+    --color-text-dark   : var(--color-white);
+    --color-text-light  : var(--color-gray-7);
+    --color-placeholder : var(--color-gray-7);
+
+    /* buttons
+     */
+    --color-btn                    : var(--color-gray-9);
+    --color-btn-text               : var(--color-1);
+    --color-btn-hover              : var(--color-white);
+    --color-btn-hover-text         : var(--color-black);
+    --color-btn-primary            : var(--color-1-dark);
+    --color-btn-primary-text       : var(--color-black);
+    --color-btn-primary-hover      : var(--color-1-darker);
+    --color-btn-primary-hover-text : var(--color-black);
+    --color-btn-stroke             : var(--color-white);
+    --color-btn-stroke-text        : var(--color-white);
+    --color-btn-stroke-hover       : var(--color-white);
+    --color-btn-stroke-hover-text  : var(--color-black);
+
+    /* preloader
+     */
+    --color-preloader-bg : var(--color-gray-10);
+    --color-loader       : white;
+    --color-loader-light : rgba(255, 255, 255, 0.1);
+
+    /* others
+     */
+    --color-body    : var(--color-gray-10);
+    --color-border  : rgba(255, 255, 255, .05);
+    --border-radius : 3px;
+}
+
+/* ------------------------------------------------------------------- 
+ * ## spacing and typescale
+ * ------------------------------------------------------------------- */
+:root {
+
+    /* spacing
+     * base font size: 19px 
+     * vertical space unit : 32px
+     */
+    --base-size      : 62.5%;
+    --multiplier     : 1;
+    --base-font-size : calc(1.9rem * var(--multiplier));
+    --space          : calc(3.2rem * var(--multiplier));
+
+    /* vertical spacing 
+     */
+    --vspace-0_125 : calc(0.125 * var(--space));
+    --vspace-0_25  : calc(0.25 * var(--space));
+    --vspace-0_375 : calc(0.375 * var(--space));
+    --vspace-0_5   : calc(0.5 * var(--space));
+    --vspace-0_625 : calc(0.625 * var(--space));
+    --vspace-0_75  : calc(0.75 * var(--space));
+    --vspace-0_875 : calc(0.875 * var(--space));
+    --vspace-1     : calc(var(--space));
+    --vspace-1_25  : calc(1.25 * var(--space));
+    --vspace-1_5   : calc(1.5 * var(--space));
+    --vspace-1_75  : calc(1.75 * var(--space));
+    --vspace-2     : calc(2 * var(--space));
+    --vspace-2_5   : calc(2.5 * var(--space));
+    --vspace-3     : calc(3 * var(--space));
+    --vspace-3_5   : calc(3.5 * var(--space));
+    --vspace-4     : calc(4 * var(--space));
+    --vspace-4_5   : calc(4.5 * var(--space));
+    --vspace-5     : calc(5 * var(--space));
+
+    /* type scale
+     * ratio 1:2 | base: 19px
+     * -------------------------------------------------------
+     *
+     * --text-display-3 = (81.70px)
+     * --text-display-2 = (68.08px)
+     * --text-display-1 = (56.73px)
+     * --text-xxxl      = (47.28px)
+     * --text-xxl       = (39.40px)
+     * --text-xl        = (32.83px)
+     * --text-lg        = (27.36px)
+     * --text-md        = (22.80px)
+     * --text-size      = (19.00px) BASE
+     * --text-sm        = (15.83px)
+     * --text-xs        = (13.19px)
+     *
+     * ---------------------------------------------------------
+     */
+    --text-scale-ratio : 1.2;
+    --text-size        : var(--base-font-size);
+    --text-xs          : calc((var(--text-size) / var(--text-scale-ratio)) / var(--text-scale-ratio));
+    --text-sm          : calc(var(--text-xs) * var(--text-scale-ratio));
+    --text-md          : calc(var(--text-sm) * var(--text-scale-ratio) * var(--text-scale-ratio));
+    --text-lg          : calc(var(--text-md) * var(--text-scale-ratio));
+    --text-xl          : calc(var(--text-lg) * var(--text-scale-ratio));
+    --text-xxl         : calc(var(--text-xl) * var(--text-scale-ratio));
+    --text-xxxl        : calc(var(--text-xxl) * var(--text-scale-ratio));
+    --text-display-1   : calc(var(--text-xxxl) * var(--text-scale-ratio));
+    --text-display-2   : calc(var(--text-display-1) * var(--text-scale-ratio));
+    --text-display-3   : calc(var(--text-display-2) * var(--text-scale-ratio));
+
+    /* default button height
+     */
+    --vspace-btn : var(--vspace-2);
+}
+
+/* on mobile devices below 600px, change the value of '--multiplier' 
+ * to adjust the values of base font size and vertical space unit.
+ */
+@media screen and (max-width: 600px) {
+    :root {
+        --multiplier : .875;
+    }
+}
+
+/* ------------------------------------------------------------------- 
+ * ## grid variables
+ * ------------------------------------------------------------------- */
+:root {
+
+    /* widths for rows and containers
+     */
+    --width-full     : 100%;
+    --width-max      : 1200px;
+    --width-wide     : 1400px;
+    --width-wider    : 1600px;
+    --width-widest   : 1800px;
+    --width-narrow   : 1000px;
+    --width-narrower : 800px;
+    --width-grid-max : var(--width-max);
+
+    /* gutter
+     */
+    --gutter : 2rem;
+}
+
+/* on medium screen devices
+ */
+@media screen and (max-width: 1200px) {
+    :root {
+        --gutter : 1.6rem;
+    }
+}
+
+/* on mobile devices
+ */
+@media screen and (max-width: 600px) {
+    :root {
+        --gutter : 1rem;
+    }
+} 

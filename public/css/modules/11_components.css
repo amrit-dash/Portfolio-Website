@@ -1,0 +1,421 @@
+/* ===================================================================
+ * # COMPONENTS
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------
+ * ## pagination
+ * ------------------------------------------------------------------- */
+.pgn {
+    --pgn-num-height : calc(var(--vspace-1) + .4rem);
+    margin           : var(--vspace-1) auto;
+    text-align       : center;
+}
+
+.pgn ul {
+    display         : inline-flex;
+    flex-flow       : row wrap;
+    justify-content : center;
+    list-style      : none;
+    margin-left     : 0;
+    position        : relative;
+    padding         : 0 6rem;
+}
+
+.pgn ul li {
+    margin  : 0;
+    padding : 0;
+}
+
+.pgn__num {
+    font-family   : var(--font-1);
+    font-weight   : 600;
+    font-size     : var(--text-size);
+    line-height   : var(--vspace-1);
+    display       : block;
+    padding       : .2rem 1.2rem;
+    height        : var(--pgn-num-height);
+    margin        : .2rem .2rem;
+    color         : var(--color-text-dark);
+    border-radius : 4px;
+    transition    : all, .3s, ease-in-out;
+}
+
+.pgn__num:focus,
+.pgn__num:hover {
+    background : var(--color-gray-9);
+    color      : var(--color-white);
+}
+
+.pgn .current,
+.pgn .current:focus,
+.pgn .current:hover {
+    background-color : var(--color-gray-9);
+    color            : var(--color-white);
+}
+
+.pgn .inactive,
+.pgn .inactive:focus,
+.pgn .inactive:hover {
+    opacity : 0.4;
+    cursor  : default;
+}
+
+.pgn__prev,
+.pgn__next {
+    display         : inline-flex;
+    flex-flow       : row wrap;
+    justify-content : center;
+    align-items     : center;
+    height          : var(--pgn-num-height);
+    width           : 4.8rem;
+    line-height     : var(--vspace-1);
+    border-radius   : 4px;
+    padding         : 0;
+    margin          : 0;
+    opacity         : 1;
+    font            : 0/0 a;
+    text-shadow     : none;
+    color           : transparent;
+    transition      : all, .3s, ease-in-out;
+    position        : absolute;
+    top             : 50%;
+    transform       : translate(0, -50%);
+}
+
+.pgn__prev:focus,
+.pgn__prev:hover,
+.pgn__next:focus,
+.pgn__next:hover {
+    background-color : var(--color-gray-9);
+}
+
+.pgn__prev svg,
+.pgn__next svg {
+    height     : 2.4rem;
+    width      : 2.4rem;
+    transition : all, .3s, ease-in-out;
+}
+
+.pgn__prev svg path,
+.pgn__next svg path {
+    fill : var(--color-text-dark);
+}
+
+.pgn__prev:focus svg path,
+.pgn__prev:hover svg path,
+.pgn__next:focus svg path,
+.pgn__next:hover svg path {
+    fill : white;
+}
+
+.pgn__prev {
+    left : 0;
+}
+
+.pgn__next {
+    right : 0;
+}
+
+.pgn__prev.inactive,
+.pgn__next.inactive {
+    opacity : 0.4;
+    cursor  : default;
+}
+
+.pgn__prev.inactive:focus,
+.pgn__prev.inactive:hover,
+.pgn__next.inactive:focus,
+.pgn__next.inactive:hover {
+    background-color : transparent;
+}
+
+/* ------------------------------------------------------------------- 
+ * responsive:
+ * pagination
+ * ------------------------------------------------------------------- */
+@media screen and (max-width: 600px) {
+    .pgn ul {
+        padding : 0 5.2rem;
+    }
+}
+
+/* ------------------------------------------------------------------- 
+ * ## alert box 
+ * ------------------------------------------------------------------- */
+.alert-box {
+    padding       : var(--vspace-0_75) 4rem var(--vspace-0_75) 3.2rem;
+    margin-bottom : var(--vspace-1);
+    border-radius : var(--border-radius);
+    font-family   : var(--font-1);
+    font-weight   : 500;
+    font-size     : var(--text-sm);
+    line-height   : var(--vspace-0_75);
+    opacity       : 1;
+    visibility    : visible;
+    position      : relative;
+}
+
+.alert-box__close {
+    position : absolute;
+    display  : block;
+    right    : 1.6rem;
+    top      : 1.6rem;
+    cursor   : pointer;
+    width    : 12px;
+    height   : 12px;
+}
+
+.alert-box__close::before,
+.alert-box__close::after {
+    content  : '';
+    display  : inline-block;
+    width    : 1px;
+    height   : 12px;
+    position : absolute;
+    top      : 0;
+    left     : 5px;
+}
+
+.alert-box__close::before {
+    transform : rotate(45deg);
+}
+
+.alert-box__close::after {
+    transform : rotate(-45deg);
+}
+
+.alert-box--error {
+    background-color : var(--color-error);
+    color            : var(--color-error-content);
+}
+
+.alert-box--error .alert-box__close::before,
+.alert-box--error .alert-box__close::after {
+    background-color : var(--color-error-content);
+}
+
+.alert-box--success {
+    background-color : var(--color-success);
+    color            : var(--color-success-content);
+}
+
+.alert-box--success .alert-box__close::before,
+.alert-box--success .alert-box__close::after {
+    background-color : var(--color-success-content);
+}
+
+.alert-box--info {
+    background-color : var(--color-info);
+    color            : var(--color-info-content);
+}
+
+.alert-box--info .alert-box__close::before,
+.alert-box--info .alert-box__close::after {
+    background-color : var(--color-info-content);
+}
+
+.alert-box--notice {
+    background-color : var(--color-notice);
+    color            : var(--color-notice-content);
+}
+
+.alert-box--notice .alert-box__close::before,
+.alert-box--notice .alert-box__close::after {
+    background-color : var(--color-notice-content);
+}
+
+.alert-box.hideit {
+    opacity    : 0;
+    visibility : hidden;
+    transition : all .5s;
+}
+
+/* ------------------------------------------------------------------- 
+ * ## skillbars 
+ * ------------------------------------------------------------------- */
+.skill-bars {
+    list-style : none;
+    margin     : var(--vspace-2) 0 var(--vspace-1);
+}
+
+.skill-bars li {
+    height        : .4rem;
+    background    : var(--color-gray-9);
+    width         : 100%;
+    margin-bottom : calc(var(--vspace-2) - .4rem);
+    padding       : 0;
+    position      : relative;
+}
+
+.skill-bars li strong {
+    position       : absolute;
+    left           : 0;
+    top            : calc((var(--vspace-1) * 1.25) * -1);
+    font-family    : var(--font-1);
+    font-weight    : 600;
+    color          : var(--color-text-dark);
+    text-transform : uppercase;
+    letter-spacing : .2em;
+    font-size      : var(--text-xs);
+    line-height    : var(--vspace-0_75);
+}
+
+.skill-bars li .progress {
+    background : var(--color-1);
+    position   : relative;
+    height     : 100%;
+}
+
+.skill-bars li .progress span {
+    display       : block;
+    font-family   : var(--font-1);
+    color         : white;
+    font-size     : 1rem;
+    line-height   : 1;
+    background    : var(--color-black);
+    padding       : var(--vspace-0_25);
+    border-radius : 4px;
+    position      : absolute;
+    right         : 0;
+    top           : calc((var(--vspace-1) + .8rem) * -1);
+}
+
+.skill-bars li .progress span::after {
+    position         : absolute;
+    left             : 50%;
+    bottom           : -10px;
+    margin-left      : -5px;
+    width            : 0;
+    height           : 0;
+    border           : 5px solid transparent;
+    border-top-color : var(--color-black, var(--color-black));
+    content          : "";
+}
+
+.skill-bars li .percent5 {
+    width : 5%;
+}
+
+.skill-bars li .percent10 {
+    width : 10%;
+}
+
+.skill-bars li .percent15 {
+    width : 15%;
+}
+
+.skill-bars li .percent20 {
+    width : 20%;
+}
+
+.skill-bars li .percent25 {
+    width : 25%;
+}
+
+.skill-bars li .percent30 {
+    width : 30%;
+}
+
+.skill-bars li .percent35 {
+    width : 35%;
+}
+
+.skill-bars li .percent40 {
+    width : 40%;
+}
+
+.skill-bars li .percent45 {
+    width : 45%;
+}
+
+.skill-bars li .percent50 {
+    width : 50%;
+}
+
+.skill-bars li .percent55 {
+    width : 55%;
+}
+
+.skill-bars li .percent60 {
+    width : 60%;
+}
+
+.skill-bars li .percent65 {
+    width : 65%;
+}
+
+.skill-bars li .percent70 {
+    width : 70%;
+}
+
+.skill-bars li .percent75 {
+    width : 75%;
+}
+
+.skill-bars li .percent80 {
+    width : 80%;
+}
+
+.skill-bars li .percent85 {
+    width : 85%;
+}
+
+.skill-bars li .percent90 {
+    width : 90%;
+}
+
+.skill-bars li .percent95 {
+    width : 95%;
+}
+
+.skill-bars li .percent100 {
+    width : 100%;
+}
+
+/* --------------------------------------------------------------------
+ * ## stats tabs
+ * -------------------------------------------------------------------- */
+.stats-tabs {
+    padding : 0;
+    margin  : var(--vspace-1) 0;
+}
+
+.stats-tabs li {
+    display      : inline-block;
+    margin       : 0 1.6rem var(--vspace-0_5) 0;
+    padding      : 0 1.5rem 0 0;
+    border-right : 1px solid var(--color-border);
+}
+
+.stats-tabs li:last-child {
+    margin  : 0;
+    padding : 0;
+    border  : none;
+}
+
+.stats-tabs li a {
+    display     : block;
+    font-family : var(--font-1);
+    font-size   : var(--text-lg);
+    font-weight : 600;
+    line-height : var(--vspace-1_5);
+    border      : none;
+    color       : var(--color-text-dark);
+}
+
+.stats-tabs li a:hover {
+    color : var(--color-1);
+}
+
+.stats-tabs li a em {
+    display     : block;
+    margin      : 0;
+    font-family : var(--font-1);
+    font-size   : var(--text-sm);
+    line-height : var(--vspace-0_5);
+    font-weight : 400;
+    font-style  : normal;
+    color       : var(--color-text-light);
+} 

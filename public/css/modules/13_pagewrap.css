@@ -1,0 +1,92 @@
+/* ===================================================================
+ * # PAGE WRAP
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+.s-pagewrap {
+    --circle-width  : 70vw;
+    --header-height : 6.4rem;
+    display         : flex;
+    flex-direction  : column;
+    min-height      : 100%;
+    overflow        : hidden;
+    position        : relative;
+}
+
+/* --------------------------------------------------------------------
+ * ## circles
+ * -------------------------------------------------------------------- */
+.s-pagewrap .circles,
+.s-pagewrap .circles span {
+    position : absolute;
+}
+
+.s-pagewrap .circles {
+    width  : var(--circle-width);
+    height : var(--circle-width);
+    top    : calc(100vh - var(--circle-width));
+    left   : calc(100% - 33vw);
+    z-index: 10;
+    pointer-events: none;
+}
+
+.s-pagewrap .circles span {
+    display: block;
+    border: 1px solid var(--color-1);
+    border-radius: 50%;
+    opacity: .1;
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 50%;
+    pointer-events: auto;
+}
+
+.s-pagewrap .circles span:nth-child(1) {
+    height : 100%;
+    width  : 100%;
+}
+
+.s-pagewrap .circles span:nth-child(2) {
+    height : 80%;
+    width  : 80%;
+}
+
+.s-pagewrap .circles span:nth-child(3) {
+    height : 60%;
+    width  : 60%;
+}
+
+.s-pagewrap .circles span:nth-child(4) {
+    height : 40%;
+    width  : 40%;
+}
+
+.s-pagewrap .circles span:nth-child(5) {
+    height : 20%;
+    width  : 20%;
+}
+
+.ss-preload .s-pagewrap {
+    visibility : hidden;
+}
+
+/* ------------------------------------------------------------------- 
+ * responsive:
+ * page-wrap
+ * ------------------------------------------------------------------- */
+@media screen and (max-width: 800px) {
+    .s-pagewrap .circles {
+        top : calc(var(--header-height) + 5vh);
+    }
+}
+
+/* Circles hover effect - desktop only */
+@media (hover: hover) and (pointer: fine) {
+  .circles--hoverable span:hover,
+  .circles--hoverable span.circle--active {
+    border: 2px solid var(--color-1);
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
+} 

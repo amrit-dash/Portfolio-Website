@@ -1,0 +1,42 @@
+/* ===================================================================
+ * # TABLE
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+table {
+    border-width    : 0;
+    width           : 100%;
+    max-width       : 100%;
+    font-family     : var(--font-1);
+    border-collapse : collapse;
+}
+
+th,
+td {
+    padding       : var(--vspace-0_5) 3.2rem calc(var(--vspace-0_5) - 1px);
+    text-align    : left;
+    border-bottom : 1px solid var(--color-border);
+}
+
+th {
+    padding     : var(--vspace-0_5) 3.2rem;
+    color       : var(--color-text-dark);
+    font-family : var(--font-1);
+    font-weight : 600;
+}
+
+th:first-child,
+td:first-child {
+    padding-left : 0;
+}
+
+th:last-child,
+td:last-child {
+    padding-right : 0;
+}
+
+.table-responsive {
+    overflow-x                 : auto;
+    -webkit-overflow-scrolling : touch;
+} 

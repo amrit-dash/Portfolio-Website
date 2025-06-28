@@ -1,0 +1,104 @@
+/* ===================================================================
+ * # UTILITY CLASSES
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+/* flex item alignment classes
+ */
+.u-flexitem-center {
+    margin     : auto;
+    align-self : center;
+}
+
+.u-flexitem-left {
+    margin-right : auto;
+    align-self   : center;
+}
+
+.u-flexitem-right {
+    margin-left : auto;
+    align-self  : center;
+}
+
+.u-flexitem-x-center {
+    margin-right : auto;
+    margin-left  : auto;
+}
+
+.u-flexitem-x-left {
+    margin-right : auto;
+}
+
+.u-flexitem-x-right {
+    margin-left : auto;
+}
+
+.u-flexitem-y-center {
+    align-self : center;
+}
+
+.u-flexitem-y-top {
+    align-self : flex-start;
+}
+
+.u-flexitem-y-bottom {
+    align-self : flex-end;
+}
+
+/* misc helper classes
+ */
+.u-clearfix:after {
+    content : "";
+    display : table;
+    clear   : both;
+}
+
+.u-hidden {
+    display : none;
+}
+
+.u-invisible {
+    visibility : hidden;
+}
+
+.u-antialiased {
+    -webkit-font-smoothing  : antialiased;
+    -moz-osx-font-smoothing : grayscale;
+}
+
+.u-overflow-hidden {
+    overflow : hidden;
+}
+
+.u-remove-top {
+    margin-top : 0;
+}
+
+.u-remove-bottom {
+    margin-bottom : 0;
+}
+
+.u-add-half-bottom {
+    margin-bottom : var(--vspace-0_5);
+}
+
+.u-add-bottom {
+    margin-bottom : var(--vspace-1);
+}
+
+.u-no-border {
+    border : none;
+}
+
+.u-fullwidth {
+    width : 100%;
+}
+
+.u-pull-left {
+    float : left;
+}
+
+.u-pull-right {
+    float : right;
+} 

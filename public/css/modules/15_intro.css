@@ -1,0 +1,201 @@
+/* ===================================================================
+ * # INTRO
+ *
+ *
+ * ------------------------------------------------------------------- */
+
+.s-intro {
+    --gutter               : 6rem;
+    --text-huge-multiplier : 1;
+    position               : relative;
+}
+
+.intro-content {
+    min-height      : calc(25.5 * var(--space));
+    justify-content : center;
+    align-items     : center;
+    padding-top     : calc(16vh + var(--header-height));
+    padding-bottom  : var(--vspace-3);
+}
+
+.intro-content .text-huge-title {
+    font-size     : calc(var(--text-huge) * var(--text-huge-multiplier));
+    padding-right : 5vw;
+}
+
+/* --------------------------------------------------------------------
+ * ## intro social
+ * -------------------------------------------------------------------- */
+.intro-social {
+    z-index          : 1;
+    list-style       : none;
+    display          : flex;
+    font-size        : 1rem;
+    font-weight      : 400;
+    text-transform   : uppercase;
+    letter-spacing   : .3em;
+    margin           : 0;
+    padding          : 0 0 0 9.6rem;
+    transform        : rotate(-90deg) translateX(-50%);
+    transform-origin : left bottom;
+    position         : absolute;
+    top              : 50%;
+    left             : calc(100% - 6rem);
+}
+
+.intro-social li {
+    padding : 0 1.2rem;
+}
+
+.intro-social a {
+    color : var(--color-text-light);
+}
+
+.intro-social a:focus,
+.intro-social a:hover {
+    color : white;
+}
+
+/* --------------------------------------------------------------------
+ * ## intro scrolldown
+ * -------------------------------------------------------------------- */
+.intro-scrolldown {
+    display         : block;
+    height          : var(--vspace-1);
+    width           : var(--vspace-1);
+    display         : flex;
+    justify-content : center;
+    align-items     : center;
+    position        : absolute;
+    bottom          : 4.8rem;
+    right           : 5.8rem;
+}
+
+.intro-scrolldown svg {
+    height : var(--vspace-0_75);
+    width  : var(--vspace-0_75);
+}
+
+.intro-scrolldown svg path {
+    fill       : white;
+    transition : all .3s ease-in-out;
+}
+
+.intro-scrolldown:focus svg path,
+.intro-scrolldown:hover svg path {
+    fill : var(--color-1);
+}
+
+/* ------------------------------------------------------------------- 
+ * responsive:
+ * intro
+ * ------------------------------------------------------------------- */
+@media screen and (max-width: 1600px) {
+    .s-intro {
+        --text-huge-multiplier : .92;
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .s-intro {
+        --text-huge-multiplier : .85;
+    }
+
+    .intro-social {
+        left : calc(100% - 4rem);
+    }
+
+    .intro-scrolldown {
+        right : 4rem;
+    }
+}
+
+@media screen and (max-width: 1000px) {
+    .s-intro {
+        --text-huge-multiplier : .8;
+    }
+
+    .intro-content {
+        padding-top : calc(14vh + var(--header-height));
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .s-intro {
+        --text-huge-multiplier : .75;
+    }
+
+    .intro-content .text-huge-title br {
+        display : none;
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .s-intro {
+        --gutter               : 4rem;
+        --text-huge-multiplier : .7;
+    }
+
+    .intro-content {
+        min-height  : 0;
+        align-items : flex-start;
+        padding-top : calc(9.6rem + var(--header-height));
+    }
+
+    .intro-content .text-huge-title {
+        padding-right : 0;
+        margin-bottom : var(--vspace-1_5);
+    }
+
+    .intro-social {
+        width         : 100%;
+        flex-wrap     : wrap;
+        padding-left  : 0;
+        padding-right : 8rem;
+        transform     : none;
+        position      : relative;
+        left          : var(--gutter);
+    }
+
+    .intro-social li {
+        padding : 0 .6rem;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .s-intro {
+        --gutter               : 2rem;
+        --text-huge-multiplier : .58;
+    }
+
+    .intro-scrolldown {
+        right : 2.4rem;
+    }
+}
+
+@media screen and (max-width: 500px) {
+    .s-intro {
+        --text-huge-multiplier : .55;
+    }
+
+    .intro-social {
+        left : 1.4rem;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .intro-content .text-huge-title {
+        font-size   : var(--text-display-1);
+        line-height : var(--vspace-2);
+    }
+
+    .intro-social {
+        left : 0;
+    }
+}
+
+@media screen and (max-width: 350px) {
+    .intro-social {
+        display : none;
+    }
+} 
