@@ -7,19 +7,17 @@ export const ssViewAnimate = function() {
     window.addEventListener("scroll", viewportAnimation);
 
     function viewportAnimation() {
-
-        let scrollY = window.pageYOffset;
+        const viewportHeight = window.innerHeight;
 
         blocks.forEach(function(current) {
-
-            const viewportHeight = window.innerHeight;
-            const triggerTop = (current.offsetTop + (viewportHeight * .2)) - viewportHeight;
-            const blockHeight = current.offsetHeight;
-            const blockSpace = triggerTop + blockHeight;
-            const inView = scrollY > triggerTop && scrollY <= blockSpace;
+            const rect = current.getBoundingClientRect();
+            const inView = (
+                rect.top <= (viewportHeight - (viewportHeight * 0.2)) &&
+                rect.bottom >= (viewportHeight * 0.2)
+            );
             const isAnimated = current.classList.contains("ss-animated");
 
-            if (inView && (!isAnimated)) {
+            if (inView && !isAnimated) {
                 anime({
                     targets: current.querySelectorAll("[data-animate-el]"),
                     opacity: [0, 1],
