@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-This is a static portfolio website (HTML/CSS/JS) served from the `public/` directory. There is no build step, no backend, no test framework, and no linter configured.
+This is a static portfolio website served from `public/`, with **Firebase** (Firestore, Storage, Auth) for dynamic content and an admin dashboard.
 
 ### Running the dev server
 
@@ -10,19 +10,27 @@ This is a static portfolio website (HTML/CSS/JS) served from the `public/` direc
 npx serve public -l 3000
 ```
 
-This serves the `public/` directory on port 3000. The `serve` package will be auto-installed by npx on first run.
+- Main site: http://localhost:3000
+- Admin dashboard: http://localhost:3000/admin (requires Firebase Auth + config)
 
 ### Project structure
 
-- `public/` — All static assets served directly (HTML, CSS, JS, images)
-- `public/index.html` — Single-page entry point
-- `public/js/` — Vanilla JS modules (preloader, lightbox, swiper, scroll-spy, etc.)
-- `public/css/` — Modular CSS + vendor styles
-- `firebase.json` — Firebase Hosting configuration (rewrites all routes to `index.html`)
+- `public/` — Static assets + SPA entry (`index.html`)
+- `public/admin/` — Hidden admin dashboard (login required)
+- `public/js/` — Portfolio app modules (theme, boot sequence, 3D hero, Firestore loader)
+- `public/data/default-content.json` — Fallback content when Firestore is empty or unconfigured
+- `public/assets/cv/` — Local CV PDFs (light/dark)
+- `firebase.json` — Hosting, Firestore rules, Storage rules
+- `FIREBASE_SETUP.md` — Enable Auth, Firestore, Storage, admin UID, deploy steps
+
+### Firebase
+
+- Configure `public/js/firebase-config.js` with your Web app credentials before production use.
+- Deploy: `npx -y firebase-tools@latest deploy`
+- GitHub Actions (`.github/workflows/firebase-hosting-merge.yml`) auto-deploys on push to `master` when secrets are set.
 
 ### Notes
 
-- There are no automated tests, no linter, and no build step in this project.
-- The only npm dependency (`firebase-tools`) is used exclusively for deployment to Firebase Hosting.
-- To verify changes, serve the site locally and test in the browser.
-- The GitHub Actions workflow (`.github/workflows/firebase-hosting-merge.yml`) auto-deploys on push to `master` — it requires Firebase credentials configured in the repository secrets.
+- No automated tests or linter in this project.
+- `npm` dependency `firebase-tools` is for CLI deploy.
+- Verify UI changes via local serve + browser; admin features need valid Firebase config and an `admins/{uid}` document.

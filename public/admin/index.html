@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio Dashboard</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div id="login-screen" class="admin-screen">
+    <form id="login-form" class="admin-card">
+      <h1>Portfolio Console</h1>
+      <p class="muted">Sign in with your admin account. This URL is not linked from the public site.</p>
+      <label>
+        Email
+        <input type="email" id="login-email" required autocomplete="username">
+      </label>
+      <label>
+        Password
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="btn btn--primary">Sign in</button>
+      <p id="login-error" class="error" hidden></p>
+    </form>
+  </div>
+
+  <div id="dashboard" class="admin-app" hidden>
+    <aside class="admin-sidebar">
+      <h2>Console</h2>
+      <nav>
+        <button type="button" data-tab="content" class="is-active">Content</button>
+        <button type="button" data-tab="projects">Projects</button>
+        <button type="button" data-tab="cosmetics">Cosmetics</button>
+        <button type="button" data-tab="cv">CV Files</button>
+      </nav>
+      <button type="button" id="logout-btn" class="btn btn--ghost">Sign out</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <h1 id="panel-title">Content</h1>
+        <button type="button" id="save-btn" class="btn btn--primary">Save changes</button>
+      </header>
+      <p id="save-status" class="status" aria-live="polite"></p>
+
+      <section id="tab-content" class="tab-panel">
+        <label>Intro pretitle <input type="text" data-field="intro.pretitle"></label>
+        <label>Intro headline <input type="text" data-field="intro.headline"></label>
+        <label>Intro subtitle <textarea data-field="intro.subtitle" rows="2"></textarea></label>
+        <label>Roles (comma-separated) <input type="text" data-field="intro.roles" data-array></label>
+        <label>About summary <textarea data-field="about.summary" rows="6"></textarea></label>
+        <label>Skills (comma-separated) <input type="text" data-field="skills" data-array></label>
+        <label>Contact headline <textarea data-field="contact.headline" rows="2"></textarea></label>
+        <details>
+          <summary>Experience JSON (advanced)</summary>
+          <textarea id="experience-json" rows="12"></textarea>
+        </details>
+      </section>
+
+      <section id="tab-projects" class="tab-panel" hidden>
+        <p class="muted">Select a project to edit thumbnails. Images are cropped to fixed dimensions before upload.</p>
+        <label>Project
+          <select id="project-select"></select>
+        </label>
+        <div class="crop-grid">
+          <div>
+            <h3>Thumbnail (600×450)</h3>
+            <input type="file" id="thumb-file" accept="image/*">
+            <div class="crop-box"><img id="thumb-crop" alt=""></div>
+            <button type="button" id="upload-thumb" class="btn btn--ghost">Upload thumbnail</button>
+          </div>
+          <div>
+            <h3>Detail image (1200×800)</h3>
+            <input type="file" id="hero-file" accept="image/*">
+            <div class="crop-box"><img id="hero-crop" alt=""></div>
+            <button type="button" id="upload-hero" class="btn btn--ghost">Upload detail image</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-cosmetics" class="tab-panel" hidden>
+        <label>Default theme
+          <select id="setting-theme">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <label>Accent hue (0–360) <input type="range" id="setting-accent" min="0" max="360" value="142"></label>
+        <label>Display font <input type="text" id="setting-font-display"></label>
+        <label>Body font <input type="text" id="setting-font-body"></label>
+        <label><input type="checkbox" id="setting-boot"> Enable boot animation</label>
+        <label><input type="checkbox" id="setting-reduced"> Prefer reduced motion</label>
+      </section>
+
+      <section id="tab-cv" class="tab-panel" hidden>
+        <p class="muted">Light CV is served when the site is in light mode; dark CV in dark mode.</p>
+        <label>Light mode CV (PDF) <input type="file" id="cv-light-file" accept="application/pdf"></label>
+        <label>Dark mode CV (PDF) <input type="file" id="cv-dark-file" accept="application/pdf"></label>
+        <button type="button" id="upload-cv" class="btn btn--primary">Upload CVs</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

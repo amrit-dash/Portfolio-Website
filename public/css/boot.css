@@ -1,0 +1,63 @@
+#boot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #020403;
+  transition: opacity 0.6s var(--ease-out), visibility 0.6s;
+}
+
+#boot-overlay.is-done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boot-console {
+  width: min(92vw, 42rem);
+  padding: var(--space-lg);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: #050807;
+  box-shadow: 0 0 40px var(--accent-glow), inset 0 0 60px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-body);
+  color: var(--accent);
+}
+
+.boot-console__title {
+  margin: 0 0 var(--space-md);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+#boot-terminal {
+  min-height: 10rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.boot-line::after {
+  content: "▌";
+  animation: cursor-blink 0.8s step-end infinite;
+}
+
+@keyframes cursor-blink {
+  50% { opacity: 0; }
+}
+
+#boot-overlay.is-opening .boot-console {
+  animation: folder-open 0.85s var(--ease-spring) forwards;
+}
+
+@keyframes folder-open {
+  0% { transform: perspective(800px) rotateX(0deg) scale(1); }
+  40% { transform: perspective(800px) rotateX(-12deg) scale(1.02); }
+  100% { transform: perspective(800px) rotateX(-75deg) scale(0.9); opacity: 0; }
+}
+
+body.is-booting .site-main {
+  visibility: hidden;
+}

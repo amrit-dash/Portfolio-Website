@@ -1,0 +1,49 @@
+:root {
+  --accent-h: 142;
+  --accent: hsl(var(--accent-h) 85% 52%);
+  --accent-dim: hsl(var(--accent-h) 60% 40%);
+  --accent-glow: hsl(var(--accent-h) 90% 60% / 0.35);
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1.25rem;
+  --space-lg: 2rem;
+  --space-xl: 3.5rem;
+  --space-2xl: 5rem;
+
+  --header-h: 4.5rem;
+  --max-width: 72rem;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="dark"] {
+  --bg: #0a0f0d;
+  --bg-elevated: #111916;
+  --bg-panel: #151f1a;
+  --text: #e8fff2;
+  --text-muted: #8fb39a;
+  --border: #2a4034;
+  --scanline: rgba(0, 0, 0, 0.25);
+  --crt-tint: rgba(61, 255, 154, 0.04);
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme="light"] {
+  --bg: #f4f7f2;
+  --bg-elevated: #ffffff;
+  --bg-panel: #eef4ea;
+  --text: #0f1a14;
+  --text-muted: #4a6354;
+  --border: #c5d6c9;
+  --scanline: rgba(255, 255, 255, 0.35);
+  --crt-tint: rgba(20, 120, 70, 0.03);
+  --shadow: 0 20px 50px rgba(20, 60, 40, 0.12);
+}
