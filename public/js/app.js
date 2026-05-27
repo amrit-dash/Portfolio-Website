@@ -241,6 +241,10 @@ function initMobileMenu() {
     window.addEventListener('keydown', e => {
         if (e.key === 'Escape') close();
     });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) close();
+    });
 }
 
 // =========================================================
@@ -407,6 +411,50 @@ function initCursor() {
 }
 
 // =========================================================
+// GSAP ENHANCED ANIMATIONS (if GSAP is loaded)
+// =========================================================
+function initGSAPAnimations() {
+    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Edu cards — scale/bounce in (no data-reveal on these)
+    gsap.utils.toArray('.edu-card').forEach((card, i) => {
+        gsap.fromTo(card,
+            { y: 40, opacity: 0, scale: 0.95 },
+            {
+                y: 0, opacity: 1, scale: 1,
+                duration: 0.65,
+                delay: i * 0.12,
+                ease: 'back.out(1.4)',
+                scrollTrigger: {
+                    trigger: card,
+                    start: 'top 88%',
+                    once: true,
+                },
+            }
+        );
+    });
+
+    // Stat cards — pop in from below
+    gsap.utils.toArray('.stat-card').forEach((card, i) => {
+        gsap.fromTo(card,
+            { y: 20, opacity: 0 },
+            {
+                y: 0, opacity: 1,
+                duration: 0.5,
+                delay: i * 0.1,
+                ease: 'power2.out',
+                scrollTrigger: {
+                    trigger: '.about__stats',
+                    start: 'top 88%',
+                    once: true,
+                },
+            }
+        );
+    });
+}
+
+// =========================================================
 // FIREBASE CONTENT LOADER (dynamic, with static fallback)
 // =========================================================
 async function loadFirebaseContent() {
@@ -462,4 +510,14 @@ onReady(() => {
     initScrollProgress();
     initCursor();
     loadFirebaseContent();
+
+    // GSAP animations (after DOM is ready and GSAP has loaded)
+    if (typeof gsap !== 'undefined') {
+        initGSAPAnimations();
+    } else {
+        // Wait for GSAP to load
+        window.addEventListener('load', () => {
+            if (typeof gsap !== 'undefined') initGSAPAnimations();
+        });
+    }
 });
