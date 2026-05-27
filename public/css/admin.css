@@ -108,6 +108,7 @@ code { font-family: var(--font-mono); background: var(--bg-card); padding: 1px 6
 .pu-card .pu-title { font-family: var(--font-mono); font-size: 1.3rem; margin-bottom: 10px; }
 
 /* ---------- Crop dialog ---------- */
+[hidden] { display: none !important; }
 .crop-backdrop {
     position: fixed; inset: 0; z-index: 500;
     background: rgba(5,7,16,.7); backdrop-filter: blur(6px);
