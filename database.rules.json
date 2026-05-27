@@ -1,0 +1,16 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "portfolio": {
+      "content": {
+        ".read": true,
+        ".write": "auth != null"
+      },
+      "adminSettings": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portfolio Admin Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="../css/admin.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header>
+        <h1>Portfolio Command Dashboard</h1>
+        <p>Hidden route editor for content, CV files, styles, and project visuals.</p>
+      </header>
+
+      <p class="status-pill" data-admin-status data-type="info">Waiting for authentication status...</p>
+
+      <section data-login-panel>
+        <h2>Admin Login</h2>
+        <form data-login-form class="panel-grid">
+          <label>
+            Email
+            <input type="email" name="adminEmail" autocomplete="username" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="adminPassword" autocomplete="current-password" required />
+          </label>
+          <button type="submit">Sign In</button>
+        </form>
+      </section>
+
+      <section data-editor-panel hidden>
+        <div class="editor-head">
+          <h2>Editor</h2>
+          <p>Signed in as <strong data-admin-user></strong></p>
+          <button type="button" data-logout>Logout</button>
+        </div>
+
+        <form data-editor-form class="panel-stack">
+          <article class="panel">
+            <h3>Profile + Theme</h3>
+            <div class="panel-grid two">
+              <label>Name <input name="name" required /></label>
+              <label>Title <input name="title" required /></label>
+              <label>Tagline <input name="tagline" required /></label>
+              <label>Location <input name="location" required /></label>
+              <label class="full">Summary <textarea name="summary" rows="4" required></textarea></label>
+              <label class="full">Status <input name="status" required /></label>
+              <label>Accent Color <input name="accent" type="color" required /></label>
+              <label>Alt Accent Color <input name="altAccent" type="color" required /></label>
+              <label>
+                Default Theme
+                <select name="defaultMode">
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </label>
+              <label class="full">Font Family <input name="fontFamily" required /></label>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>Contact</h3>
+            <div class="panel-grid two">
+              <label>Email <input type="email" name="email" required /></label>
+              <label>Phone <input name="phone" required /></label>
+              <label>LinkedIn <input name="linkedin" required /></label>
+              <label>GitHub <input name="github" required /></label>
+              <label class="full">Instagram <input name="instagram" required /></label>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>Quick Lists (one item per line)</h3>
+            <div class="panel-grid two">
+              <label>Skills <textarea name="skills" rows="8"></textarea></label>
+              <label>Interests <textarea name="interests" rows="8"></textarea></label>
+              <label>Achievements <textarea name="achievements" rows="8"></textarea></label>
+              <label>Certifications <textarea name="certifications" rows="8"></textarea></label>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>Structured JSON Editors</h3>
+            <div class="panel-grid">
+              <label>Experience JSON <textarea name="experienceJson" rows="12"></textarea></label>
+              <label>Projects JSON <textarea name="projectsJson" rows="12"></textarea></label>
+              <label>Education JSON <textarea name="educationJson" rows="8"></textarea></label>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>Mode-specific CV Upload</h3>
+            <div class="panel-grid two">
+              <label>
+                Light Mode CV (PDF)
+                <input type="file" accept="application/pdf" name="cvLight" />
+              </label>
+              <button type="button" data-upload-light>Upload Light CV</button>
+              <label>
+                Dark Mode CV (PDF)
+                <input type="file" accept="application/pdf" name="cvDark" />
+              </label>
+              <button type="button" data-upload-dark>Upload Dark CV</button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>Project Image Upload + Crop</h3>
+            <p>Fixed ratios: thumbnail 640x400 and feature image 1280x720.</p>
+            <div class="panel-grid two">
+              <label>Project Index <input type="number" min="0" name="projectIndex" value="0" /></label>
+              <label>
+                Target
+                <select name="projectImageType">
+                  <option value="thumbnail">Thumbnail (16:10)</option>
+                  <option value="image">Feature Image (16:9)</option>
+                </select>
+              </label>
+              <label class="full">Source Image <input type="file" accept="image/*" name="projectImage" /></label>
+            </div>
+            <div class="crop-stage">
+              <img data-crop-image alt="Crop preview target" />
+            </div>
+            <button type="button" data-project-upload>Upload Cropped Project Image</button>
+          </article>
+
+          <button type="submit" class="save-main">Save Portfolio Data</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="../js/firebase-config.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script type="module" src="../js/app/admin.js"></script>
+  </body>
+</html>
