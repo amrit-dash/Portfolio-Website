@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Site content is publicly readable but only the authenticated owner
+    // can write. Lock writes down further to a specific UID if desired
+    // by replacing `isSignedIn()` with `request.auth.uid == "OWNER_UID"`.
+    match /site/{doc} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+  }
+}

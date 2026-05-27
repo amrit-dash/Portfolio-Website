@@ -1,0 +1,127 @@
+/* ====================================================================
+ *  THEME TOKENS - Light & Dark
+ * --------------------------------------------------------------------
+ *  Modern retro aesthetic. CRT terminal vibes for dark mode,
+ *  warm paper-and-ink vibes for light mode. CSS custom properties
+ *  drive every coloured surface so the theme toggle is instant.
+ * ==================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap");
+
+:root {
+    --font-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    --font-body:    "Space Grotesk", system-ui, -apple-system, sans-serif;
+    --font-mono:    "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --font-crt:     "VT323", "JetBrains Mono", monospace;
+
+    --radius-sm: 6px;
+    --radius:    12px;
+    --radius-lg: 22px;
+
+    --shadow-sm: 0 2px 8px rgba(0,0,0,.08);
+    --shadow:    0 14px 40px -10px rgba(0,0,0,.18);
+    --shadow-lg: 0 30px 80px -20px rgba(0,0,0,.35);
+
+    --space-1: 8px;
+    --space-2: 16px;
+    --space-3: 24px;
+    --space-4: 32px;
+    --space-5: 48px;
+    --space-6: 72px;
+    --space-7: 112px;
+
+    --container-max: 1240px;
+    --container-wide: 1480px;
+
+    --transition: 220ms cubic-bezier(.4,.0,.2,1);
+    --transition-slow: 520ms cubic-bezier(.4,.0,.2,1);
+
+    --accent: #ff7a3d;
+}
+
+/* --------- LIGHT --------- */
+:root,
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bg:         #f4ede2;
+    --bg-soft:    #ece1cd;
+    --bg-strong:  #e2d2b3;
+    --bg-card:    #fffaf0;
+    --bg-elev:    #fffefb;
+    --bg-glass:   rgba(255, 250, 240, .72);
+    --grid-color: rgba(20, 18, 36, .06);
+
+    --ink:        #14122a;
+    --ink-soft:   #34324a;
+    --ink-mute:   #6b6884;
+    --ink-faint:  #a4a1bb;
+
+    --line:       rgba(20, 18, 36, .12);
+    --line-soft:  rgba(20, 18, 36, .06);
+
+    --accent:        #ff7a3d;
+    --accent-soft:   #ffd9c5;
+    --accent-strong: #d75416;
+    --accent-glow:   rgba(255, 122, 61, .35);
+
+    --success: #2f9e44;
+    --danger:  #d6336c;
+
+    --crt-bg:    #14122a;
+    --crt-text:  #ffd49c;
+    --crt-glow:  #ff9a5b;
+
+    --code-bg:   #14122a;
+    --code-text: #fff3df;
+
+    --noise-opacity: .035;
+}
+
+/* --------- DARK --------- */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg:         #0b0d18;
+    --bg-soft:    #11142a;
+    --bg-strong:  #1a1f3d;
+    --bg-card:    #141731;
+    --bg-elev:    #1a1f3d;
+    --bg-glass:   rgba(11, 13, 24, .65);
+    --grid-color: rgba(110, 255, 198, .07);
+
+    --ink:        #f1f4ff;
+    --ink-soft:   #cdd3ee;
+    --ink-mute:   #8a92b4;
+    --ink-faint:  #5c6488;
+
+    --line:       rgba(120, 130, 175, .22);
+    --line-soft:  rgba(120, 130, 175, .10);
+
+    --accent:        #6effc6;
+    --accent-soft:   rgba(110, 255, 198, .15);
+    --accent-strong: #21e0a3;
+    --accent-glow:   rgba(110, 255, 198, .35);
+
+    --success: #6effc6;
+    --danger:  #ff7a9c;
+
+    --crt-bg:    #04060e;
+    --crt-text:  #6effc6;
+    --crt-glow:  #21e0a3;
+
+    --code-bg:   #04060e;
+    --code-text: #6effc6;
+
+    --noise-opacity: .055;
+}
+
+/* Reduced motion ----------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

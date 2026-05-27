@@ -6,7 +6,15 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "firebase-config.js"
+      ],
+      "rewrites": [
+        { "source": "/admin",       "destination": "/admin.html" },
+        { "source": "/admin/**",    "destination": "/admin.html" },
+        { "source": "/dashboard",   "destination": "/admin.html" },
+        { "source": "/dashboard/**","destination": "/admin.html" },
+        { "source": "**",           "destination": "/index.html" }
       ]
     },
     {
@@ -15,14 +23,22 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "firebase-config.js"
+      ],
+      "rewrites": [
+        { "source": "/admin",       "destination": "/admin.html" },
+        { "source": "/admin/**",    "destination": "/admin.html" },
+        { "source": "/dashboard",   "destination": "/admin.html" },
+        { "source": "/dashboard/**","destination": "/admin.html" },
+        { "source": "**",           "destination": "/index.html" }
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "**",
-      "destination": "/index.html"
-    }
-  ]
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
 }

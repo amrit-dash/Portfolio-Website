@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <title>Dashboard · Amrit Dash</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/icons/favicons/favicon-32x32.png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('ad-theme');
+                var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+                document.documentElement.setAttribute('data-theme', stored || (prefersLight ? 'light' : 'dark'));
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body class="admin-body">
+
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-noise" aria-hidden="true"></div>
+
+<!-- ============================================================
+     LOGIN GATE
+     ============================================================ -->
+<section class="admin-login" id="login-view">
+    <div class="login-card">
+        <div class="login-brand">
+            <span class="login-dot"></span>
+            <h1>amrit.dash <span class="muted">// dashboard</span></h1>
+        </div>
+        <p class="muted login-lede">Restricted. Sign in with the owner account to make changes.</p>
+
+        <div id="login-status" class="status"></div>
+
+        <form id="login-form">
+            <label>Email
+                <input type="email" id="login-email" autocomplete="username" required>
+            </label>
+            <label>Password
+                <input type="password" id="login-password" autocomplete="current-password" required>
+            </label>
+            <button class="btn btn--accent" type="submit">Sign in</button>
+        </form>
+
+        <p class="login-help muted">
+            Firebase Auth must be enabled in your project and at least one user must exist.
+            See <code>FIREBASE_SETUP.md</code> for setup.
+        </p>
+    </div>
+</section>
+
+<!-- ============================================================
+     DASHBOARD
+     ============================================================ -->
+<section class="admin-shell" id="dashboard-view" hidden>
+    <aside class="admin-side">
+        <div class="admin-brand">
+            <span class="login-dot"></span>
+            <strong>dashboard</strong>
+        </div>
+        <nav class="admin-nav">
+            <button class="nav-item is-active" data-pane="content"><span>📝</span> Content</button>
+            <button class="nav-item" data-pane="experience"><span>🧭</span> Experience</button>
+            <button class="nav-item" data-pane="cv"><span>📄</span> CV files</button>
+            <button class="nav-item" data-pane="images"><span>🖼️</span> Images</button>
+            <button class="nav-item" data-pane="cosmetics"><span>🎨</span> Cosmetics</button>
+        </nav>
+        <div class="admin-footer">
+            <div class="who muted" id="who"></div>
+            <button class="btn btn--ghost" id="logout">Sign out</button>
+            <a class="btn btn--ghost" href="/" target="_blank" rel="noopener">View site ↗</a>
+        </div>
+    </aside>
+
+    <main class="admin-main">
+        <header class="admin-topbar">
+            <h2 id="pane-title">Content</h2>
+            <div class="admin-actions">
+                <span class="save-status muted" id="save-status"></span>
+                <button class="btn btn--accent" id="save-all">Save changes</button>
+            </div>
+        </header>
+
+        <!-- Content pane -->
+        <section class="admin-pane is-active" data-pane="content">
+            <div class="card">
+                <h3>Hero</h3>
+                <label>Display name <input type="text" data-bind="hero.name"></label>
+                <label>Sub-headline <textarea rows="3" data-bind="hero.sub"></textarea></label>
+            </div>
+            <div class="card">
+                <h3>About — paragraphs</h3>
+                <label>Paragraph 1 <textarea rows="3" data-bind="about.p1"></textarea></label>
+                <label>Paragraph 2 <textarea rows="3" data-bind="about.p2"></textarea></label>
+                <label>Paragraph 3 <textarea rows="3" data-bind="about.p3"></textarea></label>
+            </div>
+        </section>
+
+        <!-- Experience pane -->
+        <section class="admin-pane" data-pane="experience">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Timeline entries</h3>
+                    <button class="btn btn--ghost" id="add-exp">+ Add entry</button>
+                </div>
+                <div id="exp-list" class="exp-list"></div>
+            </div>
+        </section>
+
+        <!-- CV pane -->
+        <section class="admin-pane" data-pane="cv">
+            <div class="card">
+                <h3>Dark mode CV (PDF)</h3>
+                <p class="muted">This file is served when the site is in dark mode.</p>
+                <div class="upload-row">
+                    <input type="file" id="cv-dark-file" accept="application/pdf">
+                    <a id="cv-dark-link" class="btn btn--ghost" href="#" target="_blank" hidden>Current ↗</a>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Light mode CV (PDF)</h3>
+                <p class="muted">This file is served when the site is in light mode.</p>
+                <div class="upload-row">
+                    <input type="file" id="cv-light-file" accept="application/pdf">
+                    <a id="cv-light-link" class="btn btn--ghost" href="#" target="_blank" hidden>Current ↗</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Images pane -->
+        <section class="admin-pane" data-pane="images">
+            <div class="card">
+                <h3>About photo</h3>
+                <p class="muted">Recommended crop: 4&times;5 portrait.</p>
+                <div class="upload-row">
+                    <input type="file" id="about-photo-file" accept="image/*" data-aspect="0.8" data-target="about.photo">
+                </div>
+                <img id="about-photo-current" class="thumb" hidden>
+            </div>
+            <div class="card">
+                <h3>Project covers</h3>
+                <p class="muted">Recommended crop: 16&times;10 landscape.</p>
+                <div id="project-uploads" class="project-uploads"></div>
+            </div>
+        </section>
+
+        <!-- Cosmetics pane -->
+        <section class="admin-pane" data-pane="cosmetics">
+            <div class="card">
+                <h3>Cosmetics</h3>
+                <label>Default theme
+                    <select data-bind="cosmetics.defaultTheme">
+                        <option value="">(follow visitor's OS)</option>
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                    </select>
+                </label>
+                <label>Accent colour
+                    <input type="color" data-bind="cosmetics.accent" value="#ff7a3d">
+                </label>
+                <label>Body font family
+                    <select data-bind="cosmetics.font">
+                        <option value='"Space Grotesk", system-ui, sans-serif'>Space Grotesk (default)</option>
+                        <option value='"Inter", system-ui, sans-serif'>Inter</option>
+                        <option value='"DM Serif Display", serif'>DM Serif Display</option>
+                        <option value='"JetBrains Mono", monospace'>JetBrains Mono</option>
+                    </select>
+                </label>
+                <p class="muted">Changes apply immediately on the main site (and are stored in Firestore so they persist across devices).</p>
+            </div>
+        </section>
+    </main>
+</section>
+
+<!-- ============================================================
+     CROP DIALOG
+     ============================================================ -->
+<div class="crop-backdrop" id="crop-backdrop" hidden>
+    <div class="crop-dialog">
+        <header><h3 id="crop-title">Crop image</h3></header>
+        <div class="crop-area">
+            <img id="crop-image" alt="">
+        </div>
+        <footer>
+            <button class="btn btn--ghost" id="crop-cancel">Cancel</button>
+            <button class="btn btn--accent" id="crop-confirm">Save crop</button>
+        </footer>
+    </div>
+</div>
+
+<!-- Optional Firebase config file (gitignored). If absent the dashboard
+     shows a friendly setup message. -->
+<script src="firebase-config.js" onerror="window.__FIREBASE_MISSING__=true"></script>
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>
