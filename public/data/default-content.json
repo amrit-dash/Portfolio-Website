@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "settings": {
+    "defaultTheme": "dark",
+    "accentLight": "#c45c26",
+    "accentDark": "#5eead4",
+    "fontDisplay": "\"Press Start 2P\", monospace",
+    "fontBody": "\"IBM Plex Mono\", monospace",
+    "bootLines": [
+      "AMRIT-OS v2025.5 booting...",
+      "Loading automation modules...",
+      "Mounting portfolio filesystem...",
+      "Ready."
+    ]
+  },
+  "profile": {
+    "name": "Amrit Dash",
+    "pretitle": "Hey There",
+    "headline": [
+      "I am Amrit Dash,",
+      "an AI & Automation Engineer",
+      "building intelligent workflows",
+      "and delightful products."
+    ],
+    "summary": "Software Engineer with 5 years of experience implementing automation projects. Worked as a consultant on Cash Application Automation for 2 years. I prioritize real-world applications over textbook problem-solving with a fail-first, fix-fast mindset. Outside of work, I perform stand-up comedy and chase good food and new adventures.",
+    "aboutPhoto": "images/about-photo.jpg",
+    "aboutPhoto2x": "images/about-photo@2x.jpg",
+    "email": "amrit.dash60@gmail.com",
+    "phone": "+91-7978416962",
+    "social": [
+      { "label": "Email", "url": "mailto:amrit.dash60@gmail.com" },
+      { "label": "LinkedIn", "url": "https://linkedin.com/in/amritdash60" },
+      { "label": "GitHub", "url": "https://github.com/the-AoG-guy" },
+      { "label": "Instagram", "url": "https://instagram.com/_amrit_dash_" }
+    ]
+  },
+  "skills": [
+    "Google Apps Script",
+    "Make · Zapier · n8n",
+    "Monday.com & HubSpot",
+    "Node.js & SQL",
+    "LLM Agents with RAG",
+    "Flutter & Firebase",
+    "WhatsApp & Twilio Bots",
+    "Shopify Liquid",
+    "React & TypeScript"
+  ],
+  "experience": [
+    {
+      "id": "contour",
+      "company": "Contour Education",
+      "role": "Automation Engineer",
+      "period": "August 2025 — Present",
+      "highlight": true,
+      "description": "Driving end-to-end automation of student onboarding, class allocation, attendance tracking, and parent-student communication using Make.com, Zapier, n8n, and Google Apps Script with core CRM operations on Monday.com."
+    },
+    {
+      "id": "freelance",
+      "company": "Various Project-Based Roles",
+      "role": "Freelance Software Engineer",
+      "period": "September 2024 — July 2025",
+      "description": "Flutter Developer at CDT Koraput (Coffee Mapper). AI Engineer at BeGig building a custom LLM chatbot with RAG. Shopify developer for Kunsquad. WhatsApp bot developer for Nothing Bot Comedy spot curation in Bangalore."
+    },
+    {
+      "id": "axelerant",
+      "company": "Axelerant Technologies",
+      "role": "Business Automation Engineer",
+      "period": "July 2023 — August 2024",
+      "description": "Built automation scenarios for manual business processes using Make, Zapier, Apps Script, and Zoho. Delivered end-to-end employee onboarding, appraisal, and offboarding automations with ongoing optimization for cost efficiency."
+    },
+    {
+      "id": "highradius",
+      "company": "Highradius Corporation",
+      "role": "Script Automation Team Lead",
+      "period": "July 2022 — June 2023",
+      "description": "Built Apps Script Automation Projects (ASAP) tools adopted company-wide for project management, team management, and faster data gathering for consultants."
+    },
+    {
+      "id": "highradius-intern",
+      "company": "Highradius Corporation",
+      "role": "Consultant — Cash Application Automation",
+      "period": "Earlier tenure",
+      "description": "Implemented CAA projects for Zurich Insurance, CrediQ, Heritage Crystal Clean, and Bureau Veritas. Managed resources and delivered live client implementations after co-op training."
+    }
+  ],
+  "education": [
+    {
+      "id": "kiit",
+      "title": "KIIT University",
+      "subtitle": "Bachelor of Technology — Computer Science & Engineering",
+      "period": "April 2017 — April 2021",
+      "description": "CGPA 7.90. Active in student developer clubs, hackathons, and technical events."
+    },
+    {
+      "id": "scores",
+      "title": "Standardized Scores",
+      "subtitle": "Academic benchmarks",
+      "period": "",
+      "description": "IELTS: 8.0 · GRE: 306.5 · CGPA: 7.90"
+    },
+    {
+      "id": "certs",
+      "title": "Certifications",
+      "subtitle": "Professional development",
+      "period": "",
+      "description": "Make Automation Expert (Levels 1–4) · Google Cloud Essentials · Machine Learning APIs · Build Interactive Apps with Google Assistant · Kubernetes in Google Cloud · Leadership Axelerator Program (LeAP)"
+    },
+    {
+      "id": "achievements",
+      "title": "Achievements",
+      "subtitle": "Recognition",
+      "period": "",
+      "description": "AIR 1 in Digit CTC VI (Crack the Code). Runners Up, Run IO Hackathon (NIT Rourkela). Highflyer Intern of the Quarter (Q2 2021) and Star Team Award (Q3 2021) at Highradius. Tech speaker on Actions on Google at IIIT Bhubaneswar, CVRCE, and DevExpo."
+    }
+  ],
+  "projects": [
+    {
+      "id": "genkiflow",
+      "title": "GenkiFlow IDE",
+      "category": "Next.js Web App",
+      "thumbnail": "images/portfolio/make.jpg",
+      "gallery": "images/portfolio/gallery/make.jpg",
+      "description": "A web-based IDE embedding Google Genkit AI for code generation, refactoring, and summarization—with a multi-tab editor and persistent browser-based file system for a context-aware workflow.",
+      "tags": ["Next.js", "Genkit", "AI"],
+      "links": [{ "label": "GitHub", "url": "https://github.com/the-AoG-guy" }],
+      "featured": true
+    },
+    {
+      "id": "coffee-mapper",
+      "title": "Coffee Mapper",
+      "category": "Flutter Android App",
+      "thumbnail": "images/portfolio/coffeeMapper.jpg",
+      "gallery": "images/portfolio/gallery/coffeeMapper.jpg",
+      "description": "Android app for Coffee Development Trust, Koraput—field agents track coffee plantations and capture region-specific details.",
+      "tags": ["Flutter", "Android"],
+      "links": [
+        { "label": "Play Store", "url": "https://play.google.com/store/apps/details?id=com.coffee.mapper" },
+        { "label": "GitHub", "url": "https://github.com/amrit-dash/coffee-mapper-android" }
+      ],
+      "featured": true
+    },
+    {
+      "id": "coffee-dashboard",
+      "title": "Coffee Mapper Dashboard",
+      "category": "Flutter Web",
+      "thumbnail": "images/portfolio/cdtKoraput.jpg",
+      "gallery": "images/portfolio/gallery/dashboard.jpg",
+      "description": "Admin dashboard with map views and report generation for tracked plantation regions.",
+      "tags": ["Flutter Web", "Maps"],
+      "links": [
+        { "label": "Live Site", "url": "https://coffee-mapper-dashboard.web.app" },
+        { "label": "GitHub", "url": "https://github.com/amrit-dash/coffee-mapper-web" }
+      ]
+    },
+    {
+      "id": "nbc",
+      "title": "Nothing BOT Comedy",
+      "category": "WhatsApp Bot",
+      "thumbnail": "images/portfolio/nbc.jpg",
+      "gallery": "images/portfolio/gallery/nbc.jpg",
+      "description": "WhatsApp bot for comedy club spot curation—150+ comics used it weekly to check venue availability.",
+      "tags": ["WhatsApp", "Twilio", "Apps Script"],
+      "links": [
+        { "label": "Message Bot", "url": "https://wa.me/message/OGQRIVZ7W7JAN1" },
+        { "label": "GitHub", "url": "https://github.com/amrit-dash/Nothing-BOT-Comedy" }
+      ]
+    },
+    {
+      "id": "kunsquad",
+      "title": "Kunsquad Website",
+      "category": "Shopify Liquid",
+      "thumbnail": "images/portfolio/kunsquad.jpg",
+      "gallery": "images/portfolio/gallery/kunsquad.jpg",
+      "description": "Custom pages and widget assets for a Bhubaneswar e-commerce startup.",
+      "tags": ["Shopify", "Liquid"],
+      "links": [{ "label": "About Us", "url": "https://www.kunsquad.com/pages/about-us" }]
+    },
+    {
+      "id": "asap-cg",
+      "title": "ASAP — Customer Group Generator",
+      "category": "Apps Script",
+      "thumbnail": "images/portfolio/asapCG.jpg",
+      "gallery": "images/portfolio/gallery/asapCG.jpg",
+      "description": "Recommends potential customer groups from similar-sounding names—integrated with Google Sheets and a Firebase web UI.",
+      "tags": ["Apps Script", "Firebase"],
+      "links": [
+        { "label": "Documentation", "url": "https://docs.google.com/document/d/1omFaGxy4gHuwoJK1VQ7cvItkUfbLBPELfN9nB-xFVB8/edit?usp=sharing" },
+        { "label": "Website", "url": "https://fuzzy-customer-group-generator.firebaseapp.com" }
+      ]
+    },
+    {
+      "id": "make-automation",
+      "title": "Make Automation Projects",
+      "category": "Make.com",
+      "thumbnail": "images/portfolio/make.jpg",
+      "gallery": "images/portfolio/gallery/make.jpg",
+      "description": "DSM Bot for daily status meetings and Cricket Bot for prediction and engagement—showcasing workflow automation and SaaS integrations.",
+      "tags": ["Make.com", "Slack", "ChatGPT"],
+      "links": [{ "label": "GitHub", "url": "https://github.com/amrit-dash/Make-Automation-Projects" }]
+    },
+    {
+      "id": "miss-lily",
+      "title": "Miss Lily",
+      "category": "Actions on Google",
+      "thumbnail": "images/portfolio/make.jpg",
+      "gallery": "images/portfolio/gallery/make.jpg",
+      "description": "Personal health assistant Action on Google for healthy living, disease support, and medicine scheduling.",
+      "tags": ["Actions on Google", "Dialogflow"],
+      "links": []
+    }
+  ],
+  "contact": {
+    "heading": "Get In Touch",
+    "message": "Have an automation idea, a product to build, or just want to talk comedy? Drop a line.",
+    "whatsapp": "https://wa.me/917978416962?text=Hey!",
+    "extraSocial": [
+      { "label": "About.me", "url": "https://about.me/amritdash" }
+    ]
+  },
+  "assets": {
+    "cvLight": "assets/cv/Amrit-Dash-CV-2025-light.pdf",
+    "cvDark": "assets/cv/Amrit-Dash-CV-2025-dark.pdf",
+    "cvLightStorage": "",
+    "cvDarkStorage": ""
+  },
+  "imageSpecs": {
+    "thumbnail": { "width": 600, "height": 650 },
+    "gallery": { "width": 1200, "height": 1300 }
+  }
+}

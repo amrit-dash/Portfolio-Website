@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-This is a static portfolio website (HTML/CSS/JS) served from the `public/` directory. There is no build step, no backend, no test framework, and no linter configured.
+This is a static portfolio website (HTML/CSS/JS) served from the `public/` directory. Content can be loaded from `public/data/default-content.json` (fallback) or Firestore (`portfolio/content`). An admin dashboard lives at `/admin` (not linked from the public site). See `FIREBASE_SETUP.md` for Firebase Auth, Firestore, and Storage setup. There is no build step and no test framework.
 
 ### Running the dev server
 
@@ -15,9 +15,12 @@ This serves the `public/` directory on port 3000. The `serve` package will be au
 ### Project structure
 
 - `public/` — All static assets served directly (HTML, CSS, JS, images)
-- `public/index.html` — Single-page entry point
-- `public/js/` — Vanilla JS modules (preloader, lightbox, swiper, scroll-spy, etc.)
-- `public/css/` — Modular CSS + vendor styles
+- `public/index.html` — Single-page portfolio (retro desktop UI)
+- `public/admin/` — Authenticated content dashboard
+- `public/js/portfolio-app.js` — Main app entry; `public/js/core/`, `public/js/ui/`
+- `public/css/retro-system.css` — Theme + layout
+- `public/data/default-content.json` — Default portfolio data
+- `firestore.rules`, `storage.rules` — Security rules (admin email only writes)
 - `firebase.json` — Firebase Hosting configuration (rewrites all routes to `index.html`)
 
 ### Notes

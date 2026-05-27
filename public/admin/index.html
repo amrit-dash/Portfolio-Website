@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Portfolio Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+    <div id="login-view" class="admin-login">
+        <div class="admin-login__card">
+            <h1>Portfolio Dashboard</h1>
+            <p>Sign in with your admin Google account to manage site content and assets.</p>
+            <div id="login-error" class="status-bar is-error hidden"></div>
+            <button type="button" class="btn" id="google-signin">Sign in with Google</button>
+            <p style="margin-top:1rem;font-size:0.7rem;color:var(--muted)">
+                Access only via direct URL. Not linked from the public site.
+            </p>
+        </div>
+    </div>
+
+    <div id="admin-shell" class="admin-shell">
+        <header class="admin-header">
+            <h1>Amrit Dash — Site Control</h1>
+            <div>
+                <span id="admin-user" style="font-size:0.75rem;color:var(--muted);margin-right:1rem"></span>
+                <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+            </div>
+        </header>
+        <div id="status-bar" class="status-bar">Ready</div>
+
+        <div class="admin-layout">
+            <nav class="admin-nav" aria-label="Dashboard sections">
+                <button type="button" data-panel="profile" class="is-active">Profile</button>
+                <button type="button" data-panel="experience">Experience</button>
+                <button type="button" data-panel="projects">Projects</button>
+                <button type="button" data-panel="theme">Theme & UI</button>
+                <button type="button" data-panel="assets">CV & Assets</button>
+            </nav>
+
+            <main class="admin-main">
+                <section id="panel-profile" class="admin-panel is-active">
+                    <h2>Profile & Contact</h2>
+                    <form id="form-profile">
+                        <label>Name<input name="name" required></label>
+                        <label>Pretitle<input name="pretitle"></label>
+                        <label>Headline (one line per row)<textarea name="headline" rows="4"></textarea></label>
+                        <label>Summary<textarea name="summary" rows="5"></textarea></label>
+                        <label>Email<input name="email" type="email"></label>
+                        <label>Phone<input name="phone"></label>
+                        <label>Skills (comma-separated)<input name="skills"></label>
+                        <label>Contact heading<input name="contactHeading"></label>
+                        <label>Contact message<textarea name="contactMessage" rows="3"></textarea></label>
+                        <button type="submit" class="btn">Save profile</button>
+                    </form>
+                </section>
+
+                <section id="panel-experience" class="admin-panel">
+                    <h2>Experience Timeline</h2>
+                    <p style="font-size:0.8rem;color:var(--muted)">Edit JSON for full control. Order matters (first = most recent).</p>
+                    <label>Experience JSON<textarea id="experience-json" rows="12"></textarea></label>
+                    <label>Education JSON<textarea id="education-json" rows="10"></textarea></label>
+                    <button type="button" class="btn" id="save-experience">Save timeline</button>
+                </section>
+
+                <section id="panel-projects" class="admin-panel">
+                    <h2>Projects</h2>
+                    <div id="projects-editor"></div>
+                    <button type="button" class="btn btn--ghost" id="add-project" style="margin-top:1rem">+ Add project</button>
+                    <button type="button" class="btn" id="save-projects" style="margin-top:1rem">Save all projects</button>
+                </section>
+
+                <section id="panel-theme" class="admin-panel">
+                    <h2>Theme & Cosmetics</h2>
+                    <form id="form-theme">
+                        <label>Default theme
+                            <select name="defaultTheme">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                        </label>
+                        <div class="form-row">
+                            <label>Accent (light mode)<input name="accentLight" type="color"></label>
+                            <label>Accent (dark mode)<input name="accentDark" type="color"></label>
+                        </div>
+                        <label>Display font<input name="fontDisplay"></label>
+                        <label>Body font<input name="fontBody"></label>
+                        <label>Boot lines (one per line)<textarea name="bootLines" rows="5"></textarea></label>
+                        <button type="submit" class="btn">Save theme</button>
+                    </form>
+                </section>
+
+                <section id="panel-assets" class="admin-panel">
+                    <h2>CV Downloads</h2>
+                    <p style="font-size:0.8rem;color:var(--muted)">
+                        Light-mode visitors download the light CV; dark-mode visitors get the dark CV.
+                        Thumbnail: 600×650 · Gallery: 1200×1300
+                    </p>
+                    <label>Light CV (PDF)<input type="file" id="cv-light" accept="application/pdf"></label>
+                    <label>Dark CV (PDF)<input type="file" id="cv-dark" accept="application/pdf"></label>
+                    <p id="cv-status" style="font-size:0.75rem;color:var(--muted)"></p>
+                    <hr style="border-color:var(--border);margin:2rem 0">
+                    <h2>About photo</h2>
+                    <label>Upload photo<input type="file" id="about-photo" accept="image/*"></label>
+                    <button type="button" class="btn btn--ghost hidden" id="crop-about-photo">Crop & upload</button>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div id="crop-modal" class="crop-modal" role="dialog" aria-modal="true">
+        <div class="crop-modal__box">
+            <h3 id="crop-title" style="margin:0 0 1rem;font-size:0.85rem">Crop image</h3>
+            <div class="crop-modal__preview">
+                <img id="crop-image" src="" alt="">
+            </div>
+            <div class="crop-actions">
+                <button type="button" class="btn" id="crop-confirm">Upload cropped</button>
+                <button type="button" class="btn btn--ghost" id="crop-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+    <script type="module" src="js/admin-app.js"></script>
+</body>
+</html>
