@@ -7,6 +7,28 @@
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/admin",
+          "destination": "/admin/index.html"
+        },
+        {
+          "source": "/admin/login",
+          "destination": "/admin/login.html"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "/admin/**",
+          "headers": [
+            { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+          ]
+        }
       ]
     },
     {
@@ -16,13 +38,29 @@
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/admin",
+          "destination": "/admin/index.html"
+        },
+        {
+          "source": "/admin/login",
+          "destination": "/admin/login.html"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "/admin/**",
+          "headers": [
+            { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+          ]
+        }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "**",
-      "destination": "/index.html"
     }
   ]
 }

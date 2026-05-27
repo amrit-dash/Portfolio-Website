@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login — Amrit Dash</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #13131a;
+            --border: rgba(255,255,255,0.08);
+            --accent: #00e5a0;
+            --accent-dim: rgba(0,229,160,0.1);
+            --text: #e8e8f0;
+            --text-muted: #7878a0;
+            --error: #ff4d6d;
+            --font-body: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        html, body {
+            height: 100%;
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-wrap {
+            width: 100%;
+            max-width: 420px;
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .login-logo__mark {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+        .login-logo__sub {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px 36px;
+        }
+        .login-card h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .login-card p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            margin-bottom: 8px;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: var(--font-body);
+            font-size: 15px;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        input:focus {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: #0a0a0f;
+            border: none;
+            border-radius: 8px;
+            font-family: var(--font-body);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .error-msg {
+            display: none;
+            background: rgba(255,77,109,0.12);
+            border: 1px solid rgba(255,77,109,0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: var(--error);
+            margin-bottom: 16px;
+        }
+        .error-msg.is-visible { display: block; }
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+        .login-footer a { color: var(--text-muted); }
+        .login-footer a:hover { color: var(--accent); }
+        .spinner {
+            display: none;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(10,10,15,0.3);
+            border-top-color: #0a0a0f;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto;
+        }
+        .btn-login.is-loading .btn-text { display: none; }
+        .btn-login.is-loading .spinner { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="login-wrap">
+        <div class="login-logo">
+            <div class="login-logo__mark">&lt;AD/&gt;</div>
+            <div class="login-logo__sub">admin.portal</div>
+        </div>
+
+        <div class="login-card">
+            <h1>Admin Login</h1>
+            <p>Sign in to manage your portfolio content.</p>
+
+            <div class="error-msg" id="error-msg"></div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">// email</label>
+                    <input type="email" id="email" placeholder="you@example.com" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">// password</label>
+                    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn-login" id="login-btn">
+                    <span class="btn-text">Sign In</span>
+                    <div class="spinner"></div>
+                </button>
+            </form>
+        </div>
+
+        <div class="login-footer">
+            <a href="/">← Back to Portfolio</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from '../js/firebase-init.js';
+        import { signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+        const form = document.getElementById('login-form');
+        const btn = document.getElementById('login-btn');
+        const errorMsg = document.getElementById('error-msg');
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('is-visible');
+        }
+
+        function clearError() {
+            errorMsg.classList.remove('is-visible');
+        }
+
+        // Check if already logged in
+        if (auth) {
+            import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js').then(({ onAuthStateChanged }) => {
+                onAuthStateChanged(auth, (user) => {
+                    if (user) window.location.href = '/admin/';
+                });
+            });
+        } else {
+            showError('Firebase is not configured. Please add your Firebase config to js/firebase-init.js');
+            btn.disabled = true;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!auth) return;
+
+            clearError();
+            btn.classList.add('is-loading');
+            btn.disabled = true;
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.location.href = '/admin/';
+            } catch (err) {
+                const msgs = {
+                    'auth/user-not-found': 'No account found with this email.',
+                    'auth/wrong-password': 'Incorrect password.',
+                    'auth/invalid-email': 'Invalid email address.',
+                    'auth/too-many-requests': 'Too many attempts. Please try again later.',
+                };
+                showError(msgs[err.code] || 'Login failed. Please try again.');
+            } finally {
+                btn.classList.remove('is-loading');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
