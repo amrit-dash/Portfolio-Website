@@ -54,9 +54,12 @@ async function boot() {
     setTimeout(() => document.getElementById('preload')?.classList.add('is-done'), 400);
   });
 
-  // Re-render on a custom event so the admin dashboard can hot-reload changes.
+  // Re-render on storage change OR explicit postMessage from the admin parent.
   window.addEventListener('storage', (e) => {
     if (e.key === 'amritdash:portfolio:overrides') location.reload();
+  });
+  window.addEventListener('message', (e) => {
+    if (e && e.data === 'amritdash:refresh') location.reload();
   });
 }
 

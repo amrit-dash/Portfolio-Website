@@ -28,8 +28,7 @@ function refreshAuthUI() {
     app.hidden = true;
   }
 }
-document.getElementById('login-form').addEventListener('submit', (e) => {
-  e.preventDefault();
+function tryLogin() {
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value;
   const ok = u === VALID.user && p === VALID.pass;
@@ -39,6 +38,13 @@ document.getElementById('login-form').addEventListener('submit', (e) => {
     refreshAuthUI();
     initApp();
   }
+}
+document.getElementById('login-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  tryLogin();
+});
+document.getElementById('login-form').querySelectorAll('input').forEach(inp => {
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tryLogin(); } });
 });
 document.getElementById('logout-btn')?.addEventListener('click', () => {
   setAuthed(false);
@@ -73,7 +79,16 @@ function commit() {
 
 function refreshPreview() {
   const f = document.getElementById('preview-frame');
-  if (f) f.src = f.src.split('#')[0] + '#' + Date.now();
+  if (!f) return;
+  // Primary path: tell the iframe to reload via postMessage. Same-origin so
+  // it always reaches the public site's listener.
+  try { f.contentWindow.postMessage('amritdash:refresh', '*'); } catch (_) { /* */ }
+  // Fallback: explicit reload via location.replace, in case the listener
+  // wasn't attached yet (first paint) or postMessage was somehow ignored.
+  setTimeout(() => {
+    try { f.contentWindow.location.replace('/?preview=1&t=' + Date.now()); }
+    catch (_) { f.src = '/?preview=1&t=' + Date.now(); }
+  }, 400);
 }
 
 // Minimal diff: returns the parts of `cur` that differ from `orig`.
@@ -230,7 +245,7 @@ function buildIdentity() {
 
   const s4 = el('<section><h2>Profile photo</h2></section>');
   const photoRow = el('<div class="swatch-row"></div>');
-  const thumb = el(`<div class="thumb" style="aspect-ratio:4/5; width:120px; background-image:url('${id.photoRetina || id.photo || ''}')"></div>`);
+  const thumb = el(`<div class="thumb" style="aspect-ratio:4/5; width:120px; background-image:url('${normalizeAsset(id.photoRetina || id.photo || '')}')"></div>`);
   const up = uploader('Replace photo', (dataUrl) => {
     openCrop(dataUrl, 4 / 5, (cropped) => {
       id.photo = cropped;
