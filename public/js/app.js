@@ -223,11 +223,16 @@ function initNavbar() {
     /* Smooth scroll for all anchor links */
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', e => {
-            const target = document.querySelector(anchor.getAttribute('href'));
-            if (target) {
-                e.preventDefault();
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            const href = anchor.getAttribute('href');
+            /* Skip empty/placeholder anchors and modal triggers */
+            if (!href || href === '#' || anchor.dataset.project) return;
+            try {
+                const target = document.querySelector(href);
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } catch (_) { /* invalid selector — ignore */ }
         });
     });
 }
@@ -561,11 +566,24 @@ function initProjectModals() {
         });
     });
 
-    /* Open via "Explore" link on card footer (for genki project which has no external link) */
+    /* Open via "Explore" link on card footer when it has data-project (no external URL) */
     document.querySelectorAll('.project-link-btn[data-project]').forEach(btn => {
         btn.addEventListener('click', e => {
             e.preventDefault();
+            e.stopPropagation();
             openModal(btn.dataset.project);
+        });
+    });
+
+    /* Also allow clicking anywhere on project card that has data-project to open modal */
+    document.querySelectorAll('.project-card[data-project]').forEach(card => {
+        card.addEventListener('click', e => {
+            /* Only open if user didn't click a real link */
+            if (e.target.closest('a[href]:not([href="#"])')) return;
+            const pid = card.dataset.project;
+            if (pid && !modal.contains(e.target)) {
+                openModal(pid);
+            }
         });
     });
 

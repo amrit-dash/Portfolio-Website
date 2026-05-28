@@ -271,6 +271,12 @@ body.cursor-text .cursor-dot {
     z-index: 900;
     transition: background var(--duration-normal), backdrop-filter var(--duration-normal),
                 box-shadow var(--duration-normal);
+    /* Always slightly visible so toggle button stands out */
+    background: rgba(8,8,16,0.3);
+}
+
+[data-theme="light"] .navbar {
+    background: rgba(248,250,255,0.3);
 }
 
 .navbar.scrolled {
@@ -335,8 +341,8 @@ body.cursor-text .cursor-dot {
     width: 38px; height: 38px;
     border-radius: var(--radius-full);
     background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
+    border: 1.5px solid var(--border-hover);
+    color: var(--text);
     display: flex;
     align-items: center;
     justify-content: center;
