@@ -1,31 +1,63 @@
-import { ssPreloader } from './modules/preloader.js';
-import { ssMobileMenu } from './modules/mobile-menu.js';
-import { ssScrollSpy } from './modules/scroll-spy.js';
-import { ssViewAnimate } from './modules/view-animate.js';
-import { ssSwiper } from './modules/swiper.js';
-import { ssLightbox } from './modules/lightbox.js';
-import { ssAlertBoxes } from './modules/alert-boxes.js';
-import { ssMoveTo } from './modules/smooth-scroll.js';
+// Bootstrap for the public portfolio page.
 
-(function(html) {
+import { loadPortfolio } from './data.js';
+import { renderAll } from './render.js';
+import { initRevealOnScroll, initScrollSpy, initSmoothScroll, initMobileMenu } from './scroll.js';
+import { initCursor } from './cursor.js';
+import { initHero3D } from './hero3d.js';
+import {
+  applyTheme, applyAccent, applyFonts, bindThemeToggle, bindCvDownload, getInitialTheme,
+} from './theme.js';
 
-    "use strict";
+async function boot() {
+  // Default-theme can be overridden by saved or by portfolio.json.theme.defaultMode.
+  // We apply a guess before fetching to avoid flicker.
+  const guessed = getInitialTheme('dark');
+  applyTheme(guessed, { silent: true });
 
-    html.className = html.className.replace(/\bno-js\b/g, '') + ' js ';
+  let data;
+  try {
+    data = await loadPortfolio();
+  } catch (err) {
+    console.error('Failed to load portfolio.json', err);
+    data = {};
+  }
 
-    /* Initialize
-    * ------------------------------------------------------ */
-    (function ssInit() {
+  // Theme defaults (only apply if user hasn't picked one before).
+  const saved = localStorage.getItem('amritdash:theme');
+  if (!saved && data?.theme?.defaultMode) {
+    applyTheme(data.theme.defaultMode, { silent: true });
+  }
+  if (data?.theme) {
+    applyAccent(data.theme.accent, data.theme.accentAlt);
+    applyFonts({
+      fontDisplay: data.theme.fontDisplay,
+      fontBody: data.theme.fontBody,
+      fontMono: data.theme.fontMono,
+    });
+  }
 
-        ssPreloader();
-        ssMobileMenu();
-        ssScrollSpy();
-        ssViewAnimate();
-        ssSwiper();
-        ssLightbox();
-        ssAlertBoxes();
-        ssMoveTo();
+  renderAll(data);
+  bindCvDownload(data.cv || {});
+  bindThemeToggle();
+  initSmoothScroll();
+  initMobileMenu();
+  initRevealOnScroll();
+  initScrollSpy();
+  initCursor();
 
-    })();
+  // Three.js hero — non-blocking, soft-fail.
+  initHero3D().catch(err => console.warn('Hero 3D failed', err));
 
-})(document.documentElement); 
+  // Hide preloader once first paint is settled.
+  requestAnimationFrame(() => {
+    setTimeout(() => document.getElementById('preload')?.classList.add('is-done'), 400);
+  });
+
+  // Re-render on a custom event so the admin dashboard can hot-reload changes.
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'amritdash:portfolio:overrides') location.reload();
+  });
+}
+
+boot();

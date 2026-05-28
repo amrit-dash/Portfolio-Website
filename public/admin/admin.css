@@ -1,0 +1,149 @@
+/* Atlas Admin — sits on top of atlas.css design tokens */
+
+.admin-body{background:var(--bg); color:var(--text); font-family:var(--font-body); min-height:100vh}
+
+/* hide visual chrome inherited from atlas */
+.bg-grid, .bg-noise, .cursor{ display:none !important }
+
+/* ---------- LOGIN ---------- */
+.login-shell{
+  position:fixed; inset:0; display:grid; place-items:center; padding:24px;
+  background:radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%), var(--bg);
+}
+.login-card{
+  width:min(420px, 100%); padding:36px 32px;
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:24px;
+  box-shadow:var(--shadow); display:grid; gap:14px;
+}
+.login-mark{font-family:var(--font-display); font-size:1.6rem; letter-spacing:-.03em}
+.login-mark .dot{color:var(--accent)}
+.login-sub{color:var(--text-muted); margin:0 0 14px}
+.login-hint{font-size:.78rem; color:var(--text-dim); margin-top:6px}
+.login-hint code{font-family:var(--font-mono); background:var(--chip-bg); padding:2px 6px; border-radius:4px}
+.login-error{color:#f87171; font-size:.85rem; margin:0}
+.field{display:grid; gap:6px}
+.field > span{font-family:var(--font-mono); font-size:.74rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted)}
+.field input, .field select, .field textarea{
+  width:100%; padding:12px 14px; border-radius:12px;
+  border:1px solid var(--line); background:var(--bg-soft); color:var(--text);
+  transition:border-color .25s ease, background-color .25s ease;
+}
+.field input:focus, .field select:focus, .field textarea:focus{
+  outline:none; border-color:var(--accent); background:var(--bg-elev);
+}
+.field textarea{min-height:96px; resize:vertical; font-family:var(--font-body)}
+
+/* ---------- APP SHELL ---------- */
+.app{
+  display:grid; grid-template-columns:240px minmax(0,1.1fr) minmax(0,1fr);
+  height:100vh; overflow:hidden;
+}
+.sidebar{
+  background:var(--bg-soft); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; padding:22px 16px; gap:18px;
+}
+.brand{font-family:var(--font-display); font-size:1.25rem; display:flex; align-items:center; gap:10px}
+.brand .dot{width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent)}
+.side-nav{display:flex; flex-direction:column; gap:2px; margin-top:8px}
+.side-nav button{
+  text-align:left; padding:10px 12px; border-radius:10px; color:var(--text-muted); font-size:.92rem;
+  transition:background-color .25s ease, color .25s ease;
+}
+.side-nav button:hover{color:var(--text); background:var(--chip-bg)}
+.side-nav button.is-active{
+  color:var(--text); background:color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.side-actions{margin-top:auto; display:grid; gap:8px}
+.side-actions .btn{padding:10px 14px; font-size:.85rem}
+
+.editor{display:flex; flex-direction:column; min-width:0; height:100vh; overflow:hidden}
+.editor-head{
+  display:flex; justify-content:space-between; align-items:end; gap:24px;
+  padding:24px 28px 14px; border-bottom:1px solid var(--line);
+}
+.editor-head h1{font-size:1.6rem; letter-spacing:-.02em}
+.muted{color:var(--text-muted); font-size:.9rem; margin:4px 0 0}
+.editor-tools{display:flex; align-items:center; gap:10px}
+.save-status{font-family:var(--font-mono); font-size:.74rem; color:#22c55e; letter-spacing:.05em}
+.save-status.is-pending{color:#f59e0b}
+
+.editor-body{padding:24px 28px 80px; overflow:auto}
+.editor-body h2{font-size:1.1rem; margin:24px 0 12px; font-family:var(--font-display)}
+.editor-body .grid{display:grid; gap:14px}
+.grid--2{grid-template-columns:1fr 1fr}
+.grid--3{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:760px){ .grid--2, .grid--3{grid-template-columns:1fr} }
+
+.list-item{
+  border:1px solid var(--line); border-radius:14px; padding:16px;
+  background:var(--bg-elev); display:grid; gap:10px; margin-bottom:10px;
+}
+.list-item .row{display:flex; gap:8px; align-items:end}
+.list-item .row > .field{flex:1}
+.list-actions{display:flex; gap:8px; justify-content:flex-end; margin-top:6px}
+.list-actions .btn{padding:8px 14px; font-size:.85rem}
+
+.add-row{display:flex; gap:8px; margin-top:8px}
+.add-row .btn{padding:10px 16px; font-size:.88rem}
+
+.thumb{
+  width:140px; aspect-ratio:16/10; border-radius:10px; background-size:cover; background-position:center;
+  border:1px solid var(--line); background-color:var(--bg-soft);
+}
+.upload{
+  display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px;
+  background:var(--chip-bg); border:1px dashed var(--chip-line); cursor:pointer; font-size:.88rem;
+}
+.upload:hover{border-color:var(--accent); color:var(--accent)}
+.upload input{display:none}
+
+.swatch{
+  width:34px; height:34px; border-radius:50%; border:1px solid var(--line); padding:0;
+  background:currentColor; cursor:pointer;
+}
+.swatch-row{display:flex; align-items:center; gap:12px}
+.swatch-row .field{flex:1}
+
+.toolbar-tag{font-family:var(--font-mono); font-size:.7rem; padding:3px 8px; border-radius:999px; background:var(--chip-bg); border:1px solid var(--chip-line); color:var(--text-muted); margin-right:6px}
+
+/* ---------- PREVIEW PANE ---------- */
+.preview{
+  border-left:1px solid var(--line); background:var(--bg-soft);
+  display:flex; flex-direction:column; height:100vh; min-width:0;
+}
+.preview-bar{
+  display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--line);
+  background:var(--bg-elev);
+}
+.preview-bar .dot{width:10px; height:10px; border-radius:50%; background:#ef4444}
+.preview-bar .dot.dot--y{background:#f59e0b}
+.preview-bar .dot.dot--g{background:#22c55e}
+.preview-url{margin-left:8px; font-family:var(--font-mono); font-size:.78rem; color:var(--text-muted); flex:1; text-align:center}
+#preview-frame{border:0; flex:1; width:100%; background:var(--bg)}
+
+@media (max-width: 1100px){
+  .app{grid-template-columns:200px 1fr; grid-template-rows:auto 1fr}
+  .preview{grid-column:1 / -1; height:60vh}
+  .app{height:auto; overflow:auto}
+  .editor{height:auto}
+}
+@media (max-width: 720px){
+  .app{grid-template-columns:1fr}
+  .sidebar{flex-direction:row; flex-wrap:wrap; gap:6px; padding:14px}
+  .side-nav{flex-direction:row; flex-wrap:wrap; gap:4px; margin:0; flex:1}
+  .side-nav button{padding:6px 10px; font-size:.82rem}
+  .side-actions{flex-direction:row}
+}
+
+/* ---------- CROP MODAL ---------- */
+.crop-card{width:min(720px, 100%)}
+.crop-stage{
+  position:relative; margin:14px 0 18px; border-radius:14px; overflow:hidden;
+  background:#000; user-select:none; touch-action:none;
+}
+.crop-stage img{display:block; width:100%; height:auto; pointer-events:none}
+.crop-window{
+  position:absolute; border:2px solid var(--accent);
+  box-shadow:0 0 0 9999px rgba(0,0,0,.6);
+  cursor:move;
+}
