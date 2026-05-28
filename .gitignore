@@ -82,3 +82,7 @@ build/Release
 
 # dataconnect generated files
 .dataconnect
+
+# Playwright
+playwright-report/
+test-results/

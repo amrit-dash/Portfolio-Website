@@ -1,5 +1,16 @@
 {
+  "private": true,
+  "scripts": {
+    "dev": "serve public -l 3000",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report"
+  },
   "dependencies": {
     "firebase-tools": "^14.7.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "serve": "^14.2.6"
   }
 }
