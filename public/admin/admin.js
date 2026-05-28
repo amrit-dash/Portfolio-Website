@@ -4,10 +4,11 @@
    ADMIN DASHBOARD — JavaScript
    ────────────────────────────────────────────────────────────── */
 
-const CREDS_KEY    = 'admin-credentials';
-const AUTH_KEY     = 'admin-auth';
-const CONFIG_KEY   = 'portfolio-config';
-const THEME_KEY    = 'admin-theme';
+const CREDS_KEY        = 'admin-credentials';
+const AUTH_KEY         = 'admin-auth';
+const CONFIG_KEY       = 'portfolio-config';
+const THEME_KEY        = 'admin-theme';
+const FIREBASE_CFG_KEY = 'firebase-web-config';
 
 /* Default credentials (change via Settings panel) */
 const DEFAULT_CREDS = { username: 'admin', password: 'admin' };
@@ -426,6 +427,32 @@ function initSaveHandlers() {
         loadConfigIntoForms();
         showToast('All config reset to defaults');
     });
+
+    /* Firebase config save */
+    const saveFirebase = document.getElementById('save-firebase-config');
+    saveFirebase && saveFirebase.addEventListener('click', () => {
+        const rawJson = document.getElementById('firebase-config-json')?.value.trim();
+        if (!rawJson) return;
+        try {
+            const parsed = JSON.parse(rawJson);
+            if (!parsed.apiKey) { showToast('Invalid config: missing apiKey'); return; }
+            localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(parsed));
+            showFeedback('firebase-saved');
+            showToast('Firebase config saved ✓ — reload page to apply');
+        } catch (e) {
+            showToast('Invalid JSON: ' + e.message);
+        }
+    });
+
+    /* Firebase config clear */
+    const clearFirebase = document.getElementById('clear-firebase-config');
+    clearFirebase && clearFirebase.addEventListener('click', () => {
+        if (!confirm('Disconnect Firebase? The site will use localStorage fallback.')) return;
+        localStorage.removeItem(FIREBASE_CFG_KEY);
+        setVal('firebase-config-json', '');
+        updateFirebaseStatus(false);
+        showToast('Firebase disconnected');
+    });
 }
 
 function val(id) {
@@ -436,6 +463,48 @@ function val(id) {
 function checked(id) {
     const el = document.getElementById(id);
     return el ? el.checked : true;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   FIREBASE STATUS
+   ────────────────────────────────────────────────────────────── */
+function updateFirebaseStatus(connected) {
+    const items = [
+        { id: 'fb-auth-status', msgId: 'fb-auth-msg',
+          connectedMsg: 'Configured · Using Firebase Authentication',
+          pendingMsg: 'Not configured · Will replace hardcoded admin login' },
+        { id: 'fb-firestore-status', msgId: 'fb-firestore-msg',
+          connectedMsg: 'Configured · Using Cloud Firestore for persistence',
+          pendingMsg: 'Not configured · Will replace localStorage for config persistence' },
+        { id: 'fb-storage-status', msgId: 'fb-storage-msg',
+          connectedMsg: 'Configured · Firebase Storage available for uploads',
+          pendingMsg: 'Not configured · Will enable CV & image file uploads' }
+    ];
+
+    items.forEach(item => {
+        const row = document.getElementById(item.id);
+        const msg = document.getElementById(item.msgId);
+        if (!row || !msg) return;
+        const icon = row.querySelector('.firebase-icon');
+        if (connected) {
+            if (icon) { icon.textContent = '✅'; icon.className = 'firebase-icon ok'; }
+            msg.textContent = item.connectedMsg;
+        } else {
+            if (icon) { icon.textContent = '⏳'; icon.className = 'firebase-icon pending'; }
+            msg.textContent = item.pendingMsg;
+        }
+    });
+}
+
+function loadFirebaseConfigIntoForm() {
+    try {
+        const raw = localStorage.getItem(FIREBASE_CFG_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            setVal('firebase-config-json', JSON.stringify(parsed, null, 2));
+            updateFirebaseStatus(true);
+        }
+    } catch (e) { /* */ }
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -504,4 +573,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
     initSaveHandlers();
     initAppearanceLivePreview();
+    loadFirebaseConfigIntoForm();
 });

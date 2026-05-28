@@ -729,29 +729,52 @@
                 </div>
 
                 <div class="form-section">
-                    <h3 class="form-section-title">Firebase Integration Status</h3>
-                    <div class="firebase-status">
-                        <div class="firebase-item">
+                    <h3 class="form-section-title">Firebase Integration</h3>
+                    <p class="form-section-note">Paste your Firebase Web App configuration to enable cloud sync, real authentication, and file uploads. Find this in Firebase Console → Project Settings → Your Apps.</p>
+
+                    <div class="firebase-status" id="firebase-connection-status">
+                        <div class="firebase-item" id="fb-auth-status">
                             <span class="firebase-icon pending">⏳</span>
                             <div>
                                 <strong>Firebase Authentication</strong>
-                                <span>Not configured · Will replace hardcoded admin login</span>
+                                <span id="fb-auth-msg">Not configured · Will replace hardcoded admin login</span>
                             </div>
                         </div>
-                        <div class="firebase-item">
+                        <div class="firebase-item" id="fb-firestore-status">
                             <span class="firebase-icon pending">⏳</span>
                             <div>
                                 <strong>Cloud Firestore</strong>
-                                <span>Not configured · Will replace localStorage for config</span>
+                                <span id="fb-firestore-msg">Not configured · Will replace localStorage for config persistence</span>
                             </div>
                         </div>
-                        <div class="firebase-item">
+                        <div class="firebase-item" id="fb-storage-status">
                             <span class="firebase-icon pending">⏳</span>
                             <div>
                                 <strong>Firebase Storage</strong>
-                                <span>Not configured · Will enable CV &amp; image uploads</span>
+                                <span id="fb-storage-msg">Not configured · Will enable CV &amp; image file uploads</span>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:1.25rem">
+                        <label>Firebase Web App Config (JSON)</label>
+                        <textarea id="firebase-config-json" rows="8" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "amrit-dash-portfolio.firebaseapp.com",
+  "projectId": "amrit-dash-portfolio",
+  "storageBucket": "amrit-dash-portfolio.appspot.com",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn-save" id="save-firebase-config">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 12.4 19.79 19.79 0 01.22 3.79 2 2 0 012.2 1.61h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.5a16 16 0 006.59 6.59l1.27-.56a2 2 0 012.11.45c.907.339 1.85.573 2.81.7a2 2 0 011.72 2.02z"/></svg>
+                            Connect Firebase
+                        </button>
+                        <button class="btn-reset" id="clear-firebase-config">Disconnect</button>
+                        <div class="save-feedback hidden" id="firebase-saved">✓ Config saved! Reload to apply.</div>
                     </div>
                 </div>
             </section>

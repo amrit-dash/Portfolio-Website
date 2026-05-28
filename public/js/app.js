@@ -580,7 +580,25 @@ function initProjectModals() {
 /* ──────────────────────────────────────────────────────────────
    INIT
    ────────────────────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    /* Try to load config from Firebase if configured */
+    try {
+        const fbConfigRaw = localStorage.getItem('firebase-web-config');
+        if (fbConfigRaw) {
+            const { initFirebase, getConfig } = await import('./firebase-service.js');
+            const connected = await initFirebase();
+            if (connected) {
+                const cloudConfig = await getConfig();
+                if (cloudConfig && Object.keys(cloudConfig).length > 0) {
+                    /* Merge cloud config into localStorage cache */
+                    localStorage.setItem('portfolio-config', JSON.stringify(cloudConfig));
+                }
+            }
+        }
+    } catch (e) {
+        /* Silently fall back to localStorage */
+    }
+
     applyConfigTheme();
     initTheme();
     initCursor();
