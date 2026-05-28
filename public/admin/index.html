@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Portfolio Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <div id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card">
+      <h1>Platform Control</h1>
+      <p>Hidden admin panel for your portfolio. Default: <code>admin</code> / <code>admin</code> until Firebase Auth is configured.</p>
+      <label for="login-user">Username or email</label>
+      <input id="login-user" name="user" autocomplete="username" required>
+      <label for="login-pass">Password</label>
+      <input id="login-pass" name="pass" type="password" autocomplete="current-password" required>
+      <button type="submit" class="btn btn-primary" style="width:100%">Sign in</button>
+    </form>
+  </div>
+
+  <div id="dashboard" class="dashboard-layout">
+    <aside class="sidebar">
+      <h2>Dashboard</h2>
+      <button type="button" class="nav-item is-active" data-panel="overview">Overview</button>
+      <button type="button" class="nav-item" data-panel="profile">Profile & About</button>
+      <button type="button" class="nav-item" data-panel="experience">Experience</button>
+      <button type="button" class="nav-item" data-panel="projects">Projects & Media</button>
+      <button type="button" class="nav-item" data-panel="theme">Theme & UX</button>
+      <button type="button" class="nav-item" data-panel="cv">CV Files</button>
+      <button type="button" class="nav-item" data-panel="publish">Publish</button>
+      <hr style="border-color:var(--admin-border);margin:1rem 0">
+      <a href="/" target="_blank" class="nav-item">View live site ↗</a>
+      <button type="button" id="logout-btn" class="nav-item">Sign out</button>
+    </aside>
+
+    <div class="main-panel">
+      <section id="panel-overview" class="panel-section is-active">
+        <h1>Overview</h1>
+        <p class="panel-desc">Manage content, cosmetics, and assets for your portfolio platform. Changes can be saved locally for preview or published to Firebase when configured.</p>
+        <div class="card">
+          <h3>Quick actions</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:0.75rem">
+            <button type="button" id="preview-site" class="btn btn-primary">Preview site</button>
+            <button type="button" id="save-local" class="btn btn-ghost">Save draft (local)</button>
+            <button type="button" id="save-firebase" class="btn btn-ghost">Publish to Firebase</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>What you can customize</h3>
+          <ul style="color:var(--admin-muted);line-height:1.8">
+            <li>Hero copy, about text, contact messaging</li>
+            <li>Experience timeline (Contour Education as primary role)</li>
+            <li>Projects with cropped thumbnails (800×500) and gallery images (1280×720)</li>
+            <li>Light/dark theme defaults, accent colors, fonts, cursor glow</li>
+            <li>Light & dark CV PDFs for theme-aware downloads</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="panel-profile" class="panel-section">
+        <h1>Profile & About</h1>
+        <p class="panel-desc">Core identity and narrative shown on the public site.</p>
+        <div class="card">
+          <h3>Profile</h3>
+          <div class="grid-2">
+            <div><label for="profile-name">Name</label><input id="profile-name"></div>
+            <div><label for="profile-title">Title</label><input id="profile-title"></div>
+            <div><label for="profile-email">Email</label><input id="profile-email"></div>
+            <div><label for="profile-phone">Phone</label><input id="profile-phone"></div>
+          </div>
+          <label for="profile-tagline">Tagline</label>
+          <textarea id="profile-tagline" rows="2"></textarea>
+          <label for="profile-photo">Photo path / URL</label>
+          <input id="profile-photo">
+        </div>
+        <div class="card">
+          <h3>About</h3>
+          <label for="about-summary">Summary</label>
+          <textarea id="about-summary" rows="5"></textarea>
+        </div>
+        <div class="card">
+          <h3>Contact section</h3>
+          <label for="contact-headline">Headline</label>
+          <input id="contact-headline">
+          <label for="contact-sub">Subtext</label>
+          <textarea id="contact-sub" rows="2"></textarea>
+        </div>
+        <div class="card">
+          <h3>Skills</h3>
+          <div id="skills-editor"></div>
+          <button type="button" id="add-skill" class="btn btn-ghost">Add skill</button>
+        </div>
+      </section>
+
+      <section id="panel-experience" class="panel-section">
+        <h1>Experience</h1>
+        <p class="panel-desc">Timeline entries — mark current role for the live badge on the hero.</p>
+        <button type="button" id="add-experience" class="btn btn-ghost">Add experience</button>
+        <div id="experience-editor" style="margin-top:1rem"></div>
+      </section>
+
+      <section id="panel-projects" class="panel-section">
+        <h1>Projects & Media</h1>
+        <p class="panel-desc">Upload and crop images to exact dimensions before saving.</p>
+        <button type="button" id="add-project" class="btn btn-ghost">Add project</button>
+        <div id="projects-editor" style="margin-top:1rem"></div>
+      </section>
+
+      <section id="panel-theme" class="panel-section">
+        <h1>Theme & UX</h1>
+        <p class="panel-desc">Cosmetic controls mirrored on the public site.</p>
+        <form id="theme-form" class="card">
+          <div class="grid-2">
+            <div>
+              <label for="theme-default">Default mode</label>
+              <select id="theme-default">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+            <div class="color-row">
+              <div><label for="theme-accent">Accent</label><input type="color" id="theme-accent"></div>
+              <div><label for="theme-accent-2">Secondary</label><input type="color" id="theme-accent-2"></div>
+            </div>
+            <div><label for="theme-font-display">Display font</label><input id="theme-font-display"></div>
+            <div><label for="theme-font-body">Body font</label><input id="theme-font-body"></div>
+          </div>
+          <label><input type="checkbox" id="theme-cursor"> Custom cursor glow</label><br>
+          <label><input type="checkbox" id="theme-reduced"> Reduced motion</label>
+          <div style="margin-top:1rem"><button type="submit" class="btn btn-primary">Update theme draft</button></div>
+        </form>
+      </section>
+
+      <section id="panel-cv" class="panel-section">
+        <h1>CV Files</h1>
+        <p class="panel-desc">Light CV downloads in light mode; dark CV in dark mode. Bundled defaults live in <code>assets/cv/</code>.</p>
+        <div class="card grid-2">
+          <div>
+            <h3>Light mode CV (PDF)</h3>
+            <input type="file" id="cv-light-upload" accept="application/pdf">
+          </div>
+          <div>
+            <h3>Dark mode CV (PDF)</h3>
+            <input type="file" id="cv-dark-upload" accept="application/pdf">
+          </div>
+        </div>
+      </section>
+
+      <section id="panel-publish" class="panel-section">
+        <h1>Publish</h1>
+        <p class="panel-desc">Save changes locally for instant preview, or push to Firebase Realtime Database when configured.</p>
+        <div class="toolbar">
+          <button type="button" id="save-local-2" class="btn btn-primary" onclick="document.getElementById('save-local').click()">Save draft (local)</button>
+          <button type="button" id="save-firebase-2" class="btn btn-ghost" onclick="document.getElementById('save-firebase').click()">Publish to Firebase</button>
+          <button type="button" id="reset-local" class="btn btn-danger">Clear local overrides</button>
+        </div>
+        <div class="card">
+          <h3>Firebase setup</h3>
+          <p style="color:var(--admin-muted)">Copy <code>js/firebase-config.example.js</code> to <code>js/firebase-config.js</code> with your project credentials. Enable Realtime Database, Storage, and Authentication in the Firebase console.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="crop-modal" class="crop-modal">
+    <div class="crop-modal-inner">
+      <h3 style="margin-top:0">Crop image</h3>
+      <div class="crop-container"><img id="crop-image" alt="Crop preview"></div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem">
+        <button type="button" id="crop-apply" class="btn btn-primary">Apply crop</button>
+        <button type="button" id="crop-cancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

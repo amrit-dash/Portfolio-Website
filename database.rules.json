@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "site": {
+      ".read": true,
+      ".write": "auth != null"
+    }
+  }
+}

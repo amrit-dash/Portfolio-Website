@@ -1,0 +1,223 @@
+{
+  "meta": {
+    "title": "Amrit Dash",
+    "description": "Portfolio of Amrit Dash — AI & Automation Engineer building intelligent workflows and products.",
+    "author": "Amrit Dash"
+  },
+  "theme": {
+    "defaultMode": "dark",
+    "accent": "#6ee7ff",
+    "accentSecondary": "#a78bfa",
+    "fontDisplay": "Syne",
+    "fontBody": "DM Sans",
+    "cursorGlow": true,
+    "reducedMotion": false
+  },
+  "profile": {
+    "name": "Amrit Dash",
+    "title": "AI & Automation Engineer",
+    "tagline": "I design intelligent systems — from student ops automation to LLM agents and Flutter products.",
+    "location": "India",
+    "email": "amrit.dash60@gmail.com",
+    "phone": "+91 7978416962",
+    "photo": "images/about-photo.jpg",
+    "photo2x": "images/about-photo@2x.jpg",
+    "cvLight": "assets/cv/cv-light.pdf",
+    "cvDark": "assets/cv/cv-dark.pdf",
+    "social": [
+      { "label": "Email", "url": "mailto:amrit.dash60@gmail.com" },
+      { "label": "LinkedIn", "url": "https://linkedin.com/in/amritdash60" },
+      { "label": "GitHub", "url": "https://github.com/the-AoG-guy" },
+      { "label": "Instagram", "url": "https://instagram.com/_amrit_dash_" },
+      { "label": "Website", "url": "https://amritdash.web.app" }
+    ]
+  },
+  "about": {
+    "summary": "Software Engineer with 5 years of experience implementing automation projects. Worked as a consultant on Cash Application Automation for 2 years. A logical thinker who prioritizes real-world applications over textbook problem-solving — fail-first, fix-fast. Outside of work, stand-up comedy keeps the creative edge sharp. Always seeking new adventures, driven by wanderlust and a knack for discovering great food."
+  },
+  "skills": [
+    "Google Apps Script",
+    "Make.com · Zapier · n8n",
+    "Monday.com · HubSpot CRMs",
+    "Node.js · SQL",
+    "WhatsApp & Twilio Bots",
+    "LLM Agents with RAG",
+    "Dart & Flutter",
+    "Firebase",
+    "Shopify Liquid",
+    "React & TypeScript",
+    "Client Communication"
+  ],
+  "experience": [
+    {
+      "id": "contour",
+      "company": "Contour Education",
+      "role": "Automation Engineer",
+      "timeframe": "Aug 2025 — Present",
+      "current": true,
+      "description": "Driving end-to-end automation of student onboarding, class allocation, attendance tracking, and parent-student communication using Make.com, Zapier, n8n, and Google Apps Script, with core CRM operations on Monday.com."
+    },
+    {
+      "id": "freelance",
+      "company": "Freelance · Project-based roles",
+      "role": "Software Engineer",
+      "timeframe": "Sep 2024 — Jul 2025",
+      "current": false,
+      "description": "Flutter Developer at CDT Koraput (Coffee Mapper). AI Engineer at BeGig (custom LLM chatbot with RAG). Shopify Developer for Kunsquad. Software Developer for Nothing BOT Comedy (WhatsApp spot curation)."
+    },
+    {
+      "id": "axelerant",
+      "company": "Axelerant Technologies",
+      "role": "Business Automation Engineer",
+      "timeframe": "Jul 2023 — Aug 2024",
+      "current": false,
+      "description": "Built automation scenarios for manual business processes using Make, Zapier, Apps Script, and Zoho. Delivered end-to-end employee onboarding, appraisal, and offboarding systems; maintained and optimized automations for cost efficiency."
+    },
+    {
+      "id": "highradius",
+      "company": "Highradius Corporation",
+      "role": "Script Automation Team Lead",
+      "timeframe": "Jul 2022 — Jun 2023",
+      "current": false,
+      "description": "Built Apps Script Automation Projects (ASAP) tools for consultants — project management, team management, and faster data gathering. Earlier: Cash Application Automation for Bank of America clients (Zurich Insurance, CrediQ, Heritage Crystal Clean, Bureau Veritas)."
+    }
+  ],
+  "education": [
+    {
+      "school": "KIIT University",
+      "degree": "B.Tech — Computer Science & Engineering",
+      "timeframe": "Apr 2017 — Apr 2021",
+      "description": "CGPA 7.90. Active in hackathons, DSC, and developer communities."
+    }
+  ],
+  "scores": [
+    { "label": "CGPA", "value": "7.90" },
+    { "label": "IELTS", "value": "8.0" },
+    { "label": "GRE", "value": "306.5" }
+  ],
+  "certifications": [
+    "Make Automation Expert (Levels 1–4)",
+    "Google Cloud Essentials",
+    "Machine Learning APIs",
+    "Build Interactive Apps with Google Assistant",
+    "Kubernetes in Google Cloud",
+    "Leadership Axelerator Program (LeAP)"
+  ],
+  "achievements": [
+    {
+      "title": "AIR 1 — Digit CTC VI",
+      "description": "All India Rank 1 in Crack the Code, India's toughest annual cryptic hunt by Digit."
+    },
+    {
+      "title": "Runners Up — Run IO Hackathon",
+      "description": "National-level hackathon at NIT Rourkela."
+    },
+    {
+      "title": "Tech Speaker — Actions on Google",
+      "description": "Workshops and talks at IIIT Bhubaneswar, CVRCE, DevExpo, and more."
+    },
+    {
+      "title": "Highflyer Awards — Highradius",
+      "description": "Intern of the Quarter (Q2 2021) and Star Team Award (Q3 2021)."
+    }
+  ],
+  "interests": ["Stand-Up Comedy", "Tech DIY", "Gaming", "Model UN", "Tech Talks"],
+  "projects": [
+    {
+      "id": "genkiflow",
+      "title": "GenkiFlow IDE",
+      "category": "Next.js Web App",
+      "thumbnail": "images/portfolio/make.jpg",
+      "gallery": "images/portfolio/gallery/make.jpg",
+      "description": "A web-based IDE embedding Google Genkit AI for code generation, refactoring, and summarization — with a multi-tab editor and persistent browser-based file system.",
+      "tags": ["Next.js", "Genkit", "AI"],
+      "links": []
+    },
+    {
+      "id": "coffee-mapper",
+      "title": "Coffee Mapper",
+      "category": "Flutter Android App",
+      "thumbnail": "images/portfolio/coffeeMapper.jpg",
+      "gallery": "images/portfolio/gallery/coffeeMapper.jpg",
+      "description": "Android app for Coffee Development Trust, Koraput — field agents track coffee plantations across the district.",
+      "tags": ["Flutter", "Android"],
+      "links": [
+        { "label": "Play Store", "url": "https://play.google.com/store/apps/details?id=com.coffee.mapper" },
+        { "label": "GitHub", "url": "https://github.com/amrit-dash/coffee-mapper-android" }
+      ]
+    },
+    {
+      "id": "coffee-dashboard",
+      "title": "Coffee Mapper Dashboard",
+      "category": "Flutter Web",
+      "thumbnail": "images/portfolio/cdtKoraput.jpg",
+      "gallery": "images/portfolio/gallery/dashboard.jpg",
+      "description": "Web dashboard with map view and admin reporting for tracked plantation regions.",
+      "tags": ["Flutter Web", "Maps"],
+      "links": [
+        { "label": "Live Demo", "url": "https://coffee-mapper-dashboard.web.app" },
+        { "label": "GitHub", "url": "https://github.com/amrit-dash/coffee-mapper-web" }
+      ]
+    },
+    {
+      "id": "nbc",
+      "title": "Nothing BOT Comedy",
+      "category": "WhatsApp Bot",
+      "thumbnail": "images/portfolio/nbc.jpg",
+      "gallery": "images/portfolio/gallery/nbc.jpg",
+      "description": "WhatsApp bot for comedy club spot curation in Bangalore — 150+ comics on weekly spot checks.",
+      "tags": ["Twilio", "Apps Script"],
+      "links": [
+        { "label": "Message Bot", "url": "https://wa.me/message/OGQRIVZ7W7JAN1" },
+        { "label": "GitHub", "url": "https://github.com/amrit-dash/Nothing-BOT-Comedy" }
+      ]
+    },
+    {
+      "id": "kunsquad",
+      "title": "Kunsquad Website",
+      "category": "Shopify Liquid",
+      "thumbnail": "images/portfolio/kunsquad.jpg",
+      "gallery": "images/portfolio/gallery/kunsquad.jpg",
+      "description": "Custom pages and widget assets for a Bhubaneswar e-commerce startup.",
+      "tags": ["Shopify", "Liquid"],
+      "links": [{ "label": "About Us", "url": "https://www.kunsquad.com/pages/about-us" }]
+    },
+    {
+      "id": "asap-cg",
+      "title": "ASAP — Customer Group Generator",
+      "category": "Apps Script",
+      "thumbnail": "images/portfolio/asapCG.jpg",
+      "gallery": "images/portfolio/gallery/asapCG.jpg",
+      "description": "Recommends potential customer groups from similar-sounding names for consultants.",
+      "tags": ["Apps Script", "Firebase"],
+      "links": [
+        { "label": "Live App", "url": "https://fuzzy-customer-group-generator.firebaseapp.com" }
+      ]
+    },
+    {
+      "id": "make-automation",
+      "title": "Make Automation Projects",
+      "category": "Make.com",
+      "thumbnail": "images/portfolio/make.jpg",
+      "gallery": "images/portfolio/gallery/make.jpg",
+      "description": "DSM Bot for daily status meetings and Cricket Bot for prediction & engagement — workflow automation with Slack and ChatGPT.",
+      "tags": ["Make.com", "Slack", "ChatGPT"],
+      "links": [{ "label": "GitHub", "url": "https://github.com/amrit-dash/Make-Automation-Projects" }]
+    },
+    {
+      "id": "miss-lily",
+      "title": "Miss Lily",
+      "category": "Actions on Google",
+      "thumbnail": "images/portfolio/make.jpg",
+      "gallery": "images/portfolio/gallery/make.jpg",
+      "description": "Personal health-mate Action on Google — assists with healthy living, disease support, and medicine scheduling.",
+      "tags": ["Actions on Google", "Voice"],
+      "links": []
+    }
+  ],
+  "contact": {
+    "headline": "Let's build something that actually ships.",
+    "subtext": "Automation architecture, Flutter apps, or a conversation about comedy — my inbox is open.",
+    "cta": "Say Hello"
+  }
+}

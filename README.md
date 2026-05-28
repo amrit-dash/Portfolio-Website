@@ -1,6 +1,6 @@
 # Amrit Dash • Portfolio Website
 
-A sleek, single-page portfolio that highlights my recent projects, experience and contact information.
+An interactive portfolio platform with journey-style sections, light/dark themes, scroll animations, a 3D hero, and a hidden admin dashboard at `/admin`.
 
 [![Live Site](https://img.shields.io/website?down_color=lightgrey&down_message=offline&label=Website%20Status&logo=google-chrome&logoColor=white&up_color=brightgreen&up_message=online&url=https%3A%2F%2Famritdash.web.app)](https://amritdash.web.app)
 [![Firebase Hosting](https://img.shields.io/badge/Hosted%20On-Firebase-FFCA28?logo=firebase&logoColor=000000)](https://firebase.google.com/products/hosting)
@@ -8,10 +8,11 @@ A sleek, single-page portfolio that highlights my recent projects, experience an
 
 ## ✨ Highlights
 
-• **Responsive Design** – looks great on desktop, tablet and mobile.  
-• **Interactive Project Modals** – each project opens in a lightbox with rich screenshots and quick-action links (Play Store, GitHub, Docs, …).  
-• **Zero-backend** – plain HTML/CSS/JS served globally via Firebase CDN.  
-• **Continuous Delivery** – every push to `master` triggers an automated Firebase deploy (see badge above).
+• **Journey UI** – chapter-based sections with scroll-triggered animations, GSAP motion, and a Three.js particle hero.  
+• **Light / dark mode** – theme toggle with matching CV downloads (`cv-light.pdf` / `cv-dark.pdf`).  
+• **Data-driven content** – defaults in `public/data/site-default.json`; optional Firebase Realtime Database sync.  
+• **Admin dashboard** – `/admin` (not linked publicly); edit content, theme, projects with image crop, and CV uploads. Default login: `admin` / `admin`.  
+• **Continuous Delivery** – every push to `master` triggers Firebase Hosting deploy when configured.
 
 
 
