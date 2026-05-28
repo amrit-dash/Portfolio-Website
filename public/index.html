@@ -6,8 +6,12 @@
     <title>Amrit Dash · AI & Automation Engineer</title>
     <meta
       name="description"
-      content="Revamped portfolio of Amrit Dash — AI and Automation Engineer, featuring modular content, retro-modern visuals, and Firebase-powered updates."
+      content="Portfolio of Amrit Dash — AI & Automation Engineer at Contour Education. Automation, AI agents, Flutter, and product engineering."
     />
+    <link rel="apple-touch-icon" sizes="180x180" href="images/icons/favicons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="images/icons/favicons/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="images/icons/favicons/favicon-16x16.png" />
+    <link rel="manifest" href="images/icons/favicons/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,27 +21,48 @@
     <link rel="stylesheet" href="css/revamp.css" />
   </head>
   <body>
+    <div id="preloader" class="preloader" aria-hidden="true">
+      <div class="preloader-inner">
+        <p class="label">INITIALIZING JOURNEY</p>
+        <div class="preloader-bar"><span data-preloader-progress></span></div>
+      </div>
+    </div>
+
     <div class="noise"></div>
+    <div class="cursor-glow" data-cursor-glow hidden></div>
+
+    <nav class="journey-rail" data-journey-rail aria-label="Section progress">
+      <a href="#hero" data-journey-link data-label="Start"></a>
+      <a href="#about" data-journey-link data-label="About"></a>
+      <a href="#experience" data-journey-link data-label="Experience"></a>
+      <a href="#projects" data-journey-link data-label="Projects"></a>
+      <a href="#extra" data-journey-link data-label="Highlights"></a>
+      <a href="#contact" data-journey-link data-label="Contact"></a>
+    </nav>
+
     <header class="site-header">
       <a href="#hero" class="logo" data-profile-name>Amrit Dash</a>
-      <nav>
+      <button type="button" class="nav-toggle" data-nav-toggle aria-expanded="false" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav" data-site-nav>
         <a href="#about" data-scroll>About</a>
         <a href="#experience" data-scroll>Experience</a>
         <a href="#projects" data-scroll>Projects</a>
         <a href="#contact" data-scroll>Contact</a>
       </nav>
-      <button type="button" class="theme-toggle" data-theme-toggle>Switch Theme</button>
+      <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="true">Switch Theme</button>
     </header>
 
     <main>
-      <section id="hero" class="hero" data-animated-section>
+      <section id="hero" class="hero journey-section" data-animated-section data-animation="rise">
         <div class="hero-copy reveal">
           <p class="label">SYSTEM / PROFILE / LIVE</p>
           <h1><span data-profile-name>Amrit Dash</span></h1>
           <h2 data-profile-title>AI & Automation Engineer</h2>
           <p data-profile-tagline></p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#projects" data-scroll>View Projects</a>
+            <a class="button button-primary" href="#projects" data-scroll>Explore Projects</a>
             <a class="button button-ghost" data-cv-download download target="_blank" rel="noreferrer">Download CV</a>
           </div>
           <p class="status-text" data-profile-status></p>
@@ -51,13 +76,13 @@
               <div class="folder-body"></div>
             </div>
           </div>
-          <p class="folder-caption">Scroll to open the archive of projects and experience.</p>
+          <p class="folder-caption">Scroll the journey — the archive opens as you move through each chapter.</p>
         </div>
       </section>
 
-      <section id="about" class="section" data-animated-section>
+      <section id="about" class="section journey-section" data-animated-section data-animation="slide-left">
         <div class="section-heading reveal">
-          <p class="label">ABOUT</p>
+          <p class="label">CHAPTER 01 · ABOUT</p>
           <h2>Human-first automation engineer with product instincts.</h2>
           <p data-profile-summary></p>
         </div>
@@ -66,12 +91,11 @@
             <p class="about-kicker">Base</p>
             <h3 data-profile-location></h3>
             <p>
-              Building systems that connect operations, communication, and AI workflows into a single
-              practical engine.
+              Building systems that connect operations, communication, and AI workflows into one practical engine.
             </p>
           </div>
           <div class="about-card reveal">
-            <p class="about-kicker">Metrics</p>
+            <p class="about-kicker">Standardized Scores</p>
             <div class="metrics-grid" data-scores></div>
           </div>
           <div class="about-card reveal">
@@ -81,24 +105,28 @@
         </div>
       </section>
 
-      <section id="experience" class="section" data-animated-section>
+      <section id="experience" class="section journey-section" data-animated-section data-animation="timeline">
         <div class="section-heading reveal">
-          <p class="label">EXPERIENCE</p>
-          <h2>Timeline mode: active missions and previous deployments.</h2>
+          <p class="label">CHAPTER 02 · EXPERIENCE</p>
+          <h2>Timeline of missions — from consulting automation to education ops.</h2>
         </div>
         <div class="timeline" data-experience></div>
         <div class="education-wrap" data-education></div>
+        <div class="volunteer-wrap reveal">
+          <p class="label">COMMUNITY & VOLUNTEER</p>
+          <ul class="volunteer-list" data-volunteer></ul>
+        </div>
       </section>
 
-      <section id="projects" class="section" data-animated-section>
+      <section id="projects" class="section journey-section" data-animated-section data-animation="scale-in">
         <div class="section-heading reveal">
-          <p class="label">PROJECTS</p>
-          <h2>Selected products, automation systems, and AI builds.</h2>
+          <p class="label">CHAPTER 03 · PROJECTS</p>
+          <h2>Selected builds — automation systems, mobile apps, and AI products.</h2>
         </div>
         <div class="projects-grid" data-projects></div>
       </section>
 
-      <section id="extra" class="section section-split" data-animated-section>
+      <section id="extra" class="section section-split journey-section" data-animated-section data-animation="flip">
         <article class="extra-card reveal">
           <p class="label">ACHIEVEMENTS</p>
           <ul data-achievements></ul>
@@ -109,9 +137,9 @@
         </article>
       </section>
 
-      <section id="contact" class="section" data-animated-section>
+      <section id="contact" class="section journey-section" data-animated-section data-animation="slide-right">
         <div class="section-heading reveal">
-          <p class="label">CONTACT</p>
+          <p class="label">CHAPTER 04 · CONTACT</p>
           <h2>Let’s collaborate on automation, AI, or product ops.</h2>
         </div>
         <div class="contact-grid">
@@ -119,6 +147,7 @@
             <h3>Direct</h3>
             <a data-email href="mailto:amrit.dash60@gmail.com">amrit.dash60@gmail.com</a>
             <a data-phone href="tel:+917978416962">+91 7978416962</a>
+            <a data-website href="https://amritdash.web.app" target="_blank" rel="noreferrer">amritdash.web.app</a>
           </article>
           <article class="contact-card reveal">
             <h3>Social</h3>
@@ -135,8 +164,13 @@
     </main>
 
     <footer>
-      <p>© <span data-year></span> <span data-profile-name>Amrit Dash</span>. Crafted in retro-future mode.</p>
+      <p>© <span data-year></span> <span data-profile-name>Amrit Dash</span>. Crafted as an interactive portfolio journey.</p>
     </footer>
+
+    <dialog class="project-modal" data-project-modal>
+      <button type="button" class="modal-close" data-modal-close aria-label="Close project details">×</button>
+      <div class="modal-body" data-project-modal-body></div>
+    </dialog>
 
     <script src="js/firebase-config.js"></script>
     <script type="module" src="js/main.js"></script>

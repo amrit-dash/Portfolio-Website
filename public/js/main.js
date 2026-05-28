@@ -1,8 +1,16 @@
 import { defaultPortfolioData, PORTFOLIO_DB_PATH } from "./app/portfolio-data.js";
 import { readData, canUseFirebase } from "./app/firebase-client.js";
-import { renderPortfolio } from "./app/renderer.js";
+import { renderPortfolio, getProjectModalPayload } from "./app/renderer.js";
 import { applyTheme, installThemeToggle, resolveInitialTheme } from "./app/theme.js";
-import { setupFolderScrollAnimation, setupScrollAnimations } from "./app/animations.js";
+import {
+  setupFolderScrollAnimation,
+  setupScrollAnimations,
+  setupJourneyRail,
+  setupCustomCursor,
+  setupMobileNav,
+  setupPreloader,
+  setupProjectModals,
+} from "./app/animations.js";
 import { createRetroScene } from "./app/retro-scene.js";
 
 function mergeData(base, incoming) {
@@ -40,6 +48,10 @@ function installCvBehavior(data) {
     const mode = document.documentElement.dataset.theme === "light" ? "light" : "dark";
     const href = mode === "light" ? data.cv.lightUrl : data.cv.darkUrl;
     cvButton.href = href;
+    cvButton.setAttribute(
+      "download",
+      mode === "light" ? "Amrit-Dash-CV-Light-2025.pdf" : "Amrit-Dash-CV-Dark-2025.pdf",
+    );
   };
 
   updateCvLink();
@@ -58,6 +70,8 @@ function installScrollNav() {
 }
 
 async function boot() {
+  setupPreloader();
+
   const data = await getPortfolioData();
   renderPortfolio(data);
 
@@ -72,6 +86,10 @@ async function boot() {
   installScrollNav();
   setupScrollAnimations();
   setupFolderScrollAnimation();
+  setupJourneyRail();
+  setupCustomCursor();
+  setupMobileNav();
+  setupProjectModals(data.projects, getProjectModalPayload);
   createRetroScene().catch((error) => console.warn("Retro scene initialization failed.", error));
 
   document.body.classList.add("is-ready");

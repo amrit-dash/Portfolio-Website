@@ -12,6 +12,7 @@ function renderList(items = []) {
 }
 
 function renderProjectLinks(links = []) {
+  if (!links.length) return '<span class="muted">Details on request</span>';
   return links
     .map(
       (link) =>
@@ -20,32 +21,53 @@ function renderProjectLinks(links = []) {
     .join("");
 }
 
+function setTextAll(selector, value) {
+  document.querySelectorAll(selector).forEach((el) => {
+    el.textContent = value;
+  });
+}
+
 export function renderPortfolio(data) {
   document.title = `${data.profile.name} · ${data.profile.title}`;
-  document.querySelector("[data-profile-name]").textContent = data.profile.name;
-  document.querySelector("[data-profile-title]").textContent = data.profile.title;
-  document.querySelector("[data-profile-tagline]").textContent = data.profile.tagline;
-  document.querySelector("[data-profile-status]").textContent = data.profile.status;
-  document.querySelector("[data-profile-summary]").textContent = data.profile.summary;
-  document.querySelector("[data-profile-location]").textContent = data.profile.location;
+  setTextAll("[data-profile-name]", data.profile.name);
+
+  const titleEl = document.querySelector("[data-profile-title]");
+  if (titleEl) titleEl.textContent = data.profile.title;
+
+  const taglineEl = document.querySelector("[data-profile-tagline]");
+  if (taglineEl) taglineEl.textContent = data.profile.tagline;
+
+  const statusEl = document.querySelector("[data-profile-status]");
+  if (statusEl) statusEl.textContent = data.profile.status;
+
+  const summaryEl = document.querySelector("[data-profile-summary]");
+  if (summaryEl) summaryEl.textContent = data.profile.summary;
+
+  const locationEl = document.querySelector("[data-profile-location]");
+  if (locationEl) locationEl.textContent = data.profile.location;
 
   const scoresEl = document.querySelector("[data-scores]");
-  scoresEl.innerHTML = data.scores
-    .map(
-      (score) =>
-        `<article class="metric-card reveal"><p>${escapeHtml(score.label)}</p><strong>${escapeHtml(score.value)}</strong></article>`,
-    )
-    .join("");
+  if (scoresEl) {
+    scoresEl.innerHTML = data.scores
+      .map(
+        (score) =>
+          `<article class="metric-card reveal"><p>${escapeHtml(score.label)}</p><strong>${escapeHtml(score.value)}</strong></article>`,
+      )
+      .join("");
+  }
 
   const skillsEl = document.querySelector("[data-skills]");
-  skillsEl.innerHTML = data.skills
-    .map((skill) => `<span class="skill-pill reveal">${escapeHtml(skill)}</span>`)
-    .join("");
+  if (skillsEl) {
+    skillsEl.innerHTML = data.skills
+      .map((skill) => `<span class="skill-pill reveal">${escapeHtml(skill)}</span>`)
+      .join("");
+  }
 
   const timelineEl = document.querySelector("[data-experience]");
-  timelineEl.innerHTML = data.experience
-    .map(
-      (item, index) => `
+  if (timelineEl) {
+    timelineEl.innerHTML = data.experience
+      .map(
+        (item, index) => `
         <article class="timeline-item reveal ${item.primary ? "is-primary" : ""}" style="--delay:${index * 70}ms">
           <header>
             <p class="timeline-period">${escapeHtml(item.period)}</p>
@@ -54,30 +76,39 @@ export function renderPortfolio(data) {
           </header>
           <ul>${renderList(item.highlights)}</ul>
         </article>`,
-    )
-    .join("");
+      )
+      .join("");
+  }
 
   const educationEl = document.querySelector("[data-education]");
-  educationEl.innerHTML = data.education
-    .map(
-      (item) => `
+  if (educationEl) {
+    educationEl.innerHTML = data.education
+      .map(
+        (item) => `
       <article class="education-card reveal">
         <p>${escapeHtml(item.period)}</p>
         <h3>${escapeHtml(item.school)}</h3>
         <h4>${escapeHtml(item.degree)}</h4>
         <p>${escapeHtml(item.details)}</p>
       </article>`,
-    )
-    .join("");
+      )
+      .join("");
+  }
+
+  const volunteerEl = document.querySelector("[data-volunteer]");
+  if (volunteerEl && data.volunteer) {
+    volunteerEl.innerHTML = renderList(data.volunteer);
+  }
 
   const projectsEl = document.querySelector("[data-projects]");
-  projectsEl.innerHTML = data.projects
-    .map(
-      (project, index) => `
-      <article class="project-card reveal" style="--delay:${index * 90}ms">
+  if (projectsEl) {
+    projectsEl.innerHTML = data.projects
+      .map(
+        (project, index) => `
+      <article class="project-card reveal" data-project-index="${index}" tabindex="0" role="button" style="--delay:${index * 90}ms">
         ${
           project.thumbnail
-            ? `<img class="project-thumb" src="${escapeHtml(project.thumbnail)}" alt="${escapeHtml(project.title)} thumbnail" />`
+            ? `<img class="project-thumb" src="${escapeHtml(project.thumbnail)}" alt="${escapeHtml(project.title)} thumbnail" loading="lazy" />`
             : '<div class="project-thumb project-thumb--placeholder" aria-hidden="true"></div>'
         }
         <div class="project-content">
@@ -88,22 +119,77 @@ export function renderPortfolio(data) {
           <div class="project-links">${renderProjectLinks(project.links)}</div>
         </div>
       </article>`,
-    )
-    .join("");
+      )
+      .join("");
+  }
 
-  document.querySelector("[data-achievements]").innerHTML = renderList(data.achievements);
-  document.querySelector("[data-certifications]").innerHTML = renderList(data.certifications);
-  document.querySelector("[data-interests]").innerHTML = data.interests
-    .map((item) => `<span class="interest-chip">${escapeHtml(item)}</span>`)
-    .join("");
+  const achievementsEl = document.querySelector("[data-achievements]");
+  if (achievementsEl) achievementsEl.innerHTML = renderList(data.achievements);
 
-  document.querySelector("[data-email]").href = `mailto:${data.contact.email}`;
-  document.querySelector("[data-email]").textContent = data.contact.email;
-  document.querySelector("[data-phone]").href = `tel:${data.contact.phone.replace(/\s+/g, "")}`;
-  document.querySelector("[data-phone]").textContent = data.contact.phone;
-  document.querySelector("[data-linkedin]").href = data.contact.linkedin;
-  document.querySelector("[data-github]").href = data.contact.github;
-  document.querySelector("[data-instagram]").href = data.contact.instagram;
+  const certificationsEl = document.querySelector("[data-certifications]");
+  if (certificationsEl) certificationsEl.innerHTML = renderList(data.certifications);
 
-  document.querySelector("[data-year]").textContent = new Date().getFullYear();
+  const interestsEl = document.querySelector("[data-interests]");
+  if (interestsEl) {
+    interestsEl.innerHTML = data.interests
+      .map((item) => `<span class="interest-chip">${escapeHtml(item)}</span>`)
+      .join("");
+  }
+
+  const emailEl = document.querySelector("[data-email]");
+  if (emailEl) {
+    emailEl.href = `mailto:${data.contact.email}`;
+    emailEl.textContent = data.contact.email;
+  }
+
+  const phoneEl = document.querySelector("[data-phone]");
+  if (phoneEl) {
+    phoneEl.href = `tel:${data.contact.phone.replace(/\s+/g, "")}`;
+    phoneEl.textContent = data.contact.phone;
+  }
+
+  const websiteEl = document.querySelector("[data-website]");
+  if (websiteEl && data.contact.website) {
+    websiteEl.href = data.contact.website;
+    websiteEl.textContent = data.contact.website.replace(/^https?:\/\//, "");
+  }
+
+  const linkedinEl = document.querySelector("[data-linkedin]");
+  if (linkedinEl) linkedinEl.href = data.contact.linkedin;
+
+  const githubEl = document.querySelector("[data-github]");
+  if (githubEl) githubEl.href = data.contact.github;
+
+  const instagramEl = document.querySelector("[data-instagram]");
+  if (instagramEl) instagramEl.href = data.contact.instagram;
+
+  const yearEl = document.querySelector("[data-year]");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  applyUiSettings(data.ui, data.theme);
+}
+
+export function applyUiSettings(ui = {}, theme = {}) {
+  const root = document.documentElement;
+  const showRail = ui.showJourneyRail !== false;
+  const rail = document.querySelector("[data-journey-rail]");
+  if (rail) rail.hidden = !showRail;
+
+  const cursorGlow = document.querySelector("[data-cursor-glow]");
+  const useCursor = ui.customCursor ?? theme.customCursor ?? false;
+  if (cursorGlow) cursorGlow.hidden = !useCursor;
+  root.dataset.customCursor = useCursor ? "on" : "off";
+}
+
+export function getProjectModalPayload(project) {
+  if (!project) return "";
+  const image = project.image || project.thumbnail;
+  return `
+    ${image ? `<img class="modal-image" src="${escapeHtml(image)}" alt="${escapeHtml(project.title)}" />` : ""}
+    <p class="label">${escapeHtml(project.type)}</p>
+    <h3>${escapeHtml(project.title)}</h3>
+    <p>${escapeHtml(project.summary)}</p>
+    <div class="project-tags">${project.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+    <div class="project-links">${renderProjectLinks(project.links)}</div>
+  `;
 }

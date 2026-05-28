@@ -3,11 +3,17 @@ import {
   adminLogin,
   adminLogout,
   canUseFirebase,
+  devAdminLogin,
+  devAdminLogout,
+  getDevAdminUser,
+  isDevAdminSession,
   readData,
   setData,
   uploadFile,
   watchAuthState,
 } from "./firebase-client.js";
+
+const LOCAL_DRAFT_KEY = "portfolio-admin-local-draft";
 
 const state = {
   data: structuredClone(defaultPortfolioData),
@@ -58,21 +64,29 @@ function fillForms(data) {
   document.querySelector("[name='altAccent']").value = data.theme.altAccent;
   document.querySelector("[name='defaultMode']").value = data.theme.defaultMode;
   document.querySelector("[name='fontFamily']").value = data.theme.fontFamily;
+  document.querySelector("[name='customCursor']").checked = Boolean(data.theme.customCursor ?? data.ui?.customCursor);
 
   document.querySelector("[name='email']").value = data.contact.email;
   document.querySelector("[name='phone']").value = data.contact.phone;
   document.querySelector("[name='linkedin']").value = data.contact.linkedin;
   document.querySelector("[name='github']").value = data.contact.github;
   document.querySelector("[name='instagram']").value = data.contact.instagram;
+  document.querySelector("[name='website']").value = data.contact.website || "";
 
   bindTextLines("[name='skills']", data.skills);
   bindTextLines("[name='interests']", data.interests);
   bindTextLines("[name='achievements']", data.achievements);
   bindTextLines("[name='certifications']", data.certifications);
+  bindTextLines("[name='volunteer']", data.volunteer || []);
 
   document.querySelector("[name='experienceJson']").value = JSON.stringify(data.experience, null, 2);
   document.querySelector("[name='projectsJson']").value = JSON.stringify(data.projects, null, 2);
   document.querySelector("[name='educationJson']").value = JSON.stringify(data.education, null, 2);
+  document.querySelector("[name='scoresJson']").value = JSON.stringify(data.scores, null, 2);
+
+  document.querySelector("[name='showJourneyRail']").checked = data.ui?.showJourneyRail !== false;
+  document.querySelector("[name='cvLightUrl']").value = data.cv?.lightUrl || "";
+  document.querySelector("[name='cvDarkUrl']").value = data.cv?.darkUrl || "";
 }
 
 function collectFormData() {
@@ -90,6 +104,7 @@ function collectFormData() {
       altAccent: document.querySelector("[name='altAccent']").value.trim(),
       defaultMode: document.querySelector("[name='defaultMode']").value,
       fontFamily: document.querySelector("[name='fontFamily']").value.trim(),
+      customCursor: document.querySelector("[name='customCursor']").checked,
     },
     contact: {
       email: document.querySelector("[name='email']").value.trim(),
@@ -97,32 +112,66 @@ function collectFormData() {
       linkedin: document.querySelector("[name='linkedin']").value.trim(),
       github: document.querySelector("[name='github']").value.trim(),
       instagram: document.querySelector("[name='instagram']").value.trim(),
+      website: document.querySelector("[name='website']").value.trim(),
+    },
+    cv: {
+      lightUrl: document.querySelector("[name='cvLightUrl']").value.trim() || state.data.cv.lightUrl,
+      darkUrl: document.querySelector("[name='cvDarkUrl']").value.trim() || state.data.cv.darkUrl,
     },
     skills: parseTextLines("[name='skills']"),
     interests: parseTextLines("[name='interests']"),
     achievements: parseTextLines("[name='achievements']"),
     certifications: parseTextLines("[name='certifications']"),
+    volunteer: parseTextLines("[name='volunteer']"),
     experience: JSON.parse(document.querySelector("[name='experienceJson']").value),
     projects: JSON.parse(document.querySelector("[name='projectsJson']").value),
     education: JSON.parse(document.querySelector("[name='educationJson']").value),
-    cv: state.data.cv,
-    scores: state.data.scores,
-    ui: state.data.ui,
+    scores: JSON.parse(document.querySelector("[name='scoresJson']").value),
+    ui: {
+      ...state.data.ui,
+      showJourneyRail: document.querySelector("[name='showJourneyRail']").checked,
+      customCursor: document.querySelector("[name='customCursor']").checked,
+    },
   };
 }
 
+function saveLocalDraft(data) {
+  localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(data));
+}
+
+function loadLocalDraft() {
+  const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 async function loadPortfolioData() {
+  const localDraft = loadLocalDraft();
+  if (localDraft && (isDevAdminSession() || !canUseFirebase())) {
+    state.data = mergeData(defaultPortfolioData, localDraft);
+    fillForms(state.data);
+    showStatus("Loaded local draft from browser storage.", "info");
+    return;
+  }
+
   if (!canUseFirebase()) {
     state.data = structuredClone(defaultPortfolioData);
     fillForms(state.data);
-    showStatus("Firebase config missing. Edit values locally, then add firebase config to persist.", "warn");
+    showStatus(
+      "Firebase not configured. Use admin / admin to edit and save a local draft, or add firebase-config.js.",
+      "warn",
+    );
     return;
   }
 
   const remote = await readData(PORTFOLIO_DB_PATH);
   state.data = mergeData(defaultPortfolioData, remote);
   fillForms(state.data);
-  showStatus("Portfolio data loaded from Firebase.", "success");
+  showStatus("Portfolio data loaded from Firebase Realtime Database.", "success");
 }
 
 async function savePortfolioData(event) {
@@ -130,11 +179,22 @@ async function savePortfolioData(event) {
   try {
     const next = collectFormData();
     state.data = mergeData(state.data, next);
+
+    if (!canUseFirebase() || isDevAdminSession()) {
+      saveLocalDraft(state.data);
+      if (!canUseFirebase()) {
+        showStatus("Saved local draft (Firebase not configured). Changes apply on this browser only.", "warn");
+        return;
+      }
+    }
+
     if (!canUseFirebase()) {
-      showStatus("Firebase is not configured, so save is only local in this session.", "warn");
+      showStatus("Firebase is not configured.", "error");
       return;
     }
+
     await setData(PORTFOLIO_DB_PATH, state.data);
+    saveLocalDraft(state.data);
     showStatus("Portfolio content saved to Firebase Realtime Database.", "success");
   } catch (error) {
     showStatus(`Save failed: ${error.message}`, "error");
@@ -148,14 +208,21 @@ async function handleCvUpload(mode) {
     showStatus(`Choose a ${mode} CV PDF first.`, "warn");
     return;
   }
-  if (!canUseFirebase()) {
-    showStatus("Firebase Storage not configured. Add config first.", "error");
+
+  if (!canUseFirebase() || isDevAdminSession()) {
+    showStatus("CV upload to Storage requires Firebase Auth (not dev admin). Set URLs manually for now.", "warn");
     return;
   }
+
   const storagePath = `portfolio/cv/${mode}-${Date.now()}-${file.name}`;
   const url = await uploadFile(storagePath, file, file.type || "application/pdf");
-  if (mode === "light") state.data.cv.lightUrl = url;
-  else state.data.cv.darkUrl = url;
+  if (mode === "light") {
+    state.data.cv.lightUrl = url;
+    document.querySelector("[name='cvLightUrl']").value = url;
+  } else {
+    state.data.cv.darkUrl = url;
+    document.querySelector("[name='cvDarkUrl']").value = url;
+  }
   await setData(PORTFOLIO_DB_PATH, state.data);
   showStatus(`${mode[0].toUpperCase()}${mode.slice(1)} CV uploaded and linked.`, "success");
 }
@@ -210,8 +277,8 @@ async function uploadCroppedProjectImage() {
     showStatus("Load and crop an image before upload.", "warn");
     return;
   }
-  if (!canUseFirebase()) {
-    showStatus("Firebase Storage not configured.", "error");
+  if (!canUseFirebase() || isDevAdminSession()) {
+    showStatus("Image upload to Storage requires Firebase Auth (not dev admin).", "warn");
     return;
   }
 
@@ -244,7 +311,10 @@ function togglePanels(user) {
   document.querySelector("[data-login-panel]").hidden = Boolean(user);
   document.querySelector("[data-editor-panel]").hidden = !user;
   if (!user) {
-    showStatus("Log in with Firebase Auth email/password to edit dashboard.", "warn");
+    showStatus(
+      "Sign in with Firebase email/password, or use dev credentials: admin / admin (email field: admin).",
+      "info",
+    );
   }
 }
 
@@ -252,17 +322,29 @@ function setupAuth() {
   const loginForm = document.querySelector("[data-login-form]");
   const logoutButton = document.querySelector("[data-logout]");
 
-  if (!canUseFirebase()) {
-    togglePanels(null);
-    return;
-  }
-
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const email = document.querySelector("[name='adminEmail']").value.trim();
     const password = document.querySelector("[name='adminPassword']").value;
+
     try {
-      await adminLogin(email, password);
+      const devUser = devAdminLogin(email, password);
+      if (devUser) {
+        togglePanels(devUser);
+        document.querySelector("[data-admin-user]").textContent = `${devUser.email} (dev mode)`;
+        await loadPortfolioData();
+        showStatus("Dev admin session active (admin / admin). Firebase uploads disabled in dev mode.", "success");
+        return;
+      }
+
+      if (!canUseFirebase()) {
+        showStatus("Firebase not configured. Use admin / admin for dev access.", "error");
+        return;
+      }
+
+      const result = await adminLogin(email, password);
+      const user = result.user || result;
+      document.querySelector("[data-admin-user]").textContent = user.email || user.uid;
       showStatus("Login successful.", "success");
     } catch (error) {
       showStatus(`Login failed: ${error.message}`, "error");
@@ -271,14 +353,18 @@ function setupAuth() {
 
   logoutButton.addEventListener("click", async () => {
     await adminLogout();
+    togglePanels(null);
     showStatus("Logged out.", "info");
   });
 
   watchAuthState((user) => {
-    togglePanels(user);
     if (user) {
-      document.querySelector("[data-admin-user]").textContent = user.email || user.uid;
+      togglePanels(user);
+      const label = user.isDev ? `${user.email} (dev mode)` : user.email || user.uid;
+      document.querySelector("[data-admin-user]").textContent = label;
       loadPortfolioData().catch((error) => showStatus(error.message, "error"));
+    } else {
+      togglePanels(null);
     }
   });
 }
@@ -294,9 +380,6 @@ function installActions() {
 function bootAdmin() {
   setupAuth();
   installActions();
-  if (!canUseFirebase()) {
-    fillForms(state.data);
-  }
 }
 
 bootAdmin();

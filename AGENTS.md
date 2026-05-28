@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-This is a static portfolio website (HTML/CSS/JS) served from the `public/` directory. There is no build step, no backend, no test framework, and no linter configured.
+Revamped static portfolio (HTML/CSS/JS modules) served from `public/`. No build step, no test framework, no linter.
 
 ### Running the dev server
 
@@ -10,19 +10,23 @@ This is a static portfolio website (HTML/CSS/JS) served from the `public/` direc
 npx serve public -l 3000
 ```
 
-This serves the `public/` directory on port 3000. The `serve` package will be auto-installed by npx on first run.
-
 ### Project structure
 
-- `public/` — All static assets served directly (HTML, CSS, JS, images)
-- `public/index.html` — Single-page entry point
-- `public/js/` — Vanilla JS modules (preloader, lightbox, swiper, scroll-spy, etc.)
-- `public/css/` — Modular CSS + vendor styles
-- `firebase.json` — Firebase Hosting configuration (rewrites all routes to `index.html`)
+- `public/index.html` — Journey-style portfolio (theme toggle, scroll animations, Three.js hero)
+- `public/admin/` — Hidden CMS at `/admin` (also `/dashboard` redirect)
+- `public/js/app/` — Data, renderer, Firebase client, theme, animations
+- `public/js/firebase-config.js` — Firebase web config (see `firebase-config.example.js`)
+- `public/assets/` — CV PDFs (light + dark variants for theme-aware download)
+- `firebase.json` — Hosting rewrites + Realtime Database + Storage rules
+- `FIREBASE-SETUP.md` — Enable Database, Storage, Auth, and deploy rules
+
+### Admin access
+
+- **Dev (no Firebase):** `/admin` → username `admin`, password `admin`
+- **Production:** Firebase Email/Password user after `firebase-config.js` is configured
 
 ### Notes
 
-- There are no automated tests, no linter, and no build step in this project.
-- The only npm dependency (`firebase-tools`) is used exclusively for deployment to Firebase Hosting.
-- To verify changes, serve the site locally and test in the browser.
-- The GitHub Actions workflow (`.github/workflows/firebase-hosting-merge.yml`) auto-deploys on push to `master` — it requires Firebase credentials configured in the repository secrets.
+- Default content lives in `public/js/app/portfolio-data.js`; Firebase RTDB path `portfolio/content` overrides when configured.
+- CV download switches between `assets/amrit-dash-cv-light-2025.pdf` and `assets/amrit-dash-cv-dark-2025.pdf` by theme.
+- Deploy: GitHub Actions on `master` (Firebase WIF). Local: `firebase deploy`.

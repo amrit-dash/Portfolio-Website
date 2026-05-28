@@ -80,6 +80,27 @@ label.full {
   grid-column: 1 / -1;
 }
 
+label.checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text);
+}
+
+label.checkbox-row input {
+  width: auto;
+}
+
+.login-hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.login-hint code {
+  color: var(--accent);
+}
+
 input,
 textarea,
 select,

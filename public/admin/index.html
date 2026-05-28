@@ -23,10 +23,11 @@
 
       <section data-login-panel>
         <h2>Admin Login</h2>
+        <p class="login-hint">Dev access (until Firebase Auth is configured): username <code>admin</code>, password <code>admin</code>.</p>
         <form data-login-form class="panel-grid">
           <label>
-            Email
-            <input type="email" name="adminEmail" autocomplete="username" required />
+            Email or username
+            <input type="text" name="adminEmail" autocomplete="username" required placeholder="admin" />
           </label>
           <label>
             Password
@@ -63,6 +64,14 @@
                 </select>
               </label>
               <label class="full">Font Family <input name="fontFamily" required /></label>
+              <label class="checkbox-row">
+                <input type="checkbox" name="customCursor" />
+                Enable custom cursor glow on portfolio
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" name="showJourneyRail" checked />
+                Show journey progress rail
+              </label>
             </div>
           </article>
 
@@ -71,6 +80,7 @@
             <div class="panel-grid two">
               <label>Email <input type="email" name="email" required /></label>
               <label>Phone <input name="phone" required /></label>
+              <label class="full">Website <input name="website" required /></label>
               <label>LinkedIn <input name="linkedin" required /></label>
               <label>GitHub <input name="github" required /></label>
               <label class="full">Instagram <input name="instagram" required /></label>
@@ -84,6 +94,7 @@
               <label>Interests <textarea name="interests" rows="8"></textarea></label>
               <label>Achievements <textarea name="achievements" rows="8"></textarea></label>
               <label>Certifications <textarea name="certifications" rows="8"></textarea></label>
+              <label class="full">Volunteer <textarea name="volunteer" rows="6"></textarea></label>
             </div>
           </article>
 
@@ -93,11 +104,20 @@
               <label>Experience JSON <textarea name="experienceJson" rows="12"></textarea></label>
               <label>Projects JSON <textarea name="projectsJson" rows="12"></textarea></label>
               <label>Education JSON <textarea name="educationJson" rows="8"></textarea></label>
+              <label>Scores JSON <textarea name="scoresJson" rows="6"></textarea></label>
             </div>
           </article>
 
           <article class="panel">
-            <h3>Mode-specific CV Upload</h3>
+            <h3>CV URLs (theme-aware download)</h3>
+            <div class="panel-grid two">
+              <label class="full">Light mode CV URL <input name="cvLightUrl" /></label>
+              <label class="full">Dark mode CV URL <input name="cvDarkUrl" /></label>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3>Mode-specific CV Upload (Firebase Storage)</h3>
             <div class="panel-grid two">
               <label>
                 Light Mode CV (PDF)
