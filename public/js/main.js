@@ -1,31 +1,50 @@
-import { ssPreloader } from './modules/preloader.js';
-import { ssMobileMenu } from './modules/mobile-menu.js';
-import { ssScrollSpy } from './modules/scroll-spy.js';
-import { ssViewAnimate } from './modules/view-animate.js';
-import { ssSwiper } from './modules/swiper.js';
-import { ssLightbox } from './modules/lightbox.js';
-import { ssAlertBoxes } from './modules/alert-boxes.js';
-import { ssMoveTo } from './modules/smooth-scroll.js';
+// Single entry-point for the portfolio.
+//
+// Boot order:
+//   1. Load Store (data file + admin overlay)
+//   2. Init Theme using theme prefs
+//   3. Render the entire page
+//   4. Wire UI bindings + animations + cursor + 3D background
+//   5. Subscribe to Store changes (so the admin dashboard can edit live)
 
-(function(html) {
+import { Store } from "./store.js";
+import { Theme } from "./theme.js";
+import { render } from "./render.js";
+import { initUI, renderUI } from "./ui.js";
+import { initAnimations } from "./animate.js";
+import { initCursor } from "./cursor.js";
+import { initThreeBackground } from "./three-bg.js";
 
-    "use strict";
+async function boot() {
+  await Store.load();
+  Theme.init(Store.data.theme);
+  render(Store.data);
+  renderUI(Store.data);
+  initUI();
+  initAnimations();
+  if (Theme.state.customCursor) initCursor();
+  initThreeBackground();
+  hidePreloader();
 
-    html.className = html.className.replace(/\bno-js\b/g, '') + ' js ';
+  Theme.onChange(() => renderUI(Store.data));
 
-    /* Initialize
-    * ------------------------------------------------------ */
-    (function ssInit() {
+  Store.subscribe((data) => {
+    render(data);
+    renderUI(data);
+    initAnimations();
+  });
+}
 
-        ssPreloader();
-        ssMobileMenu();
-        ssScrollSpy();
-        ssViewAnimate();
-        ssSwiper();
-        ssLightbox();
-        ssAlertBoxes();
-        ssMoveTo();
+function hidePreloader() {
+  const p = document.getElementById("preloader");
+  if (!p) return;
+  requestAnimationFrame(() => {
+    p.classList.add("is-hidden");
+    setTimeout(() => p.remove(), 700);
+  });
+}
 
-    })();
-
-})(document.documentElement); 
+boot().catch((e) => {
+  console.error("Boot failure", e);
+  hidePreloader();
+});
