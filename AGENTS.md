@@ -20,6 +20,17 @@ This serves the `public/` directory on port 3000. The `serve` package will be au
 - `public/css/` — Modular CSS + vendor styles
 - `firebase.json` — Firebase Hosting configuration (rewrites all routes to `index.html`)
 
+### GitHub project enrichment
+
+Project tiles pull live metadata (description, topics, language breakdown, stars, forks, license, social-preview image, last push) from each project's GitHub repository. The data is baked into `public/data/portfolio.json` under each project's `github` field by `scripts/sync-github.mjs`.
+
+```bash
+npm run sync:github         # fetch + write portfolio.json
+npm run sync:github:dry     # dry-run + per-project report (no writes)
+```
+
+The script uses the authenticated `gh` CLI when available (higher rate limit) and falls back to anonymous `curl` against the public REST API. Re-run it any time a repo's description/topics/stars are out of date — it's idempotent.
+
 ### Automated tests (Playwright)
 
 A Playwright suite covers the public site, the admin dashboard, and the admin → public data-overlay round-trip.
@@ -45,6 +56,7 @@ Specs live in `tests/`:
 - `tests/admin.spec.js` — login (wrong + right), sidebar section navigation, dirty-state tracking, save → overlay, revert, cosmetic toggles, accent swatch, reset, sign out.
 - `tests/integration.spec.js` — overlay written into `localStorage` is rendered by the public site; admin save round-trips; project overlay drives the bento + modal; theme prefs initialise the public site.
 - `tests/visual.spec.js` — mobile/tablet/desktop × dark/light layout sanity + mobile menu open.
+- `tests/github-enrichment.spec.js` — every GitHub-linked project shows a repo badge + language/stars chips in the bento; modal renders the full repo block (stars/forks/license, language bar with percentages, topic chips, GitHub button); curated copy falls back to live GitHub description/topics when empty.
 
 Helpers live in `tests/helpers.js`. The Playwright config is `playwright.config.js`.
 

@@ -4,6 +4,7 @@
 
 import { Theme } from "./theme.js";
 import { Store } from "./store.js";
+import { iconGithub, iconStar, iconFork, iconExt } from "./render.js";
 
 function bindThemeToggle() {
   const btn = document.getElementById("theme-toggle");
@@ -74,27 +75,97 @@ function bindProjectModal() {
   const open = (projectId) => {
     const p = (Store.data.projects || []).find((x) => x.id === projectId);
     if (!p) return;
+    const gh = p.github;
+
+    // Hero image: prefer GitHub's social-preview when the repo provides
+    // a custom one, otherwise fall back to the curated hero asset.
+    const heroImg = gh?.usesCustomSocialImage && gh.socialImage
+      ? gh.socialImage
+      : p.hero || p.thumb;
+
+    // Description: prefer the curated summary; if it's empty, fall back
+    // to the live GitHub description so newly-added projects always
+    // have a description without manual copy-paste.
+    const description = (p.summary && p.summary.trim()) || gh?.description || "";
+
+    // Labels: curated tags first; if none, surface GitHub topics so
+    // every project carries at least its repo's metadata.
+    const labels = (p.tags && p.tags.length ? p.tags : gh?.topics || []).slice(0, 12);
+
     panel.innerHTML = `
       <button class="modal-close" aria-label="Close">✕</button>
-      <div class="modal-hero"><img src="${p.hero || p.thumb}" alt="${p.title}"></div>
+      <div class="modal-hero"><img src="${escapeAttr(heroImg)}" alt="${escapeAttr(p.title)}" onerror="this.onerror=null;this.src='${escapeAttr(p.hero || p.thumb || "")}'"></div>
       <div class="modal-body">
-        <div class="cat">${escapeHtml(p.category)} · ${escapeHtml(p.year || "")}</div>
+        <div class="cat">${escapeHtml(p.category)}${p.year ? " · " + escapeHtml(p.year) : ""}</div>
         <h3>${escapeHtml(p.title)}</h3>
-        <p>${escapeHtml(p.summary)}</p>
-        <ul class="tags">${(p.tags || []).map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
+        ${description ? `<p>${escapeHtml(description)}</p>` : ""}
+        ${labels.length ? `<ul class="tags">${labels.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
+        ${gh ? renderGithubBlock(gh) : ""}
         <div class="modal-actions">
-          ${(p.links || [])
-            .map(
-              (l) =>
-                `<a class="btn ${l.primary ? "btn-primary" : ""}" href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>`
-            )
-            .join("")}
+          ${renderLinks(p, gh)}
         </div>
       </div>`;
     panel.querySelector(".modal-close").addEventListener("click", close);
     modal.classList.add("is-open");
     document.body.style.overflow = "hidden";
   };
+
+  function renderLinks(p, gh) {
+    const links = (p.links || []).slice();
+    // Ensure the GitHub repo always has an explicit button when one is
+    // present but missing from the curated link list.
+    if (gh && !links.some((l) => l.href === gh.url)) {
+      links.push({ label: "GitHub Repository", href: gh.url, primary: !links.length });
+    }
+    if (gh?.homepage && !links.some((l) => l.href === gh.homepage)) {
+      links.push({ label: "Project Homepage", href: gh.homepage });
+    }
+    return links
+      .map(
+        (l) =>
+          `<a class="btn ${l.primary ? "btn-primary" : ""}" href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)} ${iconExt()}</a>`
+      )
+      .join("");
+  }
+
+  function renderGithubBlock(gh) {
+    const fmtDate = (s) => {
+      if (!s) return "";
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    };
+    const langs = (gh.languages || []).slice(0, 5);
+    return `
+      <div class="gh-block">
+        <a class="gh-repo-link" href="${escapeAttr(gh.url)}" target="_blank" rel="noopener" data-cursor-hover>
+          ${iconGithub()}<span>${escapeHtml(gh.nameWithOwner)}</span>
+        </a>
+        <div class="gh-stats">
+          <span class="gh-stat" title="Stars">${iconStar()}${gh.stars ?? 0} stars</span>
+          <span class="gh-stat" title="Forks">${iconFork()}${gh.forks ?? 0} forks</span>
+          ${gh.license ? `<span class="gh-stat" title="License">${escapeHtml(gh.license.key || gh.license.name)}</span>` : ""}
+          ${gh.pushedAt ? `<span class="gh-stat" title="Last push">Updated ${escapeHtml(fmtDate(gh.pushedAt))}</span>` : ""}
+        </div>
+        ${
+          langs.length
+            ? `<div class="gh-langs">
+                 <div class="gh-bar">
+                   ${langs.map((l) => `<span data-lang="${escapeAttr(l.name)}" style="width:${(l.pct || 0).toFixed(1)}%" title="${escapeAttr(l.name)} · ${(l.pct || 0).toFixed(1)}%"></span>`).join("")}
+                 </div>
+                 <ul class="gh-langs-key">
+                   ${langs.map((l) => `<li><span class="lang-dot" data-lang="${escapeAttr(l.name)}"></span>${escapeHtml(l.name)} <em>${(l.pct || 0).toFixed(1)}%</em></li>`).join("")}
+                 </ul>
+               </div>`
+            : ""
+        }
+        ${
+          (gh.topics || []).length
+            ? `<ul class="gh-topics">${gh.topics.map((t) => `<li>#${escapeHtml(t)}</li>`).join("")}</ul>`
+            : ""
+        }
+      </div>`;
+  }
 
   const close = () => {
     modal.classList.remove("is-open");

@@ -29,40 +29,95 @@
     ],
     "subtitle": "I architect intelligent workflows — from LLM agents to enterprise automations — and ship them on Flutter, Firebase and the cloud.",
     "metrics": [
-      { "value": "5+", "label": "Years of automation" },
-      { "value": "20+", "label": "Workflows shipped" },
-      { "value": "4", "label": "Live products" }
+      {
+        "value": "5+",
+        "label": "Years of automation"
+      },
+      {
+        "value": "20+",
+        "label": "Workflows shipped"
+      },
+      {
+        "value": "4",
+        "label": "Live products"
+      }
     ],
-    "ctaPrimary": { "label": "Explore the journey", "href": "#about" },
-    "ctaSecondary": { "label": "Download CV", "href": "cv" }
+    "ctaPrimary": {
+      "label": "Explore the journey",
+      "href": "#about"
+    },
+    "ctaSecondary": {
+      "label": "Download CV",
+      "href": "cv"
+    }
   },
   "about": {
     "headline": "A logical thinker with a fail-first, fix-fast personality.",
     "body": "Software Engineer with 5 years of experience implementing automation projects — from cash-application consulting at HighRadius, to business automation at Axelerant, to my current role driving end-to-end student onboarding automation at Contour Education. I co-founded a startup in my second year of engineering, work as an AI engineer on LLM agents with RAG, and ship Flutter, Shopify and Firebase products on the side. Outside of work, I do stand-up comedy as a full-time hobby.",
     "facts": [
-      { "k": "Currently", "v": "Automation Engineer @ Contour Education" },
-      { "k": "Stack", "v": "Make.com · n8n · Apps Script · Flutter · Firebase" },
-      { "k": "Hobby", "v": "Stand-up comedy" },
-      { "k": "Loves", "v": "Travel, food, magic, model UN" }
+      {
+        "k": "Currently",
+        "v": "Automation Engineer @ Contour Education"
+      },
+      {
+        "k": "Stack",
+        "v": "Make.com · n8n · Apps Script · Flutter · Firebase"
+      },
+      {
+        "k": "Hobby",
+        "v": "Stand-up comedy"
+      },
+      {
+        "k": "Loves",
+        "v": "Travel, food, magic, model UN"
+      }
     ]
   },
   "skills": {
     "groups": [
       {
         "title": "Automation",
-        "items": ["Google Apps Script", "Make.com", "Zapier", "n8n", "Twilio / WhatsApp Flow", "Monday CRM", "HubSpot"]
+        "items": [
+          "Google Apps Script",
+          "Make.com",
+          "Zapier",
+          "n8n",
+          "Twilio / WhatsApp Flow",
+          "Monday CRM",
+          "HubSpot"
+        ]
       },
       {
         "title": "AI & Bots",
-        "items": ["LLM Agents with RAG", "Actions on Google", "WhatsApp Bots", "Genkit (Dart & JS)", "Prompt Engineering"]
+        "items": [
+          "LLM Agents with RAG",
+          "Actions on Google",
+          "WhatsApp Bots",
+          "Genkit (Dart & JS)",
+          "Prompt Engineering"
+        ]
       },
       {
         "title": "Engineering",
-        "items": ["Dart & Flutter", "Firebase", "Node.js", "Next.js + TS", "React", "SQL", "Java", "C / C++"]
+        "items": [
+          "Dart & Flutter",
+          "Firebase",
+          "Node.js",
+          "Next.js + TS",
+          "React",
+          "SQL",
+          "Java",
+          "C / C++"
+        ]
       },
       {
         "title": "Web & Commerce",
-        "items": ["HTML / CSS / JS", "Shopify Liquid", "Three.js basics", "WordPress"]
+        "items": [
+          "HTML / CSS / JS",
+          "Shopify Liquid",
+          "Three.js basics",
+          "WordPress"
+        ]
       }
     ]
   },
@@ -80,7 +135,12 @@
         "Stack: Make.com · n8n · Apps Script · Monday CRM",
         "Reduced manual ops touch-points across the student journey"
       ],
-      "tags": ["Make.com", "n8n", "Apps Script", "Monday"]
+      "tags": [
+        "Make.com",
+        "n8n",
+        "Apps Script",
+        "Monday"
+      ]
     },
     {
       "id": "freelance",
@@ -96,7 +156,12 @@
         "Shopify Developer · Kunsquad — Custom Liquid components for a Bhubaneswar e-commerce startup",
         "Software Developer · Nothing BOT Comedy — WhatsApp bot curating spots for a Bangalore comedy club"
       ],
-      "tags": ["Flutter", "LLM + RAG", "Shopify", "WhatsApp / Twilio"]
+      "tags": [
+        "Flutter",
+        "LLM + RAG",
+        "Shopify",
+        "WhatsApp / Twilio"
+      ]
     },
     {
       "id": "axelerant",
@@ -111,7 +176,12 @@
         "Optimised existing automations for cost & throughput",
         "Completed the Leadership Axelerator Program (LeAP)"
       ],
-      "tags": ["Make.com", "Zapier", "Apps Script", "Zoho"]
+      "tags": [
+        "Make.com",
+        "Zapier",
+        "Apps Script",
+        "Zoho"
+      ]
     },
     {
       "id": "highradius",
@@ -126,7 +196,11 @@
         "Earlier (as Cash Application consultant): led implementations for Zurich Insurance, CrediQ, Heritage Crystal Clean and Bureau Veritas",
         "Highflyer Intern of the Quarter (Q2 2021) · Star Team Award (Q3 2021)"
       ],
-      "tags": ["Apps Script", "SQL", "Cash Application"]
+      "tags": [
+        "Apps Script",
+        "SQL",
+        "Cash Application"
+      ]
     }
   ],
   "education": [
@@ -140,24 +214,73 @@
     }
   ],
   "tests": [
-    { "name": "IELTS", "score": "8.0" },
-    { "name": "GRE", "score": "306.5" },
-    { "name": "CGPA", "score": "7.90" }
+    {
+      "name": "IELTS",
+      "score": "8.0"
+    },
+    {
+      "name": "GRE",
+      "score": "306.5"
+    },
+    {
+      "name": "CGPA",
+      "score": "7.90"
+    }
   ],
   "certifications": [
-    { "name": "Make Automation Expert — L1 → L4", "issuer": "Make", "year": "2024 — 2026" },
-    { "name": "Leadership Axelerator Program (LeAP)", "issuer": "Axelerant", "year": "2024" },
-    { "name": "Google Cloud Essentials", "issuer": "Qwiklabs", "year": "2018+" },
-    { "name": "Build Interactive Apps with Google Assistant", "issuer": "Qwiklabs", "year": "2018+" },
-    { "name": "Machine Learning APIs", "issuer": "Qwiklabs", "year": "2018+" },
-    { "name": "Kubernetes in Google Cloud", "issuer": "Qwiklabs", "year": "2018+" },
-    { "name": "PyTorch Scholarship", "issuer": "Udacity", "year": "2019" }
+    {
+      "name": "Make Automation Expert — L1 → L4",
+      "issuer": "Make",
+      "year": "2024 — 2026"
+    },
+    {
+      "name": "Leadership Axelerator Program (LeAP)",
+      "issuer": "Axelerant",
+      "year": "2024"
+    },
+    {
+      "name": "Google Cloud Essentials",
+      "issuer": "Qwiklabs",
+      "year": "2018+"
+    },
+    {
+      "name": "Build Interactive Apps with Google Assistant",
+      "issuer": "Qwiklabs",
+      "year": "2018+"
+    },
+    {
+      "name": "Machine Learning APIs",
+      "issuer": "Qwiklabs",
+      "year": "2018+"
+    },
+    {
+      "name": "Kubernetes in Google Cloud",
+      "issuer": "Qwiklabs",
+      "year": "2018+"
+    },
+    {
+      "name": "PyTorch Scholarship",
+      "issuer": "Udacity",
+      "year": "2019"
+    }
   ],
   "achievements": [
-    { "title": "AIR 1 · Digit CTC VI", "detail": "All-India Rank 1 in India's toughest annual cryptic-hunt event by Digit." },
-    { "title": "Runners-Up · Run IO Hackathon", "detail": "National-level hackathon hosted by NIT Rourkela." },
-    { "title": "Tech Speaker · Actions on Google", "detail": "Workshops at IIIT Bhubaneswar, CVRCE and DevExpo." },
-    { "title": "Highflyer Awards", "detail": "Intern of the Quarter (Q2 2021) and Star Team Award (Q3 2021) at HighRadius." }
+    {
+      "title": "AIR 1 · Digit CTC VI",
+      "detail": "All-India Rank 1 in India's toughest annual cryptic-hunt event by Digit."
+    },
+    {
+      "title": "Runners-Up · Run IO Hackathon",
+      "detail": "National-level hackathon hosted by NIT Rourkela."
+    },
+    {
+      "title": "Tech Speaker · Actions on Google",
+      "detail": "Workshops at IIIT Bhubaneswar, CVRCE and DevExpo."
+    },
+    {
+      "title": "Highflyer Awards",
+      "detail": "Intern of the Quarter (Q2 2021) and Star Team Award (Q3 2021) at HighRadius."
+    }
   ],
   "projects": [
     {
@@ -166,14 +289,66 @@
       "category": "Next.js Web App · AI",
       "year": "2025",
       "summary": "A web-based IDE that embeds Google Genkit's AI capabilities directly into the editor — code generation, refactoring & summarization with a multi-tab editor and a persistent, browser-based file system.",
-      "tags": ["Next.js", "Genkit", "TypeScript", "AI"],
+      "tags": [
+        "Next.js",
+        "Genkit",
+        "TypeScript",
+        "AI"
+      ],
       "thumb": "images/portfolio/coffeeMapper.jpg",
       "thumb2x": "images/portfolio/coffeeMapper@2x.jpg",
       "hero": "images/portfolio/gallery/coffeeMapper.jpg",
       "size": "lg",
       "links": [
-        { "label": "Coming soon", "href": "#", "primary": true }
-      ]
+        {
+          "label": "GitHub",
+          "href": "https://github.com/amrit-dash/GenkiFlow-IDE",
+          "primary": true
+        }
+      ],
+      "github": {
+        "nameWithOwner": "amrit-dash/GenkiFlow-IDE",
+        "url": "https://github.com/amrit-dash/GenkiFlow-IDE",
+        "description": "GenkiFlow IDE is an innovative web-based Integrated Development Environment that leverages Google Genkit's AI capabilities to enhance the coding experience.",
+        "topics": [],
+        "languages": [
+          {
+            "name": "TypeScript",
+            "bytes": 778606,
+            "pct": 99.3
+          },
+          {
+            "name": "CSS",
+            "bytes": 4397,
+            "pct": 0.6
+          },
+          {
+            "name": "Nix",
+            "bytes": 1218,
+            "pct": 0.2
+          },
+          {
+            "name": "JavaScript",
+            "bytes": 135,
+            "pct": 0
+          }
+        ],
+        "primaryLanguage": "TypeScript",
+        "stars": 0,
+        "forks": 0,
+        "createdAt": "2025-06-08T23:58:16Z",
+        "pushedAt": "2025-06-20T02:58:51Z",
+        "updatedAt": "2025-06-20T02:58:54Z",
+        "license": {
+          "key": "mit",
+          "name": "MIT License"
+        },
+        "defaultBranch": "master",
+        "homepage": "https://studio--genkiflow-ide.us-central1.hosted.app/ide",
+        "socialImage": "https://opengraph.githubassets.com/c9abcdca7011cddfe744d091572b217308d1b1fca3d6a6a8f099671c4ec0f5c1/amrit-dash/GenkiFlow-IDE",
+        "usesCustomSocialImage": false,
+        "syncedAt": "2026-05-28T14:33:57.290Z"
+      }
     },
     {
       "id": "coffee-mapper",
@@ -181,15 +356,71 @@
       "category": "Flutter · Android",
       "year": "2024",
       "summary": "An Android app built for the Coffee Development Trust, Koraput. Field agents log in to track coffee plantations across the district and capture region-level data.",
-      "tags": ["Flutter", "Android", "Geo-tracking"],
+      "tags": [
+        "Flutter",
+        "Android",
+        "Geo-tracking"
+      ],
       "thumb": "images/portfolio/coffeeMapper.jpg",
       "thumb2x": "images/portfolio/coffeeMapper@2x.jpg",
       "hero": "images/portfolio/gallery/coffeeMapper.jpg",
       "size": "md",
       "links": [
-        { "label": "Play Store", "href": "https://play.google.com/store/apps/details?id=com.coffee.mapper", "primary": true },
-        { "label": "GitHub", "href": "https://github.com/amrit-dash/coffee-mapper-android" }
-      ]
+        {
+          "label": "Play Store",
+          "href": "https://play.google.com/store/apps/details?id=com.coffee.mapper",
+          "primary": true
+        },
+        {
+          "label": "GitHub",
+          "href": "https://github.com/amrit-dash/coffee-mapper-android"
+        }
+      ],
+      "github": {
+        "nameWithOwner": "amrit-dash/coffee-mapper-android",
+        "url": "https://github.com/amrit-dash/coffee-mapper-android",
+        "description": "An Android application for Coffee Development Trust, Koraput to track and manage Coffee Plantations.",
+        "topics": [
+          "firebase",
+          "firebase-auth",
+          "firebase-firestore",
+          "flutter",
+          "flutter-android",
+          "flutter-apps"
+        ],
+        "languages": [
+          {
+            "name": "Dart",
+            "bytes": 365882,
+            "pct": 96.1
+          },
+          {
+            "name": "Shell",
+            "bytes": 13619,
+            "pct": 3.6
+          },
+          {
+            "name": "Java",
+            "bytes": 1217,
+            "pct": 0.3
+          }
+        ],
+        "primaryLanguage": "Dart",
+        "stars": 2,
+        "forks": 2,
+        "createdAt": "2025-02-14T23:43:06Z",
+        "pushedAt": "2026-05-27T23:05:31Z",
+        "updatedAt": "2026-05-27T23:05:35Z",
+        "license": {
+          "key": "mit",
+          "name": "MIT License"
+        },
+        "defaultBranch": "main",
+        "homepage": "https://coffeemapper.web.app",
+        "socialImage": "https://repository-images.githubusercontent.com/933005792/69b5d9da-7723-4607-9f9d-fabbd1a3beac",
+        "usesCustomSocialImage": true,
+        "syncedAt": "2026-05-28T14:33:57.755Z"
+      }
     },
     {
       "id": "coffee-dashboard",
@@ -197,15 +428,73 @@
       "category": "Flutter Web",
       "year": "2024",
       "summary": "A web dashboard that surfaces tracked plantation regions on an integrated map and lets admins generate region-level reports.",
-      "tags": ["Flutter Web", "Maps", "Dashboard"],
+      "tags": [
+        "Flutter Web",
+        "Maps",
+        "Dashboard"
+      ],
       "thumb": "images/portfolio/cdtKoraput.jpg",
       "thumb2x": "images/portfolio/cdtKoraput@2x.jpg",
       "hero": "images/portfolio/gallery/dashboard.jpg",
       "size": "md",
       "links": [
-        { "label": "Live", "href": "https://coffee-mapper-dashboard.web.app", "primary": true },
-        { "label": "GitHub", "href": "https://github.com/amrit-dash/coffee-mapper-web" }
-      ]
+        {
+          "label": "Live",
+          "href": "https://coffee-mapper-dashboard.web.app",
+          "primary": true
+        },
+        {
+          "label": "GitHub",
+          "href": "https://github.com/amrit-dash/coffee-mapper-web"
+        }
+      ],
+      "github": {
+        "nameWithOwner": "amrit-dash/coffee-mapper-web",
+        "url": "https://github.com/amrit-dash/coffee-mapper-web",
+        "description": "A comprehensive web dashboard application built with Flutter for tracking and managing coffee plantations in Koraput. The application provides real-time monitoring, data visualization, and management tools for coffee plantation initiatives.",
+        "topics": [
+          "firebase",
+          "firebase-auth",
+          "firebase-firestore",
+          "firebase-hosting",
+          "flutter",
+          "flutter-web",
+          "flutter-web-app",
+          "google-maps-api"
+        ],
+        "languages": [
+          {
+            "name": "Dart",
+            "bytes": 526382,
+            "pct": 97
+          },
+          {
+            "name": "Shell",
+            "bytes": 11065,
+            "pct": 2
+          },
+          {
+            "name": "HTML",
+            "bytes": 5383,
+            "pct": 1
+          }
+        ],
+        "primaryLanguage": "Dart",
+        "stars": 2,
+        "forks": 1,
+        "createdAt": "2025-02-14T02:42:24Z",
+        "pushedAt": "2026-05-27T20:13:13Z",
+        "updatedAt": "2026-05-20T06:41:41Z",
+        "license": {
+          "key": "mit",
+          "name": "MIT License"
+        },
+        "defaultBranch": "main",
+        "homepage": "https://coffeemapper.web.app",
+        "socialImage": "https://repository-images.githubusercontent.com/932504706/710d474d-bb5e-47d6-95e5-56cf85d921af",
+        "usesCustomSocialImage": true,
+        "syncedAt": "2026-05-28T14:33:58.320Z"
+      }
     },
     {
       "id": "nbc",
@@ -213,15 +502,59 @@
       "category": "WhatsApp · Twilio",
       "year": "2024",
       "summary": "A WhatsApp bot built on Twilio + Apps Script that manages spot curation for a Bangalore comedy club. Used weekly by 150+ comics.",
-      "tags": ["WhatsApp", "Twilio", "Apps Script"],
+      "tags": [
+        "WhatsApp",
+        "Twilio",
+        "Apps Script"
+      ],
       "thumb": "images/portfolio/nbc.jpg",
       "thumb2x": "images/portfolio/nbc@2x.jpg",
       "hero": "images/portfolio/gallery/nbc.jpg",
       "size": "sm",
       "links": [
-        { "label": "Text the bot", "href": "https://wa.me/message/OGQRIVZ7W7JAN1", "primary": true },
-        { "label": "GitHub", "href": "https://github.com/amrit-dash/Nothing-BOT-Comedy" }
-      ]
+        {
+          "label": "Text the bot",
+          "href": "https://wa.me/message/OGQRIVZ7W7JAN1",
+          "primary": true
+        },
+        {
+          "label": "GitHub",
+          "href": "https://github.com/amrit-dash/Nothing-BOT-Comedy"
+        }
+      ],
+      "github": {
+        "nameWithOwner": "amrit-dash/Nothing-BOT-Comedy",
+        "url": "https://github.com/amrit-dash/Nothing-BOT-Comedy",
+        "description": "A WhatsApp bot for managing comedy open mic spots at a venue",
+        "topics": [],
+        "languages": [
+          {
+            "name": "JavaScript",
+            "bytes": 129122,
+            "pct": 67.3
+          },
+          {
+            "name": "TypeScript",
+            "bytes": 62858,
+            "pct": 32.7
+          }
+        ],
+        "primaryLanguage": "JavaScript",
+        "stars": 1,
+        "forks": 0,
+        "createdAt": "2025-05-15T22:36:58Z",
+        "pushedAt": "2025-05-16T02:40:24Z",
+        "updatedAt": "2025-05-16T10:02:49Z",
+        "license": {
+          "key": "mit",
+          "name": "MIT License"
+        },
+        "defaultBranch": "master",
+        "homepage": null,
+        "socialImage": "https://opengraph.githubassets.com/538490d5646f5277de92ed6f97d2ae542ad1d58fe981968184e6cb5e2eb3dba2/amrit-dash/Nothing-BOT-Comedy",
+        "usesCustomSocialImage": false,
+        "syncedAt": "2026-05-28T14:33:58.720Z"
+      }
     },
     {
       "id": "kunsquad",
@@ -229,14 +562,25 @@
       "category": "Shopify Liquid · E-commerce",
       "year": "2024",
       "summary": "Custom pages and reusable widget components built in Shopify Liquid for a Bhubaneswar e-commerce startup.",
-      "tags": ["Shopify", "Liquid", "E-commerce"],
+      "tags": [
+        "Shopify",
+        "Liquid",
+        "E-commerce"
+      ],
       "thumb": "images/portfolio/kunsquad.jpg",
       "thumb2x": "images/portfolio/kunsquad@2x.jpg",
       "hero": "images/portfolio/gallery/kunsquad.jpg",
       "size": "sm",
       "links": [
-        { "label": "About Us", "href": "https://www.kunsquad.com/pages/about-us", "primary": true },
-        { "label": "Our Team", "href": "https://www.kunsquad.com/pages/our-team" }
+        {
+          "label": "About Us",
+          "href": "https://www.kunsquad.com/pages/about-us",
+          "primary": true
+        },
+        {
+          "label": "Our Team",
+          "href": "https://www.kunsquad.com/pages/our-team"
+        }
       ]
     },
     {
@@ -245,14 +589,55 @@
       "category": "Make.com · Workflow",
       "year": "2024",
       "summary": "Advanced automation scenarios built on Make.com, Apps Script and SaaS integrations — featuring DSM Bot (daily-status meetings) and Cricket Bot (prediction & engagement).",
-      "tags": ["Make.com", "Apps Script", "Slack", "ChatGPT"],
+      "tags": [
+        "Make.com",
+        "Apps Script",
+        "Slack",
+        "ChatGPT"
+      ],
       "thumb": "images/portfolio/make.jpg",
       "thumb2x": "images/portfolio/make@2x.jpg",
       "hero": "images/portfolio/gallery/make.jpg",
       "size": "md",
       "links": [
-        { "label": "GitHub", "href": "https://github.com/amrit-dash/Make-Automation-Projects", "primary": true }
-      ]
+        {
+          "label": "GitHub",
+          "href": "https://github.com/amrit-dash/Make-Automation-Projects",
+          "primary": true
+        }
+      ],
+      "github": {
+        "nameWithOwner": "amrit-dash/Make-Automation-Projects",
+        "url": "https://github.com/amrit-dash/Make-Automation-Projects",
+        "description": "Make Automation Projects is a showcase of advanced automation scenarios built on Make.com, Google Apps Script, and various SaaS integrations.",
+        "topics": [
+          "appsscript",
+          "automation",
+          "sheets"
+        ],
+        "languages": [
+          {
+            "name": "JavaScript",
+            "bytes": 69708,
+            "pct": 100
+          }
+        ],
+        "primaryLanguage": "JavaScript",
+        "stars": 0,
+        "forks": 0,
+        "createdAt": "2025-05-16T13:55:02Z",
+        "pushedAt": "2025-05-16T14:01:19Z",
+        "updatedAt": "2025-05-16T14:01:21Z",
+        "license": {
+          "key": "mit",
+          "name": "MIT License"
+        },
+        "defaultBranch": "master",
+        "homepage": null,
+        "socialImage": "https://opengraph.githubassets.com/5f7d9f173188712ef0ab4d91cd9a527e7e624a086c4057532f6f3455ed854a91/amrit-dash/Make-Automation-Projects",
+        "usesCustomSocialImage": false,
+        "syncedAt": "2026-05-28T14:33:59.137Z"
+      }
     },
     {
       "id": "asap-cg",
@@ -260,14 +645,25 @@
       "category": "Apps Script · Workspace",
       "year": "2023",
       "summary": "Fuzzy customer-grouping tool — generates potential customer groups (similar-sounding customer names) from Google Sheets via Apps Script and a Firebase web UI.",
-      "tags": ["Apps Script", "Workspace", "Firebase"],
+      "tags": [
+        "Apps Script",
+        "Workspace",
+        "Firebase"
+      ],
       "thumb": "images/portfolio/asapCG.jpg",
       "thumb2x": "images/portfolio/asapCG@2x.jpg",
       "hero": "images/portfolio/gallery/asapCG.jpg",
       "size": "sm",
       "links": [
-        { "label": "Docs", "href": "https://docs.google.com/document/d/1omFaGxy4gHuwoJK1VQ7cvItkUfbLBPELfN9nB-xFVB8/edit?usp=sharing", "primary": true },
-        { "label": "Live", "href": "https://fuzzy-customer-group-generator.firebaseapp.com" }
+        {
+          "label": "Docs",
+          "href": "https://docs.google.com/document/d/1omFaGxy4gHuwoJK1VQ7cvItkUfbLBPELfN9nB-xFVB8/edit?usp=sharing",
+          "primary": true
+        },
+        {
+          "label": "Live",
+          "href": "https://fuzzy-customer-group-generator.firebaseapp.com"
+        }
       ]
     },
     {
@@ -276,15 +672,60 @@
       "category": "Actions on Google · Health",
       "year": "2019",
       "summary": "A personal health-mate built on Actions on Google — schedules medicines, tracks symptoms and guides users through a healthier daily routine.",
-      "tags": ["Actions on Google", "Dialogflow"],
+      "tags": [
+        "Actions on Google",
+        "Dialogflow"
+      ],
       "thumb": "images/portfolio/asapCG.jpg",
       "thumb2x": "images/portfolio/asapCG@2x.jpg",
       "hero": "images/portfolio/gallery/asapCG.jpg",
       "size": "sm",
-      "links": []
+      "links": [
+        {
+          "label": "GitHub",
+          "href": "https://github.com/amrit-dash/miss-lily",
+          "primary": true
+        }
+      ],
+      "github": {
+        "nameWithOwner": "amrit-dash/miss-lily",
+        "url": "https://github.com/amrit-dash/miss-lily",
+        "description": "Miss Lily is your personal health-mate. She is here to assist you to lead a healthy life and even help you to fight with the diseases you're suffering from. You can schedule your medicines with her help and she will make sure you will take them on time and stay fit. Welcome aboard.",
+        "topics": [],
+        "languages": [
+          {
+            "name": "JavaScript",
+            "bytes": 38823,
+            "pct": 100
+          }
+        ],
+        "primaryLanguage": "JavaScript",
+        "stars": 2,
+        "forks": 1,
+        "createdAt": "2019-09-12T18:14:30Z",
+        "pushedAt": "2023-03-01T22:31:53Z",
+        "updatedAt": "2021-10-31T18:27:51Z",
+        "license": {
+          "key": "gpl-3.0",
+          "name": "GNU General Public License v3.0"
+        },
+        "defaultBranch": "master",
+        "homepage": null,
+        "socialImage": "https://repository-images.githubusercontent.com/208116086/e8b55080-d5e3-11e9-8d24-d9a7f121f8ce",
+        "usesCustomSocialImage": true,
+        "syncedAt": "2026-05-28T14:33:59.674Z"
+      }
     }
   ],
-  "interests": ["Stand-Up Comedy", "Tech", "DIY", "Magic", "Model UN", "Tech Talks", "Gaming"],
+  "interests": [
+    "Stand-Up Comedy",
+    "Tech",
+    "DIY",
+    "Magic",
+    "Model UN",
+    "Tech Talks",
+    "Gaming"
+  ],
   "cv": {
     "light": "assets/CV - Amrit Dash - 2025 - Light.pdf",
     "dark": "assets/CV - Amrit Dash - 2025 - Dark.pdf"
@@ -292,7 +733,14 @@
   "theme": {
     "default": "dark",
     "accent": "#7c5cff",
-    "accentOptions": ["#7c5cff", "#22d3ee", "#10b981", "#f59e0b", "#ef4444", "#ec4899"],
+    "accentOptions": [
+      "#7c5cff",
+      "#22d3ee",
+      "#10b981",
+      "#f59e0b",
+      "#ef4444",
+      "#ec4899"
+    ],
     "fontHeading": "'Space Grotesk', system-ui, sans-serif",
     "fontBody": "'Inter', system-ui, sans-serif",
     "fontMono": "'JetBrains Mono', ui-monospace, monospace",
@@ -302,5 +750,6 @@
   },
   "footer": {
     "tagline": "Designed, written and deployed by Amrit Dash. v2 · 2026 edition."
-  }
+  },
+  "lastGithubSync": "2026-05-28T14:33:59.675Z"
 }

@@ -132,19 +132,36 @@ export function render(data) {
 
   // ---- Projects (bento) ------------------------------------------------
   $("#bento").innerHTML = data.projects
-    .map(
-      (p, i) => `
+    .map((p) => {
+      const gh = p.github;
+      // Cards show curated tags first; if a repo is wired, fall back to
+      // its topics so the public site always has something to render
+      // even when curated tags are intentionally short.
+      const labels = (p.tags && p.tags.length ? p.tags : gh?.topics || []).slice(0, 4);
+      const lang = gh?.primaryLanguage;
+      const stars = gh?.stars ?? null;
+      const forks = gh?.forks ?? null;
+      const ghMeta = gh
+        ? `<div class="gh-meta">
+             ${lang ? `<span class="gh-chip"><span class="lang-dot" data-lang="${esc(lang)}"></span>${esc(lang)}</span>` : ""}
+             ${stars !== null ? `<span class="gh-chip" title="Stars">${iconStar()}${stars}</span>` : ""}
+             ${forks !== null ? `<span class="gh-chip" title="Forks">${iconFork()}${forks}</span>` : ""}
+           </div>`
+        : "";
+      return `
       <article class="card size-${esc(p.size || "md")}" data-reveal data-project="${esc(p.id)}" data-cursor-hover>
         <div class="img" style="background-image:url('${esc(p.thumb)}')"></div>
         <span class="year-tag">${esc(p.year || "")}</span>
+        ${gh ? '<span class="repo-tag" title="Linked to a GitHub repository">' + iconGithub() + '</span>' : ""}
         <div class="body">
           <div class="cat">${esc(p.category)}</div>
           <h3 class="title">${esc(p.title)}</h3>
           <p class="summary">${esc(p.summary)}</p>
-          <ul class="tags">${(p.tags || []).slice(0, 4).map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+          <ul class="tags">${labels.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+          ${ghMeta}
         </div>
-      </article>`
-    )
+      </article>`;
+    })
     .join("");
 
   // ---- Contact ---------------------------------------------------------
@@ -191,4 +208,17 @@ function iconCode() {
 }
 function iconCam() {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>`;
+}
+
+export function iconGithub() {
+  return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.84 1.18 3.1 0 4.44-2.69 5.41-5.25 5.69.41.36.78 1.07.78 2.16v3.2c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>`;
+}
+export function iconStar() {
+  return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.3 6.18 21l1.64-6.81L2.5 9.74l6.93-.59L12 2.75l2.57 6.4 6.93.59-5.32 4.45L17.82 21z"/></svg>`;
+}
+export function iconFork() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M6 7v4a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V7M12 14v3"/></svg>`;
+}
+export function iconExt() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4h6v6M20 4l-9 9M19 13v6H5V5h6"/></svg>`;
 }

@@ -1077,6 +1077,162 @@ section {
   padding: 4px 10px;
   border-radius: var(--r-pill);
 }
+.bento .card .repo-tag {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.bento .card .repo-tag svg { width: 14px; height: 14px; }
+
+.bento .card .gh-meta {
+  margin-top: 12px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bento .card .gh-chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border-radius: var(--r-pill);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.92);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.bento .card .gh-chip svg { width: 11px; height: 11px; }
+.lang-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #8b8fa1;
+  flex-shrink: 0;
+}
+
+/* GitHub repo block inside the modal */
+.gh-block {
+  margin: 4px 0 22px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--bg-soft) 60%, transparent);
+  display: grid;
+  gap: 12px;
+}
+.gh-repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  width: max-content;
+  padding: 6px 12px 6px 10px;
+  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  transition: border-color 0.2s, background 0.2s;
+}
+.gh-repo-link:hover {
+  border-color: rgba(var(--accent-rgb), 0.45);
+}
+.gh-repo-link svg { width: 16px; height: 16px; }
+.gh-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.gh-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.04em;
+}
+.gh-stat svg { width: 12px; height: 12px; color: var(--accent); }
+.gh-langs { display: grid; gap: 8px; }
+.gh-bar {
+  display: flex;
+  height: 8px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--bg-soft);
+}
+.gh-bar span {
+  display: block;
+  height: 100%;
+  background: var(--bg-elev);
+}
+.gh-langs-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+.gh-langs-key li { display: inline-flex; align-items: center; gap: 6px; }
+.gh-langs-key em { color: var(--text-mute); font-style: normal; }
+.gh-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.gh-topics li {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+  letter-spacing: 0.04em;
+}
+
+/* Modal action buttons gain a little arrow */
+.modal-actions .btn svg { width: 12px; height: 12px; opacity: 0.7; }
+
+/* Language palette · matches GitHub Linguist colours */
+[data-lang="JavaScript"] { background: #f1e05a !important; }
+[data-lang="TypeScript"] { background: #3178c6 !important; }
+[data-lang="Python"] { background: #3572A5 !important; }
+[data-lang="Dart"] { background: #00B4AB !important; }
+[data-lang="Java"] { background: #b07219 !important; }
+[data-lang="Swift"] { background: #F05138 !important; }
+[data-lang="C"] { background: #555555 !important; }
+[data-lang="C++"] { background: #f34b7d !important; }
+[data-lang="C#"] { background: #178600 !important; }
+[data-lang="Go"] { background: #00ADD8 !important; }
+[data-lang="Ruby"] { background: #701516 !important; }
+[data-lang="PHP"] { background: #4F5D95 !important; }
+[data-lang="Kotlin"] { background: #A97BFF !important; }
+[data-lang="Rust"] { background: #dea584 !important; }
+[data-lang="HTML"] { background: #e34c26 !important; }
+[data-lang="CSS"] { background: #563d7c !important; }
+[data-lang="SCSS"] { background: #c6538c !important; }
+[data-lang="Shell"] { background: #89e051 !important; }
+[data-lang="Vue"] { background: #41b883 !important; }
+[data-lang="Liquid"] { background: #67b8de !important; }
+[data-lang="Jupyter Notebook"] { background: #DA5B0B !important; }
+[data-lang="GLSL"] { background: #5686a5 !important; }
+[data-lang="Makefile"] { background: #427819 !important; }
+[data-lang="Dockerfile"] { background: #384d54 !important; }
 
 /* -------------------------------------------------------------------------- */
 /* 15 · Project modal                                                         */
