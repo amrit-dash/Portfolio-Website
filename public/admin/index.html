@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Dashboard — Amrit Dash Portfolio</title>
+    <meta name="robots" content="noindex, nofollow">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ────────────────────────────────────────── -->
+<div id="login-screen" class="login-screen">
+    <div class="login-card">
+        <div class="login-logo">
+            <span class="logo-grd">AD</span>
+        </div>
+        <h1 class="login-title">Portfolio Admin</h1>
+        <p class="login-sub">Restricted access — authorised users only</p>
+
+        <form id="login-form" class="login-form" novalidate>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" autocomplete="username" placeholder="admin" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrap">
+                    <input type="password" id="password" autocomplete="current-password" placeholder="••••••••" required>
+                    <button type="button" id="toggle-pw" class="pw-toggle" aria-label="Show password">
+                        <svg id="eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg id="eye-closed" class="hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="login-error" class="login-error hidden">Invalid credentials. Please try again.</div>
+            <button type="submit" class="btn-login">
+                <span>Sign In</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+        </form>
+        <p class="login-hint">Default: admin / admin</p>
+    </div>
+</div>
+
+<!-- ── DASHBOARD ────────────────────────────────────────────── -->
+<div id="dashboard" class="dashboard hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="logo-grd">AD</span>
+            <span class="sidebar-title">Portfolio<br><span>Admin</span></span>
+            <button id="sidebar-close" class="sidebar-close" aria-label="Close sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-panel="overview">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Overview
+            </a>
+            <a href="#" class="nav-item" data-panel="content">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Content
+            </a>
+            <a href="#" class="nav-item" data-panel="experience">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                Experience
+            </a>
+            <a href="#" class="nav-item" data-panel="projects">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><path d="M8 21h8M12 17v4"/></svg>
+                Projects
+            </a>
+            <a href="#" class="nav-item" data-panel="appearance">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                Appearance
+            </a>
+            <a href="#" class="nav-item" data-panel="cv">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                CV Files
+            </a>
+            <a href="#" class="nav-item" data-panel="settings">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                Settings
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="../" target="_blank" class="sidebar-preview-link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                View Live Site
+            </a>
+            <button id="logout-btn" class="sidebar-logout">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-wrap">
+        <!-- Top bar -->
+        <header class="topbar">
+            <button id="sidebar-toggle" class="topbar-btn" aria-label="Toggle sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="topbar-breadcrumb">
+                <span id="panel-title">Overview</span>
+            </div>
+            <div class="topbar-actions">
+                <button id="admin-theme-toggle" class="topbar-btn" title="Toggle theme">
+                    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg class="icon-moon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
+                <div class="topbar-user">
+                    <div class="user-avatar">A</div>
+                    <span class="user-name">Admin</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Panel area -->
+        <main class="panel-area">
+
+            <!-- ── OVERVIEW ────────────────────────────────── -->
+            <section class="panel active" id="panel-overview">
+                <div class="panel-header">
+                    <h2>Welcome back, Admin 👋</h2>
+                    <p>Your portfolio dashboard. Manage content, appearance, and more.</p>
+                </div>
+
+                <div class="overview-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📄</div>
+                        <div class="stat-info">
+                            <div class="stat-val">7</div>
+                            <div class="stat-lbl">Projects</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💼</div>
+                        <div class="stat-info">
+                            <div class="stat-val">4</div>
+                            <div class="stat-lbl">Experience Entries</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎓</div>
+                        <div class="stat-info">
+                            <div class="stat-val">3</div>
+                            <div class="stat-lbl">Education Entries</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-val" id="overview-status">Live</div>
+                            <div class="stat-lbl">Site Status</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <h3>Quick Actions</h3>
+                    <div class="qa-grid">
+                        <button class="qa-btn" data-nav="content">✏️ Edit Hero Text</button>
+                        <button class="qa-btn" data-nav="appearance">🎨 Change Colors</button>
+                        <button class="qa-btn" data-nav="cv">📄 Update CV</button>
+                        <button class="qa-btn" data-nav="projects">🖼 Manage Projects</button>
+                    </div>
+                </div>
+
+                <div class="info-banner">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>Changes are saved to your browser's local storage and applied immediately on the live site. Firebase integration coming soon for cloud-based persistence.</span>
+                </div>
+            </section>
+
+            <!-- ── CONTENT ─────────────────────────────────── -->
+            <section class="panel" id="panel-content">
+                <div class="panel-header">
+                    <h2>Content</h2>
+                    <p>Edit the text and information displayed on your portfolio.</p>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Hero Section</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Display Name</label>
+                            <input type="text" id="content-name" value="Amrit Dash" placeholder="Your name">
+                        </div>
+                        <div class="form-group">
+                            <label>Professional Title</label>
+                            <input type="text" id="content-title" value="AI & Automation Engineer" placeholder="Your title">
+                        </div>
+                        <div class="form-group full">
+                            <label>Hero Subtitle</label>
+                            <input type="text" id="content-subtitle" value="Currently building intelligent systems at Contour Education · 5+ years crafting automation solutions" placeholder="Short subtitle line">
+                        </div>
+                        <div class="form-group">
+                            <label>Availability Status</label>
+                            <div class="toggle-row">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="content-available" checked>
+                                    <span class="toggle-track"></span>
+                                </label>
+                                <span>Show "Available for opportunities" badge</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">About Section</h3>
+                    <div class="form-group">
+                        <label>Bio Text</label>
+                        <textarea id="content-bio" rows="5" placeholder="Your bio...">Software Engineer with 5+ years of experience implementing automation projects and full-stack development. Specializing in Google Cloud technologies, automation platforms, and Flutter. Stemming from a consulting background, I prioritize real-world applications and have adopted a fail-first, fix-fast approach as a personality trait. Outside of work, I do stand-up comedy, love traveling, and am always discovering great food.</textarea>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Years of Experience</label>
+                            <input type="number" id="content-years" value="5" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Projects Count</label>
+                            <input type="number" id="content-projects-count" value="10" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Companies</label>
+                            <input type="number" id="content-companies" value="3" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Contact Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="content-email" value="amrit.dash60@gmail.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="tel" id="content-phone" value="+91 7978416962">
+                        </div>
+                        <div class="form-group">
+                            <label>LinkedIn URL</label>
+                            <input type="url" id="content-linkedin" value="https://linkedin.com/in/amritdash60">
+                        </div>
+                        <div class="form-group">
+                            <label>GitHub URL</label>
+                            <input type="url" id="content-github" value="https://github.com/the-AoG-guy">
+                        </div>
+                        <div class="form-group">
+                            <label>Instagram URL</label>
+                            <input type="url" id="content-instagram" value="https://instagram.com/_amrit_dash_">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-save" id="save-content">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Save Content
+                    </button>
+                    <div class="save-feedback hidden" id="content-saved">✓ Saved!</div>
+                </div>
+            </section>
+
+            <!-- ── EXPERIENCE ──────────────────────────────── -->
+            <section class="panel" id="panel-experience">
+                <div class="panel-header">
+                    <h2>Experience &amp; Education</h2>
+                    <p>Manage your timeline entries for experience and education tabs.</p>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">
+                        Current Role
+                        <span class="badge-live">Live</span>
+                    </h3>
+                    <div class="exp-entry">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Role / Title</label>
+                                <input type="text" id="exp-current-role" value="Automation Engineer">
+                            </div>
+                            <div class="form-group">
+                                <label>Company</label>
+                                <input type="text" id="exp-current-company" value="Contour Education">
+                            </div>
+                            <div class="form-group">
+                                <label>Period</label>
+                                <input type="text" id="exp-current-period" value="Aug 2025 — Present">
+                            </div>
+                            <div class="form-group full">
+                                <label>Description</label>
+                                <textarea id="exp-current-desc" rows="3">Driving end-to-end automation of student onboarding, class allocation, attendance tracking and parent-student communication using Make.com, Zapier, n8n, Google Apps Script with core CRM operations on Monday.com.</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Previous Experience</h3>
+                    <p class="form-section-note">Edit experience entries on the live site's source. Firebase-based editing coming soon.</p>
+                    <div class="exp-list">
+                        <div class="exp-row">
+                            <div class="exp-row-info">
+                                <strong>Freelance Software Engineer</strong>
+                                <span>Various Clients · Sep 2024 – Jul 2025</span>
+                            </div>
+                            <div class="exp-row-actions">
+                                <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="exp-row">
+                            <div class="exp-row-info">
+                                <strong>Business Automation Engineer</strong>
+                                <span>Axelerant Technologies · Jul 2023 – Aug 2024</span>
+                            </div>
+                            <div class="exp-row-actions">
+                                <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="exp-row">
+                            <div class="exp-row-info">
+                                <strong>Script Automation Team Lead</strong>
+                                <span>Highradius Corporation · Jul 2022 – Jun 2023</span>
+                            </div>
+                            <div class="exp-row-actions">
+                                <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-save" id="save-experience">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Save Current Role
+                    </button>
+                    <div class="save-feedback hidden" id="experience-saved">✓ Saved!</div>
+                </div>
+            </section>
+
+            <!-- ── PROJECTS ────────────────────────────────── -->
+            <section class="panel" id="panel-projects">
+                <div class="panel-header">
+                    <h2>Projects</h2>
+                    <p>Manage your portfolio projects, thumbnails, and links.</p>
+                </div>
+
+                <div class="projects-list">
+                    <div class="project-admin-row">
+                        <div class="proj-thumb" style="background:linear-gradient(135deg,#7c3aed,#06b6d4)">🧠</div>
+                        <div class="proj-info">
+                            <strong>GenkiFlow IDE</strong>
+                            <span>Next.js Web App · AI</span>
+                        </div>
+                        <div class="proj-controls">
+                            <label class="toggle-switch small">
+                                <input type="checkbox" checked data-proj="genki">
+                                <span class="toggle-track"></span>
+                            </label>
+                            <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="project-admin-row">
+                        <div class="proj-thumb">
+                            <img src="../images/portfolio/coffeeMapper.jpg" alt="">
+                        </div>
+                        <div class="proj-info">
+                            <strong>Coffee Mapper</strong>
+                            <span>Flutter Android App</span>
+                        </div>
+                        <div class="proj-controls">
+                            <label class="toggle-switch small">
+                                <input type="checkbox" checked data-proj="coffee-mapper">
+                                <span class="toggle-track"></span>
+                            </label>
+                            <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="project-admin-row">
+                        <div class="proj-thumb">
+                            <img src="../images/portfolio/nbc.jpg" alt="">
+                        </div>
+                        <div class="proj-info">
+                            <strong>Nothing BOT Comedy</strong>
+                            <span>WhatsApp Bot</span>
+                        </div>
+                        <div class="proj-controls">
+                            <label class="toggle-switch small">
+                                <input type="checkbox" checked data-proj="nothing-bot">
+                                <span class="toggle-track"></span>
+                            </label>
+                            <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="project-admin-row">
+                        <div class="proj-thumb">
+                            <img src="../images/portfolio/make.jpg" alt="">
+                        </div>
+                        <div class="proj-info">
+                            <strong>Make Automation Projects</strong>
+                            <span>Make.com Automation</span>
+                        </div>
+                        <div class="proj-controls">
+                            <label class="toggle-switch small">
+                                <input type="checkbox" checked data-proj="make-automation">
+                                <span class="toggle-track"></span>
+                            </label>
+                            <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="project-admin-row">
+                        <div class="proj-thumb">
+                            <img src="../images/portfolio/kunsquad.jpg" alt="">
+                        </div>
+                        <div class="proj-info">
+                            <strong>Kunsquad Website</strong>
+                            <span>Shopify Liquid</span>
+                        </div>
+                        <div class="proj-controls">
+                            <label class="toggle-switch small">
+                                <input type="checkbox" checked data-proj="kunsquad">
+                                <span class="toggle-track"></span>
+                            </label>
+                            <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="project-admin-row">
+                        <div class="proj-thumb">
+                            <img src="../images/portfolio/asapCG.jpg" alt="">
+                        </div>
+                        <div class="proj-info">
+                            <strong>ASAP — Customer Grouping</strong>
+                            <span>Apps Script Tool</span>
+                        </div>
+                        <div class="proj-controls">
+                            <label class="toggle-switch small">
+                                <input type="checkbox" checked data-proj="asap-cg">
+                                <span class="toggle-track"></span>
+                            </label>
+                            <button class="btn-icon" title="Edit (coming soon)" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-banner">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>Full project editing with image crop &amp; upload will be available after Firebase Storage integration.</span>
+                </div>
+            </section>
+
+            <!-- ── APPEARANCE ──────────────────────────────── -->
+            <section class="panel" id="panel-appearance">
+                <div class="panel-header">
+                    <h2>Appearance</h2>
+                    <p>Customise the visual design of your portfolio — colors, fonts, and more.</p>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Theme &amp; Mode</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Default Theme Mode</label>
+                            <select id="app-default-theme">
+                                <option value="dark" selected>Dark Mode</option>
+                                <option value="light">Light Mode</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Custom Cursor</label>
+                            <div class="toggle-row">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="app-custom-cursor" checked>
+                                    <span class="toggle-track"></span>
+                                </label>
+                                <span>Enable custom cursor dot &amp; ring</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Hero Particles</label>
+                            <div class="toggle-row">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="app-particles" checked>
+                                    <span class="toggle-track"></span>
+                                </label>
+                                <span>Enable animated particle background</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Accent Colors</h3>
+                    <div class="color-swatches-row">
+                        <div class="color-preset active" data-a1="#7c3aed" data-a2="#06b6d4" title="Default — Violet/Cyan">
+                            <div style="background:linear-gradient(135deg,#7c3aed,#06b6d4)"></div>
+                        </div>
+                        <div class="color-preset" data-a1="#ea580c" data-a2="#f59e0b" title="Fire — Orange/Amber">
+                            <div style="background:linear-gradient(135deg,#ea580c,#f59e0b)"></div>
+                        </div>
+                        <div class="color-preset" data-a1="#0f766e" data-a2="#10b981" title="Forest — Teal/Green">
+                            <div style="background:linear-gradient(135deg,#0f766e,#10b981)"></div>
+                        </div>
+                        <div class="color-preset" data-a1="#db2777" data-a2="#f43f5e" title="Rose — Pink/Red">
+                            <div style="background:linear-gradient(135deg,#db2777,#f43f5e)"></div>
+                        </div>
+                        <div class="color-preset" data-a1="#1d4ed8" data-a2="#38bdf8" title="Ocean — Blue/Sky">
+                            <div style="background:linear-gradient(135deg,#1d4ed8,#38bdf8)"></div>
+                        </div>
+                    </div>
+                    <div class="form-grid" style="margin-top:1.25rem">
+                        <div class="form-group">
+                            <label>Accent Color 1 (start)</label>
+                            <div class="color-input-wrap">
+                                <input type="color" id="app-accent1" value="#7c3aed">
+                                <input type="text" id="app-accent1-text" value="#7c3aed" pattern="^#[0-9a-fA-F]{6}$">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Accent Color 2 (end)</label>
+                            <div class="color-input-wrap">
+                                <input type="color" id="app-accent2" value="#06b6d4">
+                                <input type="text" id="app-accent2-text" value="#06b6d4" pattern="^#[0-9a-fA-F]{6}$">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Status / Green Color</label>
+                            <div class="color-input-wrap">
+                                <input type="color" id="app-green" value="#10b981">
+                                <input type="text" id="app-green-text" value="#10b981" pattern="^#[0-9a-fA-F]{6}$">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accent-preview">
+                        <span class="preview-label">Preview:</span>
+                        <div id="accent-preview-bar" style="background:linear-gradient(135deg,#7c3aed,#06b6d4)"></div>
+                        <button id="accent-preview-btn" style="background:linear-gradient(135deg,#7c3aed,#06b6d4)">Button Preview</button>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Typography</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Heading Font</label>
+                            <select id="app-font-heading">
+                                <option value="Space Grotesk" selected>Space Grotesk (Default)</option>
+                                <option value="Syne">Syne</option>
+                                <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                                <option value="Outfit">Outfit</option>
+                                <option value="Clash Display">Clash Display</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Body Font</label>
+                            <select id="app-font-body">
+                                <option value="Inter" selected>Inter (Default)</option>
+                                <option value="DM Sans">DM Sans</option>
+                                <option value="Satoshi">Satoshi</option>
+                                <option value="Manrope">Manrope</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-save" id="save-appearance">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Apply &amp; Save
+                    </button>
+                    <button class="btn-reset" id="reset-appearance">Reset to Defaults</button>
+                    <div class="save-feedback hidden" id="appearance-saved">✓ Saved!</div>
+                </div>
+            </section>
+
+            <!-- ── CV FILES ────────────────────────────────── -->
+            <section class="panel" id="panel-cv">
+                <div class="panel-header">
+                    <h2>CV Files</h2>
+                    <p>Manage the downloadable CV files for dark and light modes.</p>
+                </div>
+
+                <div class="cv-cards">
+                    <div class="cv-card">
+                        <div class="cv-card-header">
+                            <div class="cv-mode-badge dark">🌙 Dark Mode CV</div>
+                        </div>
+                        <div class="cv-card-body">
+                            <div class="cv-current">
+                                <div class="cv-file-info">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div>
+                                        <strong>cv-dark.pdf</strong>
+                                        <span>Current file</span>
+                                    </div>
+                                </div>
+                                <a href="../assets/cv-dark.pdf" target="_blank" class="btn-preview">Preview</a>
+                            </div>
+                            <div class="cv-path-group">
+                                <label>File Path / URL</label>
+                                <input type="text" id="cv-dark-path" value="assets/cv-dark.pdf" placeholder="assets/cv-dark.pdf or https://...">
+                            </div>
+                            <div class="upload-zone" id="cv-dark-upload">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <p>Drag &amp; drop PDF or <strong>click to upload</strong></p>
+                                <small>Firebase Storage upload available after Firebase integration</small>
+                                <input type="file" accept=".pdf" class="upload-input" disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cv-card">
+                        <div class="cv-card-header">
+                            <div class="cv-mode-badge light">☀️ Light Mode CV</div>
+                        </div>
+                        <div class="cv-card-body">
+                            <div class="cv-current">
+                                <div class="cv-file-info">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div>
+                                        <strong>cv-light.pdf</strong>
+                                        <span>Current file</span>
+                                    </div>
+                                </div>
+                                <a href="../assets/cv-light.pdf" target="_blank" class="btn-preview">Preview</a>
+                            </div>
+                            <div class="cv-path-group">
+                                <label>File Path / URL</label>
+                                <input type="text" id="cv-light-path" value="assets/cv-light.pdf" placeholder="assets/cv-light.pdf or https://...">
+                            </div>
+                            <div class="upload-zone" id="cv-light-upload">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <p>Drag &amp; drop PDF or <strong>click to upload</strong></p>
+                                <small>Firebase Storage upload available after Firebase integration</small>
+                                <input type="file" accept=".pdf" class="upload-input" disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-save" id="save-cv">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Update CV Paths
+                    </button>
+                    <div class="save-feedback hidden" id="cv-saved">✓ Saved!</div>
+                </div>
+            </section>
+
+            <!-- ── SETTINGS ────────────────────────────────── -->
+            <section class="panel" id="panel-settings">
+                <div class="panel-header">
+                    <h2>Settings</h2>
+                    <p>Admin account settings and advanced configuration.</p>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Change Admin Password</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" id="settings-current-pw" placeholder="Current password">
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="settings-new-pw" placeholder="New password">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="settings-confirm-pw" placeholder="Confirm new password">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-save" id="save-password">Update Password</button>
+                        <div class="save-feedback hidden" id="password-saved">✓ Password Updated!</div>
+                        <div class="save-feedback error hidden" id="password-error">❌ Passwords don't match</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Data Management</h3>
+                    <div class="settings-actions">
+                        <button class="btn-outline-admin" id="export-config">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export Config JSON
+                        </button>
+                        <button class="btn-outline-admin danger" id="reset-config">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                            Reset All to Defaults
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Firebase Integration Status</h3>
+                    <div class="firebase-status">
+                        <div class="firebase-item">
+                            <span class="firebase-icon pending">⏳</span>
+                            <div>
+                                <strong>Firebase Authentication</strong>
+                                <span>Not configured · Will replace hardcoded admin login</span>
+                            </div>
+                        </div>
+                        <div class="firebase-item">
+                            <span class="firebase-icon pending">⏳</span>
+                            <div>
+                                <strong>Cloud Firestore</strong>
+                                <span>Not configured · Will replace localStorage for config</span>
+                            </div>
+                        </div>
+                        <div class="firebase-item">
+                            <span class="firebase-icon pending">⏳</span>
+                            <div>
+                                <strong>Firebase Storage</strong>
+                                <span>Not configured · Will enable CV &amp; image uploads</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
