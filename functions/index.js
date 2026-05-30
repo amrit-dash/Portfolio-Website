@@ -216,6 +216,63 @@ exports.chat = onRequest(async (req, res) => {
 });
 
 /* ===================================================== */
+/*  /models — list a provider's models from its API      */
+/*  Owner-only. Key is sent in the request body, used     */
+/*  server-side, and never stored — lets the admin fetch  */
+/*  the live model catalog before saving a key.           */
+/* ===================================================== */
+exports.models = onRequest(async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+  if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
+
+  const { provider, key } = req.body || {};
+  if (!provider) return res.status(400).json({ error: 'no-provider' });
+  // Fall back to the stored key if none supplied (e.g. re-listing after save).
+  let useKey = key;
+  if (!useKey) {
+    try { const s = await db.doc('config/llm').get(); useKey = s.exists && s.data().byProvider?.[provider]?.apiKey; } catch (e) {}
+  }
+
+  try {
+    let url, headers = {}, pick;
+    if (provider === 'gemini') {
+      if (!useKey) return res.status(400).json({ error: 'no-key' });
+      url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(useKey) + '&pageSize=200';
+      pick = (d) => (d.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')).map((m) => (m.name || '').replace(/^models\//, ''));
+    } else if (provider === 'anthropic') {
+      if (!useKey) return res.status(400).json({ error: 'no-key' });
+      url = 'https://api.anthropic.com/v1/models?limit=100';
+      headers = { 'x-api-key': useKey, 'anthropic-version': '2023-06-01' };
+      pick = (d) => (d.data || []).map((m) => m.id);
+    } else if (provider === 'openrouter') {
+      url = 'https://openrouter.ai/api/v1/models'; // public catalog, key optional
+      if (useKey) headers = { Authorization: 'Bearer ' + useKey };
+      pick = (d) => (d.data || []).map((m) => m.id);
+    } else {
+      // OpenAI-compatible: openai, mistral, grok
+      const bases = { openai: 'https://api.openai.com/v1/models', mistral: 'https://api.mistral.ai/v1/models', grok: 'https://api.x.ai/v1/models' };
+      url = bases[provider];
+      if (!url) return res.status(400).json({ error: 'unknown-provider' });
+      if (!useKey) return res.status(400).json({ error: 'no-key' });
+      headers = { Authorization: 'Bearer ' + useKey };
+      pick = (d) => (d.data || []).map((m) => m.id);
+    }
+    const r = await fetch(url, { headers });
+    const d = await r.json();
+    if (!r.ok || d.error) {
+      const msg = (d && (d.error?.message || (typeof d.error === 'string' ? d.error : null))) || ('HTTP ' + r.status);
+      return res.status(200).json({ error: msg });
+    }
+    const models = (pick(d) || []).filter(Boolean).sort();
+    return res.status(200).json({ models });
+  } catch (e) {
+    return res.status(200).json({ error: 'fetch failed: ' + (e && e.message) });
+  }
+});
+
+/* ===================================================== */
 /*  /track — analytics ingest                            */
 /* ===================================================== */
 const TRACK_TYPES = new Set(['view', 'project:open', 'cv:download', 'bot:chat', 'social:click', 'link:click', 'cta:click']);

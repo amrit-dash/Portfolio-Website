@@ -91,21 +91,51 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const bot = content.bot;
   const [tab, setTab] = useBState('context');
   const [openQA, setOpenQA] = useBState(null);
-  const [keyStatus, setKeyStatus] = useBState(null); // null | 'saving' | 'saved' | 'error'
   const PROVS = window.ADMIN_STORE.LLM_PROVIDERS;
 
-  const activateKeys = async () => {
-    setKeyStatus('saving');
-    const ok = saveLLMConfig ? await saveLLMConfig() : false;
-    setKeyStatus(ok ? 'saved' : 'error');
-    setTimeout(() => setKeyStatus(null), 3000);
+  // ---- Providers tab: LOCAL working copy, nothing persists until Save ----
+  const cloneProv = () => JSON.parse(JSON.stringify(bot.providers || { active: 'gemini', byProvider: {} }));
+  const [pcfg, setPcfg] = useBState(cloneProv);
+  const [fetchedModels, setFetchedModels] = useBState({}); // { providerId: [ids] }
+  const [modelErr, setModelErr] = useBState({});           // { providerId: 'message' }
+  const [fetching, setFetching] = useBState(null);          // providerId currently fetching
+  const [saveState, setSaveState] = useBState(null);        // null | 'saving' | 'saved' | 'error'
+  const provDirty = JSON.stringify(pcfg) !== JSON.stringify(bot.providers);
+
+  const localCfg = (id) => (pcfg.byProvider && pcfg.byProvider[id]) || {};
+  const setLocal = (id, key, val) => setPcfg((p) => ({ ...p, byProvider: { ...p.byProvider, [id]: { ...(p.byProvider[id] || {}), [key]: val } } }));
+  const setActiveProvider = (id) => setPcfg((p) => ({ ...p, active: id }));
+
+  const authHeaders = async () => {
+    const h = { 'Content-Type': 'application/json' };
+    if (window.fb && window.fb.auth && window.fb.auth.currentUser) h.Authorization = 'Bearer ' + (await window.fb.auth.currentUser.getIdToken());
+    return h;
+  };
+
+  const fetchModels = async (id) => {
+    setFetching(id); setModelErr((m) => ({ ...m, [id]: null }));
+    try {
+      const r = await fetch(window.FUNCTIONS_BASE + '/models', { method: 'POST', headers: await authHeaders(), body: JSON.stringify({ provider: id, key: localCfg(id).apiKey || '' }) });
+      const d = await r.json();
+      if (d.models && d.models.length) setFetchedModels((m) => ({ ...m, [id]: d.models }));
+      else setModelErr((m) => ({ ...m, [id]: d.error || 'No models returned' }));
+    } catch (e) { setModelErr((m) => ({ ...m, [id]: (e && e.message) || 'fetch failed' })); }
+    finally { setFetching(null); }
+  };
+
+  const saveProviders = async () => {
+    setSaveState('saving');
+    setAt('bot.providers', pcfg);                                  // persist into the draft
+    const merged = { ...content, bot: { ...bot, providers: pcfg } };
+    const ok = saveLLMConfig ? await saveLLMConfig(merged) : false; // activate config/llm now
+    setSaveState(ok ? 'saved' : 'error');
+    setTimeout(() => setSaveState(null), 3000);
   };
 
   const setIntro = (v) => setAt('bot.intro', v);
   const setQA = (i, key, val) => setAt('bot.qa', bot.qa.map((x, j) => j === i ? { ...x, [key]: val } : x));
   const setCmd = (i, key, val) => setAt('bot.commands', bot.commands.map((x, j) => j === i ? { ...x, [key]: val } : x));
   const setBeh = (key, val) => setAt('bot.behavior.' + key, val);
-  const setProvCfg = (pid, key, val) => setAt('bot.providers.byProvider.' + pid + '.' + key, val);
 
   return (
     <div>
@@ -198,39 +228,55 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
 
       {tab === 'providers' && (
         <div className="canvas--narrow">
-          <div className="callout"><AdminIcon name="key" size={16} /><div>Pick the active provider and set its key & model. Edits autosave to your private draft as you type. To make a key live for the bot, click <b>Activate keys</b> below (or Publish) — keys are stored server-side in a private config the proxy reads; they are <b>never</b> sent to visitors or written into the public site.</div></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
-            <Btn kind="primary" icon="check" onClick={activateKeys} disabled={keyStatus === 'saving'}>
-              {keyStatus === 'saving' ? 'Activating…' : 'Activate keys (sync to live bot)'}
+          <div className="callout"><AdminIcon name="key" size={16} /><div>Set the key & model for each provider and choose which one is the <b>default</b>. Nothing is stored while you type — changes are held locally until you click <b>Save &amp; activate</b>. Keys are written to a private server config the proxy reads; they are <b>never</b> sent to visitors or written into the public site.</div></div>
+
+          <div className="provbar">
+            <Btn kind="primary" icon="check" onClick={saveProviders} disabled={saveState === 'saving' || !provDirty}>
+              {saveState === 'saving' ? 'Saving…' : (provDirty ? 'Save & activate' : 'Saved')}
             </Btn>
-            {keyStatus === 'saved' && <span className="dirty saved"><span className="dot" />Keys activated ✓</span>}
-            {keyStatus === 'error' && <span className="login__err" style={{ margin: 0 }}>Sign in required / save failed</span>}
-            <span className="helptext" style={{ marginLeft: 'auto' }}>also runs automatically on Publish</span>
+            {saveState === 'saved' && <span className="dirty saved"><span className="dot" />Saved & activated ✓</span>}
+            {saveState === 'error' && <span className="login__err" style={{ margin: 0 }}>Sign in required / save failed</span>}
+            {provDirty && saveState !== 'saving' && <span className="helptext" style={{ color: 'var(--warn, #e0a341)' }}>unsaved changes</span>}
+            <span className="helptext" style={{ marginLeft: 'auto' }}>default: <b style={{ color: 'var(--accent)' }}>{(PROVS.find((p) => p.id === pcfg.active) || {}).label || pcfg.active}</b></span>
           </div>
+
           {PROVS.map((p) => {
-            const active = bot.providers.active === p.id;
-            const cfg = bot.providers.byProvider[p.id] || { apiKey: '', model: p.models[0] };
+            const active = pcfg.active === p.id;
+            const cfg = localCfg(p.id);
+            const opts = fetchedModels[p.id] || p.models;
             return (
-              <div key={p.id}>
-                <div className="provrow" data-on={active} onClick={() => setAt('bot.providers.active', p.id)}>
-                  <span className="provrow__radio" />
+              <div key={p.id} className={'provcard' + (active ? ' provcard--active' : '')}>
+                <div className="provcard__hd">
                   <div style={{ minWidth: 0 }}>
-                    <div className="provrow__nm">{p.label}{p.tag && <span className="tag">{p.tag}</span>}</div>
-                    <div className="provrow__ep">{p.endpoint.replace('{model}', cfg.model)}</div>
+                    <div className="provrow__nm">{p.label}{p.tag && <span className="tag">{p.tag}</span>}{active && <span className="tag tag--accent">DEFAULT</span>}</div>
+                    <div className="provrow__ep">{p.endpoint.replace('{model}', cfg.model || p.models[0])}</div>
                   </div>
+                  <span className="spacer" style={{ flex: 1 }} />
                   <span className={'keystate' + (cfg.apiKey ? ' has' : '')}><span className="d" />{cfg.apiKey ? 'key set' : 'no key'}</span>
+                  {active
+                    ? <span className="provcard__badge">✓ default</span>
+                    : <Btn sm kind="ghost" onClick={() => setActiveProvider(p.id)}>Set as default</Btn>}
                 </div>
-                {active && (
-                  <div className="item" style={{ marginTop: -4 }}>
-                    <div className="item__bd" style={{ borderTop: 0, paddingTop: 14 }}>
-                      <div className="row">
-                        <Field label="API key" hint={p.keyHint}><SecretInput name={'llm-key-' + p.id} value={cfg.apiKey} placeholder={'paste your ' + p.label + ' key'} onChange={(v) => setProvCfg(p.id, 'apiKey', v)} /></Field>
-                        <Field label="Model"><Select value={cfg.model} options={p.models} onChange={(v) => setProvCfg(p.id, 'model', v)} /></Field>
+                <div className="provcard__bd">
+                  <Field label="API key" hint={p.keyHint}>
+                    <SecretInput name={'llm-key-' + p.id} value={cfg.apiKey || ''} placeholder={'paste your ' + p.label + ' key'} onChange={(v) => setLocal(p.id, 'apiKey', v)} />
+                  </Field>
+                  <Field label="Model" hint="type any model id, or fetch the list">
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <Input value={cfg.model || ''} placeholder={p.models[0]} onChange={(v) => setLocal(p.id, 'model', v)} />
                       </div>
-                      <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>
+                      <Btn sm icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Fetching…' : 'Fetch models'}</Btn>
                     </div>
-                  </div>
-                )}
+                    {modelErr[p.id] && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {modelErr[p.id]}</div>}
+                    {fetchedModels[p.id] && (
+                      <div style={{ marginTop: 8 }}>
+                        <Select value={opts.includes(cfg.model) ? cfg.model : ''} options={[{ value: '', label: `— ${opts.length} models — pick one —` }].concat(opts.map((m) => ({ value: m, label: m })))} onChange={(v) => v && setLocal(p.id, 'model', v)} />
+                      </div>
+                    )}
+                  </Field>
+                  <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>
+                </div>
               </div>
             );
           })}

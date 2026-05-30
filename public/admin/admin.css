@@ -398,6 +398,18 @@ body::before {
 .provrow .keystate { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--fg-mute); display: flex; align-items: center; gap: 6px; }
 .provrow .keystate .d { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); }
 .provrow .keystate.has .d { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.keystate { font-family: var(--font-mono); font-size: 10px; color: var(--fg-mute); display: inline-flex; align-items: center; gap: 6px; }
+.keystate .d { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); }
+.keystate.has .d { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+
+/* Provider cards (LLM Providers tab) */
+.provbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.provcard { border: 1px solid var(--line); border-radius: 12px; background: var(--bg-elev); margin-bottom: 14px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.provcard--active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.provcard__hd { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.provcard__bd { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.provcard__badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--accent); padding: 4px 8px; border: 1px solid var(--accent); border-radius: 6px; white-space: nowrap; }
+.tag--accent { color: var(--accent-fg) !important; background: var(--accent) !important; border: 0 !important; font-size: 9px; letter-spacing: .1em; padding: 2px 6px !important; }
 
 .callout { display: flex; gap: 11px; padding: 13px 15px; border: 1px solid var(--line-2); border-left: 3px solid var(--accent); border-radius: 9px; background: color-mix(in oklab, var(--accent) 5%, var(--bg-card)); font-size: 12.5px; color: var(--fg-dim); margin-bottom: 16px; }
 .callout svg { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
