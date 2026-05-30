@@ -598,6 +598,21 @@ const PORTFOLIO_CONTENT = _override ? _deepMerge(PORTFOLIO_DEFAULTS, _override) 
 window.PORTFOLIO_DEFAULTS = PORTFOLIO_DEFAULTS;
 window.PORTFOLIO_CONTENT  = PORTFOLIO_CONTENT;
 window.LLM_PROVIDERS      = LLM_PROVIDERS;
+
+/* Apply core cosmetics to the document root synchronously, before React (and
+   the boot splash) first paints — so the splash and first frame already use the
+   published accent/theme instead of flashing the hardcoded default. The App
+   re-applies these reactively as the live snapshot streams in. */
+try {
+  const _cos = (PORTFOLIO_CONTENT && PORTFOLIO_CONTENT.cosmetics) || {};
+  const _root = document.documentElement;
+  if (_cos.accent) _root.style.setProperty('--accent-raw', _cos.accent);
+  if (_cos.cursorColor || _cos.accent) _root.style.setProperty('--cursor-color', _cos.cursorColor || _cos.accent);
+  if (typeof _cos.fontScale === 'number') _root.style.setProperty('--font-scale', (_cos.fontScale / 100).toString());
+  _root.dataset.scanlines = _cos.scanlines === false ? 'off' : 'on';
+  if (_cos.type && _cos.type !== 'default') _root.dataset.type = _cos.type;
+  if (!localStorage.getItem('amritos.theme') && _cos.theme) _root.dataset.theme = _cos.theme === 'light' ? 'light' : 'dark';
+} catch (e) { /* non-fatal */ }
 window.mergeContent = (over) => over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS));
 
 /* Live content subscription. If Firebase is present (and we're not inside the

@@ -276,13 +276,16 @@ function BootSequence({ onDone }) {
     return () => clearTimeout(id);
   }, [visible, phase]);
 
-  // logo hold then fade
+  // logo hold then fade. Hold the "press any key to continue" prompt for ~1.9s
+  // so the user has a real window to click/press (or just wait) — then it
+  // auto-advances into the site. Skipping (key/click) is handled below.
   useEffect(() => {
     if (phase !== 'logo') return;
-    const t1 = setTimeout(() => setPhase('fading'), 720);
-    // Schedule onDone independently so it survives phase change to 'fading'
-    const t2 = setTimeout(() => onDone(), 1180);
-    return () => {clearTimeout(t1);};
+    const HOLD = 1900;   // visible "press any key" window
+    const t1 = setTimeout(() => setPhase('fading'), HOLD);
+    // Schedule onDone independently so it survives the phase change to 'fading'.
+    const t2 = setTimeout(() => onDone(), HOLD + 460);
+    return () => { clearTimeout(t1); };
     // Intentionally do NOT clear t2 — we want it to fire even if phase changes.
   }, [phase, onDone]);
 
@@ -330,7 +333,7 @@ function BootSequence({ onDone }) {
   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝   ╚═╝
               .  O  S`}</pre>
             <div className="boot__tagline">a software engineer's portfolio</div>
-            <div className="boot__hint mono">press any key to continue_</div>
+            <div className="boot__hint mono">press any key or click to continue_</div>
           </div>
         }
       </div>
@@ -1317,6 +1320,20 @@ function App() {
   const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
   const active = useActiveSection(['intro', 'about', 'expertise', 'work', 'projects', 'contact']);
   useReveal();
+
+  // Appearance follows the live published cosmetics: when a new snapshot streams
+  // in, push its cosmetic fields into the tweak state so the DOM-apply effect
+  // below re-runs and the accent/scanlines/cursor/fonts update without a reload.
+  // (Theme is intentionally left to the visitor's own toggle + stored pref.)
+  const liveCos = liveContent && liveContent.cosmetics;
+  useEffect(() => {
+    if (!liveCos) return;
+    const next = {};
+    ['accent', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale'].forEach((k) => {
+      if (liveCos[k] !== undefined) next[k] = liveCos[k];
+    });
+    setTweak(next);
+  }, [liveCos]);
 
   // Log one `view` event per session so the admin Overview reflects real visits.
   useEffect(() => {

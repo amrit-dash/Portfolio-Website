@@ -257,8 +257,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* ---------- Boot sequence ---------- */
 .boot {
   position: fixed; inset: 0;
-  background: radial-gradient(ellipse at center, #0a1208 0%, #000 75%);
-  color: #c8e856;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent-raw) 12%, #000) 0%, #000 75%);
+  color: var(--accent-raw);
   z-index: 5000;
   display: grid; place-items: center;
   font-family: var(--font-mono);
@@ -289,7 +289,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .boot__header {
   display: flex; align-items: center; gap: 10px;
   margin-bottom: 10px;
-  color: #c8e856;
+  color: var(--accent-raw);
   letter-spacing: .1em;
   text-transform: uppercase;
   font-size: 11px;
@@ -306,14 +306,14 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .boot__progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #c8e856 0%, #f4ff7a 100%);
-  box-shadow: 0 0 14px #c8e856;
+  background: linear-gradient(90deg, var(--accent-raw) 0%, color-mix(in srgb, var(--accent-raw) 55%, #fff) 100%);
+  box-shadow: 0 0 14px var(--accent-raw);
   transition: width .12s ease-out;
 }
 .boot__lines { min-height: 200px; }
 .boot__cursor {
   display: inline-block; width: .6em; height: 1em;
-  background: #c8e856; vertical-align: -2px;
+  background: var(--accent-raw); vertical-align: -2px;
   animation: blink 1s steps(2) infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
@@ -332,8 +332,8 @@ ul { margin: 0; padding: 0; list-style: none; }
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.1;
-  color: #c8e856;
-  text-shadow: 0 0 10px rgba(200,232,86,.5), 0 0 22px rgba(200,232,86,.3);
+  color: var(--accent-raw);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent-raw) 50%, transparent), 0 0 22px color-mix(in srgb, var(--accent-raw) 30%, transparent);
   margin: 0 0 18px;
   white-space: pre;
   display: inline-block;
@@ -342,7 +342,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .boot__tagline {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: #c8e856;
+  color: var(--accent-raw);
   opacity: .65;
   letter-spacing: .3em;
   text-transform: uppercase;
@@ -350,7 +350,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .boot__hint {
   font-size: 11px;
-  color: #c8e856;
+  color: var(--accent-raw);
   opacity: .55;
   letter-spacing: .15em;
   animation: blink 1.6s steps(2) infinite;
