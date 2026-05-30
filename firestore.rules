@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Owner = the single Google account that runs the admin console.
+    // Keep this in sync with OWNER_EMAIL in functions/index.js.
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() == 'amrit.dash60@gmail.com';
+    }
+
+    // Published content — the live site reads it (public); only the owner writes.
+    match /content/published {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // Draft + any other content docs — owner only.
+    match /content/{doc} {
+      allow read, write: if isOwner();
+    }
+
+    // LLM keys + tunable settings — NO client access at all.
+    // Functions read/write these via the Admin SDK, which bypasses rules.
+    match /config/{doc} {
+      allow read, write: if false;
+    }
+
+    // Analytics — written exclusively by the /track function (Admin SDK).
+    // Clients may not write; only the owner may read (admin dashboard).
+    match /stats/{doc}      { allow read: if isOwner(); allow write: if false; }
+    match /stats_daily/{doc}{ allow read: if isOwner(); allow write: if false; }
+    match /events/{doc}     { allow read: if isOwner(); allow write: if false; }
+    match /bot_questions/{doc} { allow read, write: if isOwner(); }
+
+    // Rate-limit bookkeeping — server only.
+    match /ratelimits/{doc} { allow read, write: if false; }
+
+    // Default deny.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
