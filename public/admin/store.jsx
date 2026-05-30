@@ -213,10 +213,42 @@ const Store = {
     try { await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() }); }
     catch (e) { console.warn('[store] fsSaveDraft failed', e && e.message); }
   },
+  // Deep-clone content with every LLM apiKey blanked — for the PUBLIC published
+  // doc, which must never carry a secret.
+  stripKeys(content) {
+    const c = JSON.parse(JSON.stringify(content || {}));
+    try {
+      const by = c.bot.providers.byProvider;
+      for (const id in by) if (by[id]) by[id].apiKey = '';
+    } catch (e) { /* no providers */ }
+    return c;
+  },
+  // Write the bot runtime config (incl. keys) to the PRIVATE config/llm doc that
+  // only the proxy reads. This is what activates a key for the live bot.
+  async fsSaveLLMConfig(content) {
+    if (!this.fsReady()) return false;
+    try {
+      const bot = (content && content.bot) || {};
+      const prov = bot.providers || {};
+      const beh = bot.behavior || {};
+      await window.fb.db.doc('config/llm').set({
+        active: prov.active || 'gemini',
+        byProvider: prov.byProvider || {},
+        systemPrompt: bot.systemPrompt || '',
+        temperature: typeof beh.temperature === 'number' ? beh.temperature : 0.7,
+        maxTokens: typeof beh.maxTokens === 'number' ? beh.maxTokens : 300,
+        updatedAt: window.fb.serverTimestamp(),
+      });
+      return true;
+    } catch (e) { console.warn('[store] fsSaveLLMConfig failed', e && e.message); return false; }
+  },
   async fsPublish(content) {
     if (!this.fsReady()) return;
     try {
-      await window.fb.db.doc('content/published').set({ content, updatedAt: window.fb.serverTimestamp() });
+      await this.fsSaveLLMConfig(content);                       // keys → private config/llm
+      const safe = this.stripKeys(content);                      // public copy carries NO keys
+      await window.fb.db.doc('content/published').set({ content: safe, updatedAt: window.fb.serverTimestamp() });
+      // Draft is owner-only readable, so it keeps the keys for continued editing.
       await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() });
     } catch (e) { console.warn('[store] fsPublish failed', e && e.message); }
   },
@@ -320,7 +352,15 @@ function useContent() {
     setContent((cur) => { Store.setPreview(cur); return cur; });
   }, []);
 
-  return { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, setDirty, synced };
+  // Activate the current bot/key config for the live proxy without a full
+  // publish — writes the private config/llm doc. Returns a success boolean.
+  const saveLLMConfig = React.useCallback(() => {
+    return new Promise((resolve) => {
+      setContent((cur) => { Store.fsSaveLLMConfig(cur).then(resolve); return cur; });
+    });
+  }, []);
+
+  return { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig };
 }
 
 window.ADMIN_STORE = { Store, buildDefaultContent, useContent, LLM_PROVIDERS, LS };

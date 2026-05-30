@@ -429,40 +429,25 @@ function findBestMatch(query, threshold) {
 // Call the active provider configured in admin → AmritBot → LLM Providers.
 // Throws on missing key or empty response; the caller falls back to local Q&A.
 async function callBot(query, suggestion) {
-  const active = (BOT.providers && BOT.providers.active) || 'gemini';
-  const cfg = (BOT.providers && BOT.providers.byProvider && BOT.providers.byProvider[active]) || {};
-  const provider = PROVIDERS.find((p) => p.id === active);
-  const key = cfg.apiKey;
-  if (!provider || !key) throw new Error('no-key');
-  const model = cfg.model || (provider.models && provider.models[0]);
-  const systemPrompt = BOT.systemPrompt || '';
-  const userMsg = suggestion
-    ? `Suggested answer from knowledge base: "${suggestion}"\n\nUser question: ${query}\n\nRespond using the suggested answer as reference. Rephrase naturally if needed. Keep to 1-2 sentences, casual lowercase, no markdown.`
-    : query;
-  const temperature = Number(BOT_BEHAVIOR.temperature) || 0.7;
-  const maxTokens = Number(BOT_BEHAVIOR.maxTokens) || 300;
-
-  if (active === 'gemini') {
-    const url = provider.endpoint.replace('{model}', model) + '?key=' + encodeURIComponent(key);
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system_instruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: 'user', parts: [{ text: userMsg }] }], generationConfig: { temperature, maxOutputTokens: maxTokens } }) });
-    const d = await res.json();
-    const t = d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts && d.candidates[0].content.parts[0] && d.candidates[0].content.parts[0].text;
-    if (!t) throw new Error('empty'); return t.trim();
-  }
-  if (active === 'anthropic') {
-    const res = await fetch(provider.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: userMsg }] }) });
-    const d = await res.json();
-    const t = d && d.content && d.content[0] && d.content[0].text;
-    if (!t) throw new Error('empty'); return t.trim();
-  }
-  // OpenAI-compatible: openai, openrouter, mistral, grok
-  const res = await fetch(provider.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-    body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }], temperature, max_tokens: maxTokens }) });
-  const d = await res.json();
-  const t = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-  if (!t) throw new Error('empty'); return t.trim();
+  // The bot never holds a key in the browser. It POSTs to the /chat Cloud
+  // Function, which reads the active provider + key from the private config/llm
+  // doc server-side and calls the LLM. Throwing here makes the caller fall back
+  // to the local Q&A matcher (offline-friendly + zero-cost).
+  const base = window.FUNCTIONS_BASE;
+  if (!base) throw new Error('no-proxy');
+  const headers = { 'Content-Type': 'application/json' };
+  // When the owner is signed in (admin "Test bot"), attach the ID token so the
+  // proxy skips the per-IP rate limit.
+  try {
+    if (window.fb && window.fb.auth && window.fb.auth.currentUser) {
+      headers.Authorization = 'Bearer ' + (await window.fb.auth.currentUser.getIdToken());
+    }
+  } catch (e) { /* anonymous visitor — rate-limited path */ }
+  const res = await fetch(base + '/chat', { method: 'POST', headers, body: JSON.stringify({ message: query, suggestion }) });
+  if (res.status === 429) { const e = new Error('rate-limit'); e.rate = true; throw e; }
+  const d = await res.json().catch(() => null);
+  if (!d || d.fallback || !d.text) throw new Error('fallback');
+  return d.text;
 }
 
 function BotMsg({ children, typing }) {
@@ -645,6 +630,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
 
   const runCommand = useCallback((cmd) => {
     setPhase('idle'); // stop auto-cycle once user interacts
+    if (cmd !== 'clear') logEvent('bot:chat', { command: cmd }); // slash commands count as bot chats
     setThread((prev) => [...prev, { from: 'user', body: '/' + cmd }]);
     setThinking(true);
     setTimeout(() => {
@@ -702,7 +688,9 @@ function AmritBotConsole({ botIcon, botIconColor }) {
       setThread((prev) => [...prev, { from: 'bot', body: text }]);
     } catch (e) {
       setThinking(false);
-      const fallback = matched || "i'm offline right now — try /stats, /links, /work or /comedy.";
+      const fallback = e && e.rate
+        ? "you've sent a lot of messages — give it a few minutes and try again."
+        : (matched || "i'm offline right now — try /stats, /links, /work or /comedy.");
       setThread((prev) => [...prev, { from: 'bot', body: fallback }]);
     }
   }, [input, runCommand]);

@@ -338,7 +338,7 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, saveLLMConfig } = window.ADMIN_STORE.useContent();
   // Recompute analytics whenever the user lands on the overview route or
   // returns the tab to focus — keeps stats in sync with the live site without
   // a manual reload.
@@ -381,7 +381,7 @@ function AdminApp() {
       case 'contact': return <E.ContactEditor content={content} setAt={setAt} />;
       case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} />;
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
-      case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} />;
+      case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={reset} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onResetAnalytics={resetAnalytics} go={go} />;
     }

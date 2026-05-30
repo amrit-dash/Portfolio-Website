@@ -97,12 +97,20 @@ function LiveTest({ bot }) {
 }
 
 /* ---- Main bot admin ---- */
-function BotAdmin({ content, setAt }) {
+function BotAdmin({ content, setAt, saveLLMConfig }) {
   const { PageHead, Panel, Field, Input, SecretInput, TextArea, Select, Btn, AdminIcon, TagInput, BulletEditor } = window.ADMIN_UI;
   const bot = content.bot;
   const [tab, setTab] = useBState('context');
   const [openQA, setOpenQA] = useBState(null);
+  const [keyStatus, setKeyStatus] = useBState(null); // null | 'saving' | 'saved' | 'error'
   const PROVS = window.ADMIN_STORE.LLM_PROVIDERS;
+
+  const activateKeys = async () => {
+    setKeyStatus('saving');
+    const ok = saveLLMConfig ? await saveLLMConfig() : false;
+    setKeyStatus(ok ? 'saved' : 'error');
+    setTimeout(() => setKeyStatus(null), 3000);
+  };
 
   const setIntro = (v) => setAt('bot.intro', v);
   const setQA = (i, key, val) => setAt('bot.qa', bot.qa.map((x, j) => j === i ? { ...x, [key]: val } : x));
@@ -201,7 +209,15 @@ function BotAdmin({ content, setAt }) {
 
       {tab === 'providers' && (
         <div className="canvas--narrow">
-          <div className="callout"><AdminIcon name="key" size={16} /><div>Pick the active provider and set its key & model. The bot routes to that provider's endpoint at runtime. <b>Keys live in Firestore after migration</b> — for production, proxy calls through a Cloud Function so keys never reach the browser.</div></div>
+          <div className="callout"><AdminIcon name="key" size={16} /><div>Pick the active provider and set its key & model. Edits autosave to your private draft as you type. To make a key live for the bot, click <b>Activate keys</b> below (or Publish) — keys are stored server-side in a private config the proxy reads; they are <b>never</b> sent to visitors or written into the public site.</div></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
+            <Btn kind="primary" icon="check" onClick={activateKeys} disabled={keyStatus === 'saving'}>
+              {keyStatus === 'saving' ? 'Activating…' : 'Activate keys (sync to live bot)'}
+            </Btn>
+            {keyStatus === 'saved' && <span className="dirty saved"><span className="dot" />Keys activated ✓</span>}
+            {keyStatus === 'error' && <span className="login__err" style={{ margin: 0 }}>Sign in required / save failed</span>}
+            <span className="helptext" style={{ marginLeft: 'auto' }}>also runs automatically on Publish</span>
+          </div>
           {PROVS.map((p) => {
             const active = bot.providers.active === p.id;
             const cfg = bot.providers.byProvider[p.id] || { apiKey: '', model: p.models[0] };

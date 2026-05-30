@@ -21,10 +21,11 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
-    // LLM keys + tunable settings — NO client access at all.
-    // Functions read/write these via the Admin SDK, which bypasses rules.
+    // LLM keys + tunable settings — owner-only (so the admin can manage keys),
+    // never public. The bot proxy reads these via the Admin SDK server-side; the
+    // public site never reads config and never receives a key.
     match /config/{doc} {
-      allow read, write: if false;
+      allow read, write: if isOwner();
     }
 
     // Analytics — written exclusively by the /track function (Admin SDK).
