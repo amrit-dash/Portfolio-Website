@@ -164,6 +164,6 @@ Server enriches each with `source` (from referrer the client sends) and `country
 ---
 
 ## 7. Future work (parked)
+- **Admin AI authoring tooling** — inline writing assistant + agentic section ops + command bar, owner-only, grounded in voice. Full requirements brainstormed in `docs/brainstorms/admin-ai-authoring-requirements.md`. **Sequences AFTER the migration above** (depends on Firestore content, Auth, and the Functions proxy being live).
 - Genkit + RAG over owner docs for richer off-script answers.
-- "AI-assist" copy drafting in admin editors (via the same proxy).
 - Secret Manager for LLM keys (vs locked Firestore doc) as a hardening upgrade.
