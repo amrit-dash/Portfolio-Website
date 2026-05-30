@@ -1,0 +1,16 @@
+/* Firebase web SDK config for amrit.os.
+   NOTE: these values are public by design — the apiKey identifies the project,
+   it is NOT a secret. Real security is enforced by Firestore/Storage rules and
+   Firebase Auth (see firestore.rules / storage.rules). Safe to commit + ship.
+
+   Functions base URL is region-specific; update if the Functions region changes
+   (see setGlobalOptions in functions/index.js). */
+window.FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDkyWhjzZbfj4JEZTLRKDNtHInX5kwAhck',
+  authDomain: 'amrit-dash-portfolio.firebaseapp.com',
+  projectId: 'amrit-dash-portfolio',
+  storageBucket: 'amrit-dash-portfolio.firebasestorage.app',
+  messagingSenderId: '685743056177',
+  appId: '1:685743056177:web:d371bcd3b8a63b62bbbc10',
+};
+window.FUNCTIONS_BASE = 'https://us-central1-amrit-dash-portfolio.cloudfunctions.net';
