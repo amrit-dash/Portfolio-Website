@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="60%" r="55%">
+      <stop offset="0%" stop-color="#c8732a" stop-opacity="0.6"></stop>
+      <stop offset="100%" stop-color="#1a0e06" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+  <rect width="120" height="120" fill="#1a0e06"></rect>
+  <circle cx="60" cy="72" r="60" fill="url(#glow)"></circle>
+  <text x="60" y="80" font-size="54" text-anchor="middle" font-family="sans-serif" dominant-baseline="auto">🎤</text>
+</svg>
