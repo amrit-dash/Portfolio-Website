@@ -195,6 +195,31 @@ const Store = {
   resetAnalytics() {
     try { localStorage.removeItem('amritos.events'); } catch (e) {}
   },
+
+  /* ---------- Firestore sync (live, cross-device) ----------
+     Available only when Firebase is loaded AND the owner is signed in (rules
+     enforce owner-only writes). localStorage stays the offline cache + instant
+     first paint; Firestore is the durable, cross-device source of truth. */
+  fsReady() { return !!(window.fb && window.fb.db && window.fb.auth && window.fb.auth.currentUser); },
+  async fsLoadDraft() {
+    if (!this.fsReady()) return null;
+    try {
+      const snap = await window.fb.db.doc('content/draft').get();
+      return snap.exists ? (snap.data().content || null) : null;
+    } catch (e) { console.warn('[store] fsLoadDraft failed', e && e.message); return null; }
+  },
+  async fsSaveDraft(content) {
+    if (!this.fsReady()) return;
+    try { await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() }); }
+    catch (e) { console.warn('[store] fsSaveDraft failed', e && e.message); }
+  },
+  async fsPublish(content) {
+    if (!this.fsReady()) return;
+    try {
+      await window.fb.db.doc('content/published').set({ content, updatedAt: window.fb.serverTimestamp() });
+      await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() });
+    } catch (e) { console.warn('[store] fsPublish failed', e && e.message); }
+  },
 };
 
 function fmtRelative(ms) {
@@ -217,8 +242,40 @@ function useContent() {
   const [content, setContent] = React.useState(() => Store.loadDraft());
   const [dirty, setDirty] = React.useState(false);
   const [publishedAt, setPublishedAt] = React.useState(() => Store.read('amritos.publishedAt'));
+  const [synced, setSynced] = React.useState(false); // true once Firestore draft adopted/seeded
+  const draftTimer = React.useRef(null);
+
+  // When the owner signs in, adopt the Firestore draft (or seed it from the
+  // current local content if none exists). After this, Firestore is the source
+  // of truth and localStorage trails as a cache.
+  React.useEffect(() => {
+    if (!window.fb || !window.fb.auth) return;
+    const unsub = window.fb.auth.onAuthStateChanged(async (u) => {
+      if (!u) { setSynced(false); return; }
+      const remote = await Store.fsLoadDraft();
+      if (remote) {
+        const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
+        Store.saveDraft(merged);
+        setContent(merged);
+      } else {
+        // No remote draft yet — seed it from whatever we have locally.
+        setContent((cur) => { Store.fsSaveDraft(cur); return cur; });
+      }
+      setSynced(true);
+    });
+    return () => unsub();
+  }, []);
+
+  // Debounced Firestore draft write (1s after the last edit) to avoid a write
+  // per keystroke while still keeping the cross-device draft current.
+  const scheduleDraftSync = React.useCallback((next) => {
+    if (!Store.fsReady()) return;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => { Store.fsSaveDraft(next); }, 1000);
+  }, []);
 
   const setAt = React.useCallback((path, value) => {
+    let computed;
     setContent((prev) => {
       const keys = Array.isArray(path) ? path : String(path).split('.');
       // Path-only immutable update: only the spine to the edited leaf is copied;
@@ -235,17 +292,19 @@ function useContent() {
       };
       const next = copyIn(prev, 0);
       Store.saveDraft(next);
+      computed = next;
       return next;
     });
     setDirty(true);
-  }, []);
+    if (computed) scheduleDraftSync(computed);
+  }, [scheduleDraftSync]);
 
   const replace = React.useCallback((next) => {
-    setContent(next); Store.saveDraft(next); setDirty(true);
-  }, []);
+    setContent(next); Store.saveDraft(next); setDirty(true); scheduleDraftSync(next);
+  }, [scheduleDraftSync]);
 
   const publish = React.useCallback(() => {
-    setContent((cur) => { Store.publish(cur); return cur; });
+    setContent((cur) => { Store.publish(cur); Store.fsPublish(cur); return cur; });
     const ts = new Date().toISOString();
     Store.write('amritos.publishedAt', ts);
     setPublishedAt(ts);
@@ -254,14 +313,14 @@ function useContent() {
 
   const reset = React.useCallback(() => {
     const def = Store.resetDraft();
-    setContent(def); setDirty(true);
-  }, []);
+    setContent(def); setDirty(true); scheduleDraftSync(def);
+  }, [scheduleDraftSync]);
 
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
   }, []);
 
-  return { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, setDirty };
+  return { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, setDirty, synced };
 }
 
 window.ADMIN_STORE = { Store, buildDefaultContent, useContent, LLM_PROVIDERS, LS };

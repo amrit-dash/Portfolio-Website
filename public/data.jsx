@@ -580,15 +580,44 @@ function _deepMerge(base, over) {
   return out;
 }
 
+/* Synchronous first paint: defaults merged with the last cached published
+   snapshot (localStorage). Firestore then hydrates/streams the live copy via
+   subscribeContent() below — so the page renders instantly, then updates live. */
+const LIVE_CACHE = 'amritos.published.cache';
 let _override = null;
 try {
-  _override = JSON.parse(localStorage.getItem('amritos.preview') || localStorage.getItem('amritos.published') || 'null');
+  _override = JSON.parse(
+    localStorage.getItem('amritos.preview') ||      // admin live-preview (iframe)
+    localStorage.getItem(LIVE_CACHE) ||             // last Firestore snapshot cached
+    localStorage.getItem('amritos.published') ||    // legacy local publish
+    'null'
+  );
 } catch (e) { /* keep defaults */ }
 const PORTFOLIO_CONTENT = _override ? _deepMerge(PORTFOLIO_DEFAULTS, _override) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS));
 
 window.PORTFOLIO_DEFAULTS = PORTFOLIO_DEFAULTS;
 window.PORTFOLIO_CONTENT  = PORTFOLIO_CONTENT;
 window.LLM_PROVIDERS      = LLM_PROVIDERS;
+window.mergeContent = (over) => over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS));
+
+/* Live content subscription. If Firebase is present (and we're not inside the
+   admin's preview iframe, which is driven by localStorage), stream
+   content/published and invoke cb(mergedContent) on every change. Returns an
+   unsubscribe fn. No-op (returns null) when Firebase isn't loaded. */
+window.subscribeContent = function (cb) {
+  try {
+    const inPreview = new URLSearchParams(location.search).has('adminpreview');
+    if (inPreview || !window.fb || !window.fb.db) return null;
+    return window.fb.db.doc('content/published').onSnapshot((snap) => {
+      if (!snap.exists) return;
+      const data = snap.data() || {};
+      const payload = data.content || data;           // tolerate {content:{...}} or flat
+      try { localStorage.setItem(LIVE_CACHE, JSON.stringify(payload)); } catch (e) {}
+      cb(window.mergeContent(payload));
+    }, (err) => console.warn('[content] live subscribe failed', err && err.message));
+  } catch (e) { return null; }
+};
+
 /* Back-compat shim: portfolio app.jsx still destructures from PORTFOLIO_DATA. */
 window.PORTFOLIO_DATA = {
   EXPERIENCE: PORTFOLIO_CONTENT.experience,

@@ -4,6 +4,15 @@ const CONTENT = window.PORTFOLIO_CONTENT || {};
 const { EXPERIENCE, EXPERTISE, PROJECTS, SOCIALS } = window.PORTFOLIO_DATA;
 const { useTime, useReveal, useActiveSection } = window.PORTFOLIO_HOOKS;
 
+/* Live content context — App subscribes to Firestore content/published via
+   window.subscribeContent() and provides the latest snapshot here, so the
+   visible content sections (hero, about, expertise, work, projects, cards,
+   contact) update in place when you publish from the admin — no refresh.
+   Defaults to the synchronous CONTENT for instant first paint and for any
+   component rendered outside the provider. */
+const ContentCtx = React.createContext(CONTENT);
+const useSiteContent = () => React.useContext(ContentCtx) || CONTENT;
+
 /* tiny rich-text helper — admin text fields use <b>/<em>/<br/>; rendering via
    dangerouslySetInnerHTML is fine because the source is the portfolio owner. */
 const rt = (html) => ({ __html: String(html == null ? '' : html) });
@@ -747,7 +756,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
    ===================================================== */
 
 function Hero({ botIcon, botIconColor }) {
-  const h = CONTENT.hero || {};
+  const h = useSiteContent().hero || {};
   const ctas = Array.isArray(h.ctas) ? h.ctas : [];
   return (
     <section id="intro" className="hero">
@@ -780,7 +789,7 @@ function Hero({ botIcon, botIconColor }) {
    ===================================================== */
 
 function AboutWindow({ cvUrl, cvVariant }) {
-  const a = CONTENT.about || {};
+  const a = useSiteContent().about || {};
   const meta = Array.isArray(a.meta) ? a.meta : [];
   const impact = Array.isArray(a.impact) ? a.impact : [];
   const onCvDownload = () => logEvent('cv:download', cvVariant);
@@ -827,6 +836,7 @@ function AboutWindow({ cvUrl, cvVariant }) {
    ===================================================== */
 
 function ExpertiseWindow() {
+  const EXPERTISE = useSiteContent().expertise || [];
   const [activeSkill, setActiveSkill] = useState(null);
 
   // Sync with the projects-side clear event so the active highlight resets if
@@ -893,8 +903,10 @@ function ExpertiseWindow() {
    ===================================================== */
 
 function ExperienceFolder() {
-  const [active, setActive] = useState(EXPERIENCE[0].id);
+  const EXPERIENCE = useSiteContent().experience || [];
+  const [active, setActive] = useState(() => (EXPERIENCE[0] && EXPERIENCE[0].id));
   const [activeRole, setActiveRole] = useState({});
+  if (!EXPERIENCE.length) return null;
   const current = EXPERIENCE.find((x) => x.id === active) || EXPERIENCE[0];
   const currentRole = current.roles ?
   current.roles.find((r) => r.id === activeRole[current.id]) || current.roles[0] :
@@ -978,7 +990,7 @@ function ExperienceFolder() {
 
       {/* Education / Awards / Certs */}
       <div className="dual-col">
-        {(CONTENT.cards || []).map((c, i) => (
+        {(useSiteContent().cards || []).map((c, i) => (
           <div key={c.id || i} className="info-card" data-reveal data-reveal-type="up" data-reveal-delay={String(i + 1)}>
             <div className="info-card__head"><span>{c.eyebrow}</span><b>{c.meta}</b></div>
             <h3>{c.title}</h3>
@@ -1073,6 +1085,8 @@ function ProjectModal({ project, onClose }) {
 }
 
 function ProjectsDesktop() {
+  const PROJECTS = useSiteContent().projects || [];
+  const EXPERTISE = useSiteContent().expertise || [];
   const [open, setOpen] = useState(null);
   const [filter, setFilter] = useState(null);
 
@@ -1134,7 +1148,7 @@ function ProjectsDesktop() {
    ===================================================== */
 
 function ContactWindow() {
-  const c = CONTENT.contact || {};
+  const c = useSiteContent().contact || {};
   const email = c.email || '';
   const phone = c.phone || '';
   const socials = Array.isArray(c.socials) ? c.socials : SOCIALS;
@@ -1285,6 +1299,15 @@ const TYPE_OPTIONS = ['default', 'editorial', 'pixel', 'modern'];
 
 function App() {
   const [booted, setBooted] = useState(false);
+  // Live content: starts from the synchronous snapshot, then streams from
+  // Firestore content/published so edits published in the admin appear here
+  // without a refresh.
+  const [liveContent, setLiveContent] = useState(CONTENT);
+  useEffect(() => {
+    const unsub = window.subscribeContent ? window.subscribeContent((c) => setLiveContent(c)) : null;
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, []);
+
   const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem('amritos.theme');
     if (stored) return stored;
@@ -1355,7 +1378,7 @@ function App() {
 
   // CV: pick the theme-matching variant so the file mirrors the page they came from.
   // Sources from content.media so admin uploads replace the link without code changes.
-  const media = (CONTENT && CONTENT.media) || {};
+  const media = (liveContent && liveContent.media) || {};
   const cvVariant = theme === 'dark' ? 'dark' : 'light';
   const cvUrl = (cvVariant === 'dark' ? (media.cvDark && media.cvDark.url) : (media.cvLight && media.cvLight.url))
     || (theme === 'dark' ? 'assets/Amrit Dash - CV 2025 (Dark).pdf' : 'assets/Amrit Dash - CV 2025.pdf');
@@ -1363,7 +1386,7 @@ function App() {
   const { TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio, TweakSelect, TweakSlider } = window;
 
   return (
-    <>
+    <ContentCtx.Provider value={liveContent}>
       {!booted && <BootSequence onDone={handleBootDone} />}
       <div className="os-root" data-comment-anchor="e902a98e34-div-780-7">
         <MenuBar
@@ -1412,7 +1435,7 @@ function App() {
         </TweaksPanel>
       }
       <CustomCursor cursorStyle={t.cursorStyle || 'ring'} />
-    </>);
+    </ContentCtx.Provider>);
 }
 
 /* =====================================================
