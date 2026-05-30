@@ -107,34 +107,48 @@ function Input({ value, onChange, placeholder, ...rest }) {
   return <input className="inp" value={v} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} {...rest} />;
 }
 
-/* SecretInput — for API keys / tokens. Masks with a show/hide toggle but
-   crucially disables browser + password-manager autofill (autoComplete="off",
-   a unique name, and 1Password/LastPass ignore attrs). Without these, Chrome
-   and Safari hijack a bare type="password" field — preloading the saved admin
-   passphrase and blocking manual entry. */
+/* SecretInput — for API keys / tokens.
+   Password managers (1Password, Chrome, Safari) autofill ANY type="password"
+   field and ignore autocomplete=off — that clobbered the key field with a saved
+   credential. The robust fix is to NOT be a password field at all: use a normal
+   text input masked with CSS (-webkit-text-security), which managers leave
+   alone. We also keep it readOnly until focus (defeats autofill-on-load) and
+   show a non-secret fingerprint (length + last 4) so a wrong value is obvious. */
 function SecretInput({ value, onChange, placeholder, name }) {
   const [show, setShow] = useState(false);
+  const [ro, setRo] = useState(true); // readOnly until focus — blocks autofill-on-mount
   const v = typeof value === 'string' ? value : '';
+  const masked = !show;
+  const fp = v ? `${v.length} chars · ends “${v.slice(-4)}”` : 'not set';
+  const looksShort = v && v.length > 0 && v.length < 20;
   return (
-    <div className="secret">
-      <input
-        className="inp"
-        type={show ? 'text' : 'password'}
-        value={v}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        name={name || 'secret-field'}
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        data-1p-ignore="true"
-        data-lpignore="true"
-        data-form-type="other"
-      />
-      <button type="button" className="secret__toggle" onClick={() => setShow((s) => !s)} title={show ? 'Hide' : 'Show'} aria-label={show ? 'Hide key' : 'Show key'}>
-        <AdminIcon name={show ? 'eye-off' : 'eye'} size={14} />
-      </button>
+    <div>
+      <div className="secret">
+        <input
+          className="inp"
+          type="text"
+          value={v}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setRo(false)}
+          readOnly={ro}
+          name={name || 'secret-field'}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-form-type="other"
+          style={masked ? { WebkitTextSecurity: 'disc', textSecurity: 'disc' } : undefined}
+        />
+        <button type="button" className="secret__toggle" onClick={() => setShow((s) => !s)} title={show ? 'Hide' : 'Show'} aria-label={show ? 'Hide key' : 'Show key'}>
+          <AdminIcon name={show ? 'eye-off' : 'eye'} size={14} />
+        </button>
+      </div>
+      <div className="helptext" style={{ marginTop: 4, color: looksShort ? '#e0a341' : 'var(--fg-mute)' }}>
+        stored: {fp}{looksShort ? ' · ⚠ looks too short for a real key' : ''}
+      </div>
     </div>
   );
 }
