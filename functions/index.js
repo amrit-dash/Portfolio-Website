@@ -24,8 +24,10 @@ admin.initializeApp();
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
-// Region close to the owner / Firestore. Adjust if the project's default differs.
-setGlobalOptions({ region: 'us-central1', maxInstances: 10 });
+// Co-located with Firestore (asia-south1 / Mumbai) so the per-request reads on
+// /chat and /track don't pay a cross-region round-trip. Storage lives in
+// us-central1 but is accessed client-side, not from these functions.
+setGlobalOptions({ region: 'asia-south1', maxInstances: 10 });
 
 // The Google account allowed to use admin-only endpoints (and to bypass the bot
 // rate limit when testing). Override via env OWNER_EMAIL at deploy time.

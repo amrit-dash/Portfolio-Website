@@ -13,4 +13,4 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: '685743056177',
   appId: '1:685743056177:web:d371bcd3b8a63b62bbbc10',
 };
-window.FUNCTIONS_BASE = 'https://us-central1-amrit-dash-portfolio.cloudfunctions.net';
+window.FUNCTIONS_BASE = 'https://asia-south1-amrit-dash-portfolio.cloudfunctions.net';

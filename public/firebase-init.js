@@ -25,7 +25,7 @@
       auth.useEmulator('http://localhost:9099', { disableWarnings: true });
       db.useEmulator('localhost', 8080);
       if (storage) storage.useEmulator('localhost', 9199);
-      window.FUNCTIONS_BASE = 'http://localhost:5001/' + window.FIREBASE_CONFIG.projectId + '/us-central1';
+      window.FUNCTIONS_BASE = 'http://localhost:5001/' + window.FIREBASE_CONFIG.projectId + '/asia-south1';
       console.info('[firebase-init] using local emulators');
     } catch (e) { console.warn('[firebase-init] emulator wiring failed', e); }
   }
