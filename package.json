@@ -1,4 +1,13 @@
 {
+  "name": "amrit-os-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "amrit.os — retro-OS portfolio with a localStorage-backed admin console",
+  "scripts": {
+    "dev": "npx --yes serve public -l 3000",
+    "start": "npx --yes serve public -l 3000",
+    "deploy": "firebase deploy --only hosting"
+  },
   "dependencies": {
     "firebase-tools": "^14.7.0"
   }
