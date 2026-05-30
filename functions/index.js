@@ -306,12 +306,14 @@ exports.track = onRequest(async (req, res) => {
   // Global counter
   batch.set(db.doc('stats/global'), { [counterField]: inc, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
-  // Per-day bucket with breakdowns
+  // Per-day bucket with breakdowns. Use NESTED objects (not dotted keys) so
+  // set({merge:true}) merges into the maps — dotted keys would create literal
+  // "bySource.google" fields instead of bySource:{google:n}.
   const daily = { date: today, [counterField]: inc };
-  if (source) daily[`bySource.${source}`] = inc;
-  if (geo.country) daily[`byCountry.${geo.country}`] = inc;
-  if (type === 'project:open' && meta?.id) daily[`byProject.${meta.id}`] = inc;
-  if (type === 'social:click' && meta?.label) daily[`bySocial.${meta.label}`] = inc;
+  if (source) daily.bySource = { [source]: inc };
+  if (geo.country) daily.byCountry = { [geo.country]: inc };
+  if (type === 'project:open' && meta && meta.id) daily.byProject = { [meta.id]: inc };
+  if (type === 'social:click' && meta && meta.label) daily.bySocial = { [meta.label]: inc };
   batch.set(db.doc(`stats_daily/${today}`), daily, { merge: true });
 
   // Capped recent-activity feed (raw IP kept per owner request; admin-only).

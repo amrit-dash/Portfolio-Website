@@ -141,6 +141,92 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
   );
 }
 
+/* ---------- Analytics (dedicated page) ---------- */
+function AnalyticsPage({ analytics, onReset }) {
+  const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
+  const a = analytics;
+  const daily = a.daily || [];
+
+  // Aggregate breakdowns across the loaded day-buckets.
+  const agg = (field) => {
+    const out = {};
+    daily.forEach((d) => { const m = d[field] || {}; for (const k in m) out[k] = (out[k] || 0) + m[k]; });
+    return Object.entries(out).sort((x, y) => y[1] - x[1]);
+  };
+  const bySource = agg('bySource');
+  const byCountry = agg('byCountry');
+  const bySocial = agg('bySocial');
+  const maxHist = Math.max(1, ...a.history);
+  const hasData = (a.totalEvents || 0) > 0;
+
+  const Bars = ({ rows, label, empty }) => {
+    const max = Math.max(1, ...rows.map((r) => r[1]));
+    return (
+      <Panel title={label}>
+        {rows.length === 0 ? <p className="helptext" style={{ margin: 0 }}>{empty}</p> : (
+          <div className="bars">
+            {rows.slice(0, 8).map(([name, n]) => (
+              <div className="barrow" key={name}>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                <span className="track"><span className="fill" style={{ width: (n / max * 100) + '%' }} /></span>
+                <span className="v">{n}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+    );
+  };
+
+  return (
+    <div>
+      <PageHead eyebrow="/ANALYTICS" title="Analytics" actions={hasData ? <Btn sm kind="ghost" icon="trash" onClick={onReset}>Clear all</Btn> : null}>
+        Real visitor activity captured from the live site — last 30 days. Counts update in real time as events come in.
+      </PageHead>
+
+      {!hasData && (
+        <div className="callout"><AdminIcon name="info" size={16} /><div>No analytics captured yet. Open the <a href="index.html" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>live portfolio</a> and interact — views, project opens, CV downloads, bot chats, social/link/CTA clicks all flow in here.</div></div>
+      )}
+
+      <div className="stats">
+        <Stat icon="eye" label="PAGE VIEWS" num={a.pageViews.toLocaleString()} />
+        <Stat icon="projects" label="PROJECT OPENS" num={a.projectOpens.toLocaleString()} />
+        <Stat icon="download" label="CV DOWNLOADS" num={a.cvDownloads.toLocaleString()} />
+        <Stat icon="chat" label="BOT CHATS" num={a.botChats.toLocaleString()} />
+        <Stat icon="contact" label="SOCIAL CLICKS" num={(a.socialClicks || 0).toLocaleString()} />
+        <Stat icon="link" label="LINK CLICKS" num={(a.linkClicks || 0).toLocaleString()} />
+      </div>
+
+      <Panel title="Traffic" sub="page views · last 14 days">
+        {hasData ? (
+          <div className="spark">
+            {a.history.map((v, i) => <div key={i} className="bar" style={{ height: Math.max(2, v / maxHist * 100) + '%' }} title={v + ' views'} />)}
+          </div>
+        ) : <p className="helptext" style={{ margin: 0 }}>Waiting for visits.</p>}
+      </Panel>
+
+      <div className="grid2">
+        <Bars rows={a.topProjects.map((p) => [p.name, p.opens])} label="Most-opened projects" empty="No project opens yet." />
+        <Bars rows={bySource} label="Traffic sources" empty="No referrers captured yet." />
+      </div>
+      <div className="grid2">
+        <Bars rows={byCountry} label="By country" empty="No location data yet." />
+        <Bars rows={bySocial} label="Social link clicks" empty="No social clicks yet." />
+      </div>
+
+      <Panel title="Recent activity" sub="live feed">
+        {a.activity.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No activity captured yet.</p> : (
+          <ul className="activity">
+            {a.activity.map((ev, i) => (
+              <li key={i}><span className="when">{ev.when}</span><span className="dot" /><span>{ev.what}</span><span className="who">{ev.who}</span></li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
 /* ---------- Sync & deploy ---------- */
 function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
   const { PageHead, Panel, Btn, Field, Input, AdminIcon } = window.ADMIN_UI;
@@ -239,7 +325,7 @@ function PreviewDrawer({ open, mode, onClose, onMode }) {
 
 /* ---------- Sidebar ---------- */
 const NAV = [
-  { group: 'DASHBOARD', items: [{ id: 'overview', label: 'Overview', icon: 'overview' }] },
+  { group: 'DASHBOARD', items: [{ id: 'overview', label: 'Overview', icon: 'overview' }, { id: 'analytics', label: 'Analytics', icon: 'eye' }] },
   { group: 'CONTENT', items: [
     { id: 'hero', label: 'Hero & intro', icon: 'hero' },
     { id: 'about', label: 'About', icon: 'about' },
@@ -257,7 +343,7 @@ const NAV = [
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
 ];
 
-const TITLES = { overview: 'Overview', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
+const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
 
 function Sidebar({ route, go, content, onLogout }) {
   const { AdminIcon } = window.ADMIN_UI;
@@ -339,18 +425,13 @@ function AdminApp() {
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
   const { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, saveLLMConfig } = window.ADMIN_STORE.useContent();
-  // Recompute analytics whenever the user lands on the overview route or
-  // returns the tab to focus — keeps stats in sync with the live site without
-  // a manual reload.
-  const [analyticsTick, setAnalyticsTick] = useAState(0);
-  const analytics = useAMemo(() => window.ADMIN_STORE.Store.analytics(), [analyticsTick, route]);
-  useAEffect(() => {
-    const refresh = () => setAnalyticsTick((n) => n + 1);
-    window.addEventListener('focus', refresh);
-    window.addEventListener('storage', (e) => { if (e.key === 'amritos.events') refresh(); });
-    return () => window.removeEventListener('focus', refresh);
-  }, []);
-  const resetAnalytics = () => { window.ADMIN_STORE.Store.resetAnalytics(); setAnalyticsTick((n) => n + 1); };
+  // Real-time analytics from Firestore (counters + recent feed + daily buckets).
+  const analytics = window.ADMIN_STORE.useAnalytics();
+  const resetAnalytics = async () => {
+    if (!confirm('Clear ALL analytics? This deletes the counters, per-day buckets and the recent-events feed. Cannot be undone.')) return;
+    const ok = await window.ADMIN_STORE.Store.fsClearStats();
+    if (ok) { setFlash('Analytics cleared'); setTimeout(() => setFlash(null), 2600); analytics.refreshDaily(); }
+  };
   const { AdminIcon, Btn } = window.ADMIN_UI;
 
   useAEffect(() => { const onHash = () => setRoute((location.hash || '').replace('#', '') || 'overview'); window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash); }, []);
@@ -372,6 +453,7 @@ function AdminApp() {
   const renderRoute = () => {
     switch (route) {
       case 'overview': return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onResetAnalytics={resetAnalytics} go={go} />;
+      case 'analytics': return <AnalyticsPage analytics={analytics} onReset={resetAnalytics} />;
       case 'hero': return <E.HeroEditor content={content} setAt={setAt} />;
       case 'about': return <E.AboutEditor content={content} setAt={setAt} />;
       case 'expertise': return <E.ExpertiseEditor content={content} setAt={setAt} />;

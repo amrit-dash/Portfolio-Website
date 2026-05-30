@@ -12,6 +12,7 @@ const BOT_TABS = [
   { id: 'commands', label: 'Commands' },
   { id: 'behavior', label: 'Behavior' },
   { id: 'providers', label: 'LLM Providers' },
+  { id: 'review', label: 'Review / Inbox' },
   { id: 'test', label: 'Test bot' },
 ];
 
@@ -130,6 +131,34 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
     const ok = saveLLMConfig ? await saveLLMConfig(merged) : false; // activate config/llm now
     setSaveState(ok ? 'saved' : 'error');
     setTimeout(() => setSaveState(null), 3000);
+  };
+
+  // ---- Review / Inbox: visitor bot questions captured server-side ----
+  const [questions, setQuestions] = useBState(null); // null = not loaded
+  const [qLoading, setQLoading] = useBState(false);
+  const loadQuestions = async () => {
+    setQLoading(true);
+    try { setQuestions(await window.ADMIN_STORE.Store.fsBotQuestions(100)); }
+    catch (e) { setQuestions([]); }
+    finally { setQLoading(false); }
+  };
+  useBEffect(() => { if (tab === 'review' && questions === null) loadQuestions(); }, [tab]);
+  const addToQA = (q) => {
+    const text = (q.q || '').trim();
+    if (!text) return;
+    setAt('bot.qa', [...(bot.qa || []), { qs: [text], as: [''] }]);
+    window.ADMIN_STORE.Store.fsDeleteBotQuestion(q.id);
+    setQuestions((list) => (list || []).filter((x) => x.id !== q.id));
+  };
+  const dismissQ = (q) => {
+    window.ADMIN_STORE.Store.fsDeleteBotQuestion(q.id);
+    setQuestions((list) => (list || []).filter((x) => x.id !== q.id));
+  };
+  const qWhen = (q) => {
+    const ms = q.at && q.at.toMillis ? q.at.toMillis() : (q.at && q.at.seconds ? q.at.seconds * 1000 : 0);
+    if (!ms) return '';
+    const d = Math.floor((Date.now() - ms) / 86400000);
+    return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + 'd ago';
   };
 
   const setIntro = (v) => setAt('bot.intro', v);
@@ -280,6 +309,31 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === 'review' && (
+        <div className="canvas--narrow">
+          <Panel title="Visitor questions" sub={questions ? `${questions.length} captured` : '…'}
+            actions={<Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading}>{qLoading ? 'Loading…' : 'Refresh'}</Btn>}>
+            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Turn good ones into canned answers with <b>Add to Q&amp;A</b> (then write the answer in the Q&amp;A tab), or dismiss the rest. This is how the bot gets smarter over time.</p>
+            {questions === null ? <p className="helptext" style={{ margin: 0 }}>Loading…</p>
+              : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
+              : questions.map((q) => (
+                <div className="item" key={q.id}>
+                  <div className="item__hd" style={{ cursor: 'default' }}>
+                    <span className="miniico"><AdminIcon name="chat" size={15} /></span>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="item__title">{q.q}</div>
+                      <div className="item__sub">{qWhen(q)}</div>
+                    </div>
+                    <span className="spacer" style={{ flex: 1 }} />
+                    <Btn sm kind="primary" icon="plus" onClick={() => addToQA(q)}>Add to Q&amp;A</Btn>
+                    <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
+                  </div>
+                </div>
+              ))}
+          </Panel>
         </div>
       )}
 

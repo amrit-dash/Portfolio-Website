@@ -18,19 +18,22 @@ const useSiteContent = () => React.useContext(ContentCtx) || CONTENT;
 const rt = (html) => ({ __html: String(html == null ? '' : html) });
 
 /* =====================================================
-   ANALYTICS — real, localStorage-backed event log shared
-   with the admin Overview. Ring-buffer capped at 1k.
+   ANALYTICS — fire-and-forget POST to the /track function,
+   which writes Firestore counters + per-day buckets + a
+   recent-events feed (with geo/source enrichment). The
+   admin dashboard reads those back in real time.
    ===================================================== */
-const ANALYTICS_KEY = 'amritos.events';
-const ANALYTICS_CAP = 1000;
 function logEvent(type, meta) {
   try {
-    const raw = localStorage.getItem(ANALYTICS_KEY);
-    const list = raw ? JSON.parse(raw) : [];
-    list.push({ at: Date.now(), type, ...(meta ? { meta } : {}) });
-    if (list.length > ANALYTICS_CAP) list.splice(0, list.length - ANALYTICS_CAP);
-    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(list));
-  } catch (e) { /* quota or disabled — ignore */ }
+    const base = window.FUNCTIONS_BASE;
+    if (!base) return;
+    fetch(base + '/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, meta, referrer: (typeof document !== 'undefined' && document.referrer) || '' }),
+      keepalive: true, // survive page navigation (e.g. CV download / external link)
+    }).catch(() => {});
+  } catch (e) { /* never let analytics break the UX */ }
 }
 
 /* =====================================================

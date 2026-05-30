@@ -201,6 +201,45 @@ const Store = {
      enforce owner-only writes). localStorage stays the offline cache + instant
      first paint; Firestore is the durable, cross-device source of truth. */
   fsReady() { return !!(window.fb && window.fb.db && window.fb.auth && window.fb.auth.currentUser); },
+
+  /* ---------- Firestore analytics reads (owner-only) ---------- */
+  fsStatsListen(cb) {
+    if (!this.fsReady()) return null;
+    return window.fb.db.doc('stats/global').onSnapshot((s) => cb(s.exists ? s.data() : {}), (e) => console.warn('[stats]', e && e.message));
+  },
+  fsEventsListen(cb, n) {
+    if (!this.fsReady()) return null;
+    return window.fb.db.collection('events').orderBy('at', 'desc').limit(n || 25).onSnapshot(
+      (snap) => cb(snap.docs.map((d) => d.data())), (e) => console.warn('[events]', e && e.message));
+  },
+  async fsDailyRange(days) {
+    if (!this.fsReady()) return [];
+    const ids = [];
+    const now = new Date();
+    for (let i = 0; i < days; i++) { const dt = new Date(now); dt.setDate(now.getDate() - i); ids.push(dt.toISOString().slice(0, 10)); }
+    const docs = await Promise.all(ids.map((id) =>
+      window.fb.db.doc('stats_daily/' + id).get().then((s) => (s.exists ? { id, ...s.data() } : { id })).catch(() => ({ id }))));
+    return docs.reverse(); // chronological
+  },
+  async fsBotQuestions(n) {
+    if (!this.fsReady()) return [];
+    try {
+      const snap = await window.fb.db.collection('bot_questions').orderBy('at', 'desc').limit(n || 100).get();
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (e) { console.warn('[botq]', e && e.message); return []; }
+  },
+  async fsDeleteBotQuestion(id) {
+    if (!this.fsReady()) return;
+    try { await window.fb.db.collection('bot_questions').doc(id).delete(); } catch (e) {}
+  },
+  async fsClearStats() {
+    if (!this.fsReady()) return false;
+    try {
+      const tok = await window.fb.auth.currentUser.getIdToken();
+      const r = await fetch(window.FUNCTIONS_BASE + '/clearStats', { method: 'POST', headers: { Authorization: 'Bearer ' + tok } });
+      return r.ok;
+    } catch (e) { return false; }
+  },
   async fsLoadDraft() {
     if (!this.fsReady()) return null;
     try {
@@ -352,10 +391,12 @@ function useContent() {
     setContent((cur) => { Store.setPreview(cur); return cur; });
   }, []);
 
-  // Activate the current bot/key config for the live proxy without a full
-  // publish — writes the private config/llm doc. Returns a success boolean.
-  const saveLLMConfig = React.useCallback(() => {
+  // Activate the bot/key config for the live proxy without a full publish —
+  // writes the private config/llm doc. Accepts an explicit content snapshot
+  // (used by the Providers tab to avoid a stale-state race). Returns success.
+  const saveLLMConfig = React.useCallback((explicit) => {
     return new Promise((resolve) => {
+      if (explicit) { Store.fsSaveLLMConfig(explicit).then(resolve); return; }
       setContent((cur) => { Store.fsSaveLLMConfig(cur).then(resolve); return cur; });
     });
   }, []);
@@ -363,4 +404,62 @@ function useContent() {
   return { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig };
 }
 
-window.ADMIN_STORE = { Store, buildDefaultContent, useContent, LLM_PROVIDERS, LS };
+/* ---------- Analytics hook (real-time, Firestore-backed) ----------
+   Subscribes to the global counters + recent-events feed and loads the per-day
+   buckets for the last 30 days. Re-attaches when the owner signs in. Returns a
+   shape compatible with the existing Overview plus richer data for the
+   dedicated Analytics page. */
+function useAnalytics() {
+  const [counters, setCounters] = React.useState(null);
+  const [recent, setRecent] = React.useState([]);
+  const [daily, setDaily] = React.useState([]);
+
+  React.useEffect(() => {
+    if (!window.fb || !window.fb.auth) return;
+    let u1 = null, u2 = null;
+    const unsubAuth = window.fb.auth.onAuthStateChanged(async (u) => {
+      if (u1) u1(); if (u2) u2(); u1 = u2 = null;
+      if (u) {
+        u1 = Store.fsStatsListen(setCounters);
+        u2 = Store.fsEventsListen(setRecent, 25);
+        try { setDaily(await Store.fsDailyRange(30)); } catch (e) {}
+      } else { setCounters(null); setRecent([]); setDaily([]); }
+    });
+    return () => { if (u1) u1(); if (u2) u2(); unsubAuth(); };
+  }, []);
+
+  const refreshDaily = React.useCallback(async () => {
+    try { setDaily(await Store.fsDailyRange(30)); } catch (e) {}
+  }, []);
+
+  const c = counters || {};
+  const history = daily.slice(-14).map((d) => d.views || 0);
+  const projAgg = {};
+  daily.forEach((d) => { const bp = d.byProject || {}; for (const k in bp) projAgg[k] = (projAgg[k] || 0) + bp[k]; });
+  const topProjects = Object.entries(projAgg).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, opens]) => ({ name, opens }));
+  const evMs = (ev) => (ev.at && ev.at.toMillis ? ev.at.toMillis() : (ev.at && ev.at.seconds ? ev.at.seconds * 1000 : Date.now()));
+  const activity = recent.map((ev) => {
+    const meta = ev.meta || {};
+    let what = ev.type;
+    if (ev.type === 'view') what = 'Page view';
+    else if (ev.type === 'cv:download') what = 'CV downloaded' + (meta.variant ? ' (' + meta.variant + ')' : '');
+    else if (ev.type === 'bot:chat') what = 'amrit-bot chat' + (meta.command ? ' · /' + meta.command : '');
+    else if (ev.type === 'project:open') what = 'Opened · ' + (meta.title || meta.id || 'project');
+    else if (ev.type === 'social:click') what = 'Social · ' + (meta.label || '');
+    else if (ev.type === 'link:click') what = 'Link · ' + (meta.label || meta.href || '');
+    else if (ev.type === 'cta:click') what = 'CTA · ' + (meta.label || '');
+    const where = [ev.city, ev.country].filter(Boolean).join(', ') || (ev.source || 'visitor');
+    return { when: fmtRelative(Date.now() - evMs(ev)), what, who: where };
+  });
+  const totalEvents = ['views', 'cvDownloads', 'botChats', 'projectOpens', 'socialClicks', 'linkClicks', 'ctaClicks']
+    .reduce((s, k) => s + (c[k] || 0), 0);
+
+  return {
+    ready: counters != null,
+    pageViews: c.views || 0, cvDownloads: c.cvDownloads || 0, botChats: c.botChats || 0, projectOpens: c.projectOpens || 0,
+    socialClicks: c.socialClicks || 0, linkClicks: c.linkClicks || 0, ctaClicks: c.ctaClicks || 0,
+    history, topProjects, activity, totalEvents, daily, recent, counters: c, refreshDaily,
+  };
+}
+
+window.ADMIN_STORE = { Store, buildDefaultContent, useContent, useAnalytics, LLM_PROVIDERS, LS };
