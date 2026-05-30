@@ -6,17 +6,12 @@
    ===================================================== */
 const { useState: useAState, useEffect: useAEffect, useRef: useARef, useMemo: useAMemo } = React;
 
-const DEMO_PASS = 'amrit';
+// The single Google account allowed into the console. Mirrors OWNER_EMAIL in
+// functions/index.js and the isOwner() checks in firestore.rules / storage.rules.
+const OWNER_EMAIL = 'amrit.dash60@gmail.com';
 
-/* ---------- Login ---------- */
-function Login({ onAuth }) {
-  const [pw, setPw] = useAState('');
-  const [err, setErr] = useAState(false);
-  const submit = (e) => {
-    e.preventDefault();
-    if (pw === DEMO_PASS) { sessionStorage.setItem('amritos.admin.session', '1'); onAuth(); }
-    else { setErr(true); setPw(''); }
-  };
+/* ---------- Login (Firebase Auth, Google, owner-only) ---------- */
+function Login({ onGoogle, error, busy }) {
   return (
     <div className="login">
       <div className="login__crt">
@@ -25,18 +20,16 @@ function Login({ onAuth }) {
           <span style={{ flex: 1, textAlign: 'center' }}>~/system/admin — authenticate</span>
           <span style={{ opacity: .5 }}>secure</span>
         </div>
-        <form className="login__body" onSubmit={submit}>
+        <form className="login__body" onSubmit={(e) => e.preventDefault()}>
           <pre className="login__ascii">{`  ▄▀█ █▀▄ █▀▄▀█ █ █▄░█
   █▀█ █▄▀ █░▀░█ █ █░▀█   . os`}</pre>
           <div className="login__head"><b>RESTRICTED</b> — amrit.os control panel</div>
-          <div className="login__lead">Not linked from the site. Enter the passphrase to continue.<span className="login__cursor" /></div>
-          <div className="login__row">
-            <span className="prmpt">›</span>
-            <input type="password" name="amritos-admin-passphrase" autoComplete="current-password" autoFocus value={pw} placeholder="passphrase" onChange={(e) => { setPw(e.target.value); setErr(false); }} />
-          </div>
-          {err && <div className="login__err">✕ access denied — wrong passphrase</div>}
-          <div className="login__hint">demo passphrase: <b style={{ color: 'var(--accent)' }}>amrit</b> · production swaps this for Firebase Auth</div>
-          <button className="login__btn" type="submit">AUTHENTICATE →</button>
+          <div className="login__lead">Not linked from the site. Sign in with the owner Google account.<span className="login__cursor" /></div>
+          <button className="login__btn" type="button" onClick={onGoogle} disabled={busy}>
+            {busy ? 'AUTHENTICATING…' : 'SIGN IN WITH GOOGLE →'}
+          </button>
+          {error && <div className="login__err">✕ {error}</div>}
+          <div className="login__hint">access restricted to <b style={{ color: 'var(--accent)' }}>{OWNER_EMAIL}</b> · Firebase Auth</div>
         </form>
       </div>
     </div>
@@ -194,7 +187,7 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
             ['amritos.preview',   'localStorage', 'transient — written by Preview, cleared on close/publish'],
             ['amritos.events',    'localStorage', 'live analytics — written by the portfolio'],
             ['amritos.theme',     'localStorage', 'last-used theme of the visitor'],
-            ['admin session',     'sessionStorage', 'passphrase gate — cleared on tab close'],
+            ['admin session',     'Firebase Auth', 'Google sign-in, restricted to the owner account'],
           ].map(([k, store, note]) => (
             <div className="barrow" key={k} style={{ gridTemplateColumns: '200px 130px 1fr' }}>
               <span className="mono" style={{ fontSize: 11 }}>{k}</span><span className="mono" style={{ color: 'var(--accent)', fontSize: 11 }}>{store}</span><span className="helptext">{note}</span>
@@ -308,7 +301,39 @@ function Sidebar({ route, go, content, onLogout }) {
 
 /* ---------- App ---------- */
 function AdminApp() {
-  const [authed, setAuthed] = useAState(() => sessionStorage.getItem('amritos.admin.session') === '1');
+  // Firebase Auth state. `authReady` gates the first render until we know
+  // whether there's a signed-in session; `user` is set only for the owner.
+  const [user, setUser] = useAState(null);
+  const [authReady, setAuthReady] = useAState(false);
+  const [authError, setAuthError] = useAState(null);
+  const [authBusy, setAuthBusy] = useAState(false);
+
+  useAEffect(() => {
+    if (!window.fb || !window.fb.auth) { setAuthError('Firebase failed to load.'); setAuthReady(true); return; }
+    const unsub = window.fb.auth.onAuthStateChanged((u) => {
+      if (u && (u.email || '').toLowerCase() === OWNER_EMAIL) {
+        setUser(u); setAuthError(null);
+      } else if (u) {
+        // Signed in, but not the owner — reject and sign back out.
+        setAuthError("That account isn't authorized for this console.");
+        window.fb.auth.signOut();
+        setUser(null);
+      } else {
+        setUser(null);
+      }
+      setAuthReady(true);
+    });
+    return () => unsub();
+  }, []);
+
+  const signInGoogle = async () => {
+    setAuthBusy(true); setAuthError(null);
+    try { await window.fb.auth.signInWithPopup(window.fb.googleProvider()); }
+    catch (e) { setAuthError((e && e.message) || 'sign-in failed'); }
+    finally { setAuthBusy(false); }
+  };
+  const signOut = () => { try { window.fb.auth.signOut(); } catch (e) {} };
+
   const [route, setRoute] = useAState(() => (location.hash || '').replace('#', '') || 'overview');
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
@@ -340,7 +365,8 @@ function AdminApp() {
 
   const doPublish = () => { publish(); setFlash('Published to site ✓'); setTimeout(() => setFlash(null), 2600); };
 
-  if (!authed) return <Login onAuth={() => setAuthed(true)} />;
+  if (!authReady) return <div className="login"><div className="login__crt"><div className="login__body" style={{ textAlign: 'center', color: 'var(--fg-mute)' }}>Checking session…</div></div></div>;
+  if (!user) return <Login onGoogle={signInGoogle} error={authError} busy={authBusy} />;
 
   const E = window.ADMIN_EDITORS, WP = window.ADMIN_EDITORS_WP, BOT = window.ADMIN_BOT;
   const renderRoute = () => {
@@ -363,7 +389,7 @@ function AdminApp() {
 
   return (
     <div className="shell">
-      <Sidebar route={route} go={go} content={content} onLogout={() => { sessionStorage.removeItem('amritos.admin.session'); setAuthed(false); }} />
+      <Sidebar route={route} go={go} content={content} onLogout={signOut} />
       <div className="main">
         <div className="topbar">
           <span className="topbar__crumb">amrit.os / <b>{TITLES[route] || route}</b></span>
