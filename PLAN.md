@@ -159,7 +159,7 @@ Server enriches each with `source` (from referrer the client sends) and `country
 3. **Bot rate limit**: 30 msgs/IP/hour (admin test unlimited). **Retention**: events pruned > 30 days; daily buckets > 12 months.
 4. **Stats visibility**: **private to admin** (no public badge in v1; trivial to expose later).
 5. **Tunable in admin → AmritBot section**: bot rate limit, event-retention/prune window, and other knobs editable from the panel (not hardcoded).
-6. **Bot training loop**: every visitor bot question is logged; admin gets a "questions asked" view with one-click **"add to Q&A"** to turn real questions into canned answers. (LLM fine-tuning = future.)
+6. **Bot training loop**: every visitor bot question is logged. The admin AmritBot area gets a **dedicated "Review / Inbox" section** (its own sub-tab) that collects captured visitor questions + other inputs for the owner to review, then one-click **"add to Q&A"** to turn real questions into canned answers and grow the bot's grounding over time. (LLM fine-tuning itself = future; this is curation.)
 
 ---
 

@@ -98,7 +98,7 @@ Two costs compound. First, blank-page friction — staring at an empty "descript
 ## Scope Boundaries
 
 - **Owner-only.** Authoring tools are never exposed to public visitors — only the authenticated owner. Visitors still get the public chat bot, nothing more.
-- **No model training/fine-tuning.** Authoring uses an off-the-shelf LLM via the proxy. The bot's "visitor questions → add to Q&A" curation loop (planned separately) is the only "learning," and it is not part of this feature.
+- **No model training/fine-tuning.** Authoring uses an off-the-shelf LLM via the proxy. The bot's curation loop — a dedicated "Review / Inbox" section in the AmritBot admin area that collects captured visitor questions + other inputs for the owner to review and one-click "add to Q&A" (tracked in `PLAN.md` Phase 6) — is the only "learning," and it is not part of this feature.
 - **Layered delivery, not big-bang.** Full suite is the target; it ships in layers (inline assist → agentic section ops → command bar), each independently shippable and testable.
 - **No image generation.** Authoring covers text/structured content, not generating project imagery or the cropped media assets.
 - **Not a public-facing content generator.** This is private authoring of the owner's own portfolio, not a tool that lets anyone generate site content.
