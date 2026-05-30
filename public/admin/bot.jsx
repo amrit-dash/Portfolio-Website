@@ -26,41 +26,27 @@ function localMatch(qa, query, threshold) {
   return best.s >= threshold ? best.a : null;
 }
 
-/* ---- live provider call ---- */
-async function callProvider(providerId, cfg, systemPrompt, behavior, userText, hint) {
-  const PROV = window.ADMIN_STORE.LLM_PROVIDERS.find((p) => p.id === providerId);
-  const model = cfg.model;
-  const key = cfg.apiKey;
-  if (!key) throw new Error('no-key');
-  const userMsg = hint ? `Reference answer: "${hint}"\n\nUser: ${userText}\n\nUse the reference, rephrase naturally, 1-2 sentences.` : userText;
-
-  if (providerId === 'gemini') {
-    const url = PROV.endpoint.replace('{model}', model) + '?key=' + key;
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system_instruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: 'user', parts: [{ text: userMsg }] }], generationConfig: { temperature: behavior.temperature, maxOutputTokens: behavior.maxTokens } }) });
-    const d = await res.json();
-    const t = d.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!t) throw new Error('empty'); return t.trim();
+/* ---- live test via the deployed /chat proxy (same path visitors use) ----
+   Sends the owner's Firebase ID token so the proxy bypasses the rate limit AND
+   returns the real upstream error (e.g. quota/billing) instead of a silent
+   fallback. Tests the ACTIVATED config — click "Activate keys" first. */
+async function proxyChat(message, suggestion) {
+  const base = window.FUNCTIONS_BASE;
+  if (!base) throw new Error('Functions base URL not configured.');
+  const headers = { 'Content-Type': 'application/json' };
+  if (window.fb && window.fb.auth && window.fb.auth.currentUser) {
+    headers.Authorization = 'Bearer ' + (await window.fb.auth.currentUser.getIdToken());
   }
-  if (providerId === 'anthropic') {
-    const res = await fetch(PROV.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model, max_tokens: behavior.maxTokens, system: systemPrompt, messages: [{ role: 'user', content: userMsg }] }) });
-    const d = await res.json();
-    const t = d.content?.[0]?.text; if (!t) throw new Error('empty'); return t.trim();
-  }
-  // OpenAI-compatible: openai, openrouter, mistral, grok
-  const res = await fetch(PROV.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-    body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }], temperature: behavior.temperature, max_tokens: behavior.maxTokens }) });
-  const d = await res.json();
-  const t = d.choices?.[0]?.message?.content; if (!t) throw new Error('empty'); return t.trim();
+  const res = await fetch(base + '/chat', { method: 'POST', headers, body: JSON.stringify({ message, suggestion }) });
+  const d = await res.json().catch(() => ({}));
+  return { ok: !!d.text, text: d.text, error: d.error, status: res.status };
 }
 
 /* ---- Test chat ---- */
 function LiveTest({ bot }) {
   const { AdminIcon, Btn } = window.ADMIN_UI;
   const PROV = window.ADMIN_STORE.LLM_PROVIDERS.find((p) => p.id === bot.providers.active);
-  const cfg = bot.providers.byProvider[bot.providers.active] || {};
-  const [msgs, setMsgs] = useBState([{ from: 'sys', text: 'Test session — replies use the config above. Without a live API key it answers from your Q&A pairs.' }]);
+  const [msgs, setMsgs] = useBState([{ from: 'sys', text: 'Tests the live /chat proxy with your activated config. If a key fails, the real provider error shows here. Activate keys above first.' }]);
   const [input, setInput] = useBState('');
   const [busy, setBusy] = useBState(false);
   const bodyRef = useBRef(null);
@@ -70,15 +56,18 @@ function LiveTest({ bot }) {
     const q = input.trim(); if (!q || busy) return;
     setInput(''); setMsgs((m) => [...m, { from: 'usr', text: q }]); setBusy(true);
     const matched = localMatch(bot.qa, q, bot.behavior.matchThreshold);
-    let reply, via;
     try {
-      reply = await callProvider(bot.providers.active, cfg, bot.systemPrompt, bot.behavior, q, matched);
-      via = PROV.label;
+      const r = await proxyChat(q, matched);
+      if (r.ok) {
+        setMsgs((m) => [...m, { from: 'bot', text: r.text }, { from: 'sys', text: 'via ' + (PROV ? PROV.label : 'proxy') + ' (live)' }]);
+      } else {
+        const reply = matched || "i'm offline right now — try /stats, /links, /work or /comedy.";
+        setMsgs((m) => [...m, { from: 'bot', text: reply }, { from: 'sys', text: r.error ? ('⚠ ' + r.error + ' — fell back to local Q&A') : 'local Q&A (no key active)' }]);
+      }
     } catch (e) {
-      reply = matched || "i'm offline right now — try /stats, /links, /work or /comedy.";
-      via = e.message === 'no-key' ? 'local Q&A (no key set)' : 'local Q&A (API unreachable)';
+      const reply = matched || "i'm offline right now.";
+      setMsgs((m) => [...m, { from: 'bot', text: reply }, { from: 'sys', text: '⚠ ' + (e && e.message) }]);
     }
-    setMsgs((m) => [...m, { from: 'bot', text: reply }, { from: 'sys', text: 'via ' + via }]);
     setBusy(false);
   };
 

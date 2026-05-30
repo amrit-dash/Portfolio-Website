@@ -167,8 +167,13 @@ exports.chat = onRequest(async (req, res) => {
   const key = pcfg.apiKey;
   const model = pcfg.model;
 
+  // Surface the real upstream error ONLY to the authenticated owner (admin test
+  // panel), so debugging "offline" doesn't require log-diving. Public visitors
+  // just get the clean fallback signal.
+  const fail = (reason) => res.status(200).json({ text: null, fallback: true, ...(owner ? { error: reason } : {}) });
+
   // No key configured → tell the client to fall back to local Q&A.
-  if (!provider || !key) return res.status(200).json({ text: null, fallback: true });
+  if (!provider || !key) return fail('No API key set for the active provider (' + active + '). Paste a key and click Activate.');
 
   const systemPrompt = (cfg && cfg.systemPrompt) || '';
   const temperature = Number(cfg && cfg.temperature) || 0.7;
@@ -177,29 +182,36 @@ exports.chat = onRequest(async (req, res) => {
     ? `Suggested answer from knowledge base: "${suggestion}"\n\nUser question: ${message}\n\nRespond using the suggested answer as reference. Rephrase naturally if needed. Keep to 1-2 sentences, casual lowercase, no markdown.`
     : message;
 
+  // Pull a human-readable error out of any provider's error JSON shape.
+  const errOf = (status, d) => {
+    const m = (d && (d.error?.message || d.error?.[0]?.message || (typeof d.error === 'string' ? d.error : null) || d.message)) || ('HTTP ' + status);
+    return `${active} (${model}): ${m}`;
+  };
+
   try {
-    let text;
+    let r, d, text;
     if (active === 'gemini') {
       const url = provider.endpoint.replace('{model}', model) + '?key=' + encodeURIComponent(key);
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ system_instruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: 'user', parts: [{ text: userMsg }] }], generationConfig: { temperature, maxOutputTokens: maxTokens } }) });
-      const d = await r.json();
+      d = await r.json();
       text = d?.candidates?.[0]?.content?.parts?.[0]?.text;
     } else if (active === 'anthropic') {
-      const r = await fetch(provider.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      r = await fetch(provider.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: userMsg }] }) });
-      const d = await r.json();
+      d = await r.json();
       text = d?.content?.[0]?.text;
     } else {
-      const r = await fetch(provider.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+      r = await fetch(provider.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }], temperature, max_tokens: maxTokens }) });
-      const d = await r.json();
+      d = await r.json();
       text = d?.choices?.[0]?.message?.content;
     }
-    if (!text) return res.status(200).json({ text: null, fallback: true });
+    if (!r.ok || (d && d.error)) return fail(errOf(r.status, d));
+    if (!text) return fail('Empty response from ' + active + ' (' + model + ').');
     return res.status(200).json({ text: String(text).trim() });
   } catch (e) {
-    return res.status(200).json({ text: null, fallback: true });
+    return fail('Request to ' + active + ' failed: ' + (e && e.message));
   }
 });
 
