@@ -1,0 +1,324 @@
+/* global React */
+/* =====================================================
+   amrit.os ADMIN — content editors (part 1)
+   Hero · About · Expertise · Achievements/Cards · Contact · Media · Appearance
+   ===================================================== */
+const { useState } = React;
+
+const EXPERTISE_ICONS = ['automation', 'rag', 'gas', 'flutter', 'bots', 'shopify', 'web', 'ios', 'comedy', 'brain'];
+const SOCIAL_ICONS = ['whatsapp', 'linkedin', 'github', 'instagram', 'email', 'web'];
+const ACCENT_OPTIONS = ['#c8e856', '#33ff66', '#ff7a3d', '#7a9eff', '#ffd25a', '#e85c89', '#9d7cff'];
+const CURSOR_COLOR_OPTIONS = ['#ffffff', '#c8e856', '#33ff66', '#ff7a3d', '#7a9eff', '#ffd25a', '#ff4466'];
+const TYPE_OPTIONS = [
+  { value: 'default', label: 'Default · Newsreader' },
+  { value: 'editorial', label: 'Editorial · Playfair' },
+  { value: 'pixel', label: 'Pixel · VT323' },
+  { value: 'modern', label: 'Modern · Space Grotesk' },
+];
+const BOT_ICONS = [
+  { value: 'brain-computer', label: 'Brain + Computer' },
+  { value: 'brain', label: 'Brain (original)' },
+  { value: 'brain14', label: 'Brain Outline' },
+  { value: 'intelligence', label: 'Intelligence' },
+  { value: 'bot-ai', label: 'Bot AI' },
+  { value: 'brain-pc2', label: 'Brain + Computer 2' },
+  { value: 'brain-pc', label: 'Brain + Computer 3' },
+];
+
+const TARGETS = {
+  aboutPhoto: { w: 720, h: 880 },
+  projThumb: { w: 480, h: 360 },
+  projGallery: { w: 1280, h: 800 },
+};
+
+function RangeRow({ label, value, min, max, step = 1, unit = '', onChange }) {
+  return (
+    <div className="zoomrow" style={{ marginTop: 0 }}>
+      <span className="lbl" style={{ minWidth: 88 }}>{label}</span>
+      <input className="rng" type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <span className="lbl" style={{ minWidth: 44, textAlign: 'right', color: 'var(--accent)' }}>{value}{unit}</span>
+    </div>
+  );
+}
+
+/* ============ HERO ============ */
+function HeroEditor({ content, setAt }) {
+  const { PageHead, Panel, Field, Input, TextArea, Btn, AdminIcon } = window.ADMIN_UI;
+  const h = content.hero;
+  const setCta = (i, key, val) => { const n = h.ctas.map((c, j) => j === i ? { ...c, [key]: val } : c); setAt('hero.ctas', n); };
+  return (
+    <div className="canvas--narrow">
+      <PageHead eyebrow="/HERO.INTRO" title="Hero & intro">The first thing visitors see — terminal handle, name, title and the pitch paragraph.</PageHead>
+      <Panel title="Headline">
+        <Field label="Terminal handle"><Input value={h.handle} onChange={(v) => setAt('hero.handle', v)} /></Field>
+        <div className="row">
+          <Field label="First name"><Input value={h.name} onChange={(v) => setAt('hero.name', v)} /></Field>
+          <Field label="Emphasised (italic) name"><Input value={h.nameEm} onChange={(v) => setAt('hero.nameEm', v)} /></Field>
+        </div>
+        <Field label="Subtitle"><Input value={h.subtitle} onChange={(v) => setAt('hero.subtitle', v)} /></Field>
+        <Field label="Pitch paragraph" hint="<b> for bold"><TextArea rows={4} value={h.role} onChange={(v) => setAt('hero.role', v)} /></Field>
+      </Panel>
+      <Panel title="Call-to-action buttons">
+        {h.ctas.map((c, i) => (
+          <div className="item" key={i}>
+            <div className="item__bd" style={{ borderTop: 0, paddingTop: 14 }}>
+              <div className="row">
+                <Field label={`Button ${i + 1} label`}><Input value={c.label} onChange={(v) => setCta(i, 'label', v)} /></Field>
+                <Field label="Link / anchor"><Input value={c.href} onChange={(v) => setCta(i, 'href', v)} /></Field>
+              </div>
+              <div className="togrow" style={{ padding: 0 }}>
+                <div className="txt"><b>Primary (filled) style</b></div>
+                {React.createElement(window.ADMIN_UI.Toggle, { value: c.primary, onChange: (v) => setCta(i, 'primary', v) })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </Panel>
+    </div>
+  );
+}
+
+/* ============ ABOUT ============ */
+function AboutEditor({ content, setAt }) {
+  const { PageHead, Panel, Field, Input, TextArea, Btn, AdminIcon } = window.ADMIN_UI;
+  const { ImageSlot } = window.ADMIN_CROP;
+  const a = content.about;
+  const setMeta = (i, key, val) => setAt('about.meta', a.meta.map((m, j) => j === i ? { ...m, [key]: val } : m));
+  const setImpact = (i, key, val) => setAt('about.impact', a.impact.map((m, j) => j === i ? { ...m, [key]: val } : m));
+  return (
+    <div className="canvas--narrow">
+      <PageHead eyebrow="/ABOUT.ME" title="About section">Your photo, the readme-style bio and the Now / Then / Before timeline.</PageHead>
+      <div className="grid2">
+        <Panel title="Photo">
+          <ImageSlot label="About photo" value={a.photo} target={TARGETS.aboutPhoto} previewW={120}
+            hint="Portrait — shown in the about window" onChange={(url) => setAt('about.photo', url)} />
+          <Field label="Photo stamp caption"><Input value={a.photoStamp} onChange={(v) => setAt('about.photoStamp', v)} /></Field>
+        </Panel>
+        <Panel title="Meta strip">
+          {a.meta.map((m, i) => (
+            <div className="row" key={i} style={{ marginBottom: 10 }}>
+              <Field label="Label"><Input value={m.label} onChange={(v) => setMeta(i, 'label', v)} /></Field>
+              <Field label="Value"><Input value={m.value} onChange={(v) => setMeta(i, 'value', v)} /></Field>
+              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                <span className="iconbtn iconbtn--danger" onClick={() => setAt('about.meta', a.meta.filter((_, j) => j !== i))}><AdminIcon name="trash" size={14} /></span>
+              </div>
+            </div>
+          ))}
+          <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.meta', [...a.meta, { label: '', value: '' }])}>Add meta row</Btn>
+        </Panel>
+      </div>
+      <Panel title="Bio copy">
+        <Field label="Heading" hint="<em> for italic accent"><TextArea rows={2} value={a.heading} onChange={(v) => setAt('about.heading', v)} /></Field>
+        <Field label="Intro paragraph"><TextArea rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} /></Field>
+      </Panel>
+      <Panel title="Impact timeline" sub={`${a.impact.length} entries`}>
+        {a.impact.map((m, i) => (
+          <div className="item" key={i}>
+            <div className="item__bd" style={{ borderTop: 0, paddingTop: 14 }}>
+              <div className="row">
+                <Field label="Label"><Input value={m.label} onChange={(v) => setImpact(i, 'label', v)} /></Field>
+                <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                  <span className="iconbtn iconbtn--danger" onClick={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))}><AdminIcon name="trash" size={14} /></span>
+                </div>
+              </div>
+              <Field label="Description" hint="<em> for accent"><TextArea rows={2} value={m.html} onChange={(v) => setImpact(i, 'html', v)} /></Field>
+            </div>
+          </div>
+        ))}
+        <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.impact', [...a.impact, { label: '', html: '' }])}>Add timeline entry</Btn>
+      </Panel>
+    </div>
+  );
+}
+
+/* ============ EXPERTISE ============ */
+function ExpertiseEditor({ content, setAt }) {
+  const { PageHead, Panel, Field, Input, Select, Btn, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const list = content.expertise;
+  const [open, setOpen] = useState(null);
+  const update = (i, key, val) => setAt('expertise', list.map((e, j) => j === i ? { ...e, [key]: val } : e));
+  const renumber = (arr) => arr.map((e, i) => ({ ...e, num: String(i + 1).padStart(2, '0') }));
+  const add = () => { const n = renumber([...list, { num: '', icon: 'automation', title: 'New module', sub: '' }]); setAt('expertise', n); setOpen(n.length - 1); };
+
+  return (
+    <div className="canvas--narrow">
+      <PageHead eyebrow="/EXPERTISE.SYS" title="Expertise modules">The clickable skill grid. Drag to reorder — numbers (MOD_01…) renumber automatically. Each module can filter projects on the site.</PageHead>
+      <Panel title="Installed modules" sub={`${list.length} modules`} actions={<Btn sm icon="plus" kind="primary" onClick={add}>Add module</Btn>}>
+        <Reorderable items={list} getKey={(_, i) => i}
+          onReorder={(next) => setAt('expertise', renumber(next))}
+          renderItem={(e, i, { gripProps }) => (
+            <ListItem gripProps={gripProps} num={'MOD_' + (e.num || String(i + 1).padStart(2, '0'))}
+              icon={<AdminIcon name={EXPERTISE_ICONS.includes(e.icon) ? e.icon : 'sparkle'} size={16} />}
+              title={e.title} sub={e.sub} open={open === i}
+              onToggle={() => setOpen(open === i ? null : i)}
+              onDelete={() => { setAt('expertise', renumber(list.filter((_, j) => j !== i))); setOpen(null); }}>
+              <div className="row">
+                <Field label="Title"><Input value={e.title} onChange={(v) => update(i, 'title', v)} /></Field>
+                <Field label="Subtitle"><Input value={e.sub} onChange={(v) => update(i, 'sub', v)} /></Field>
+              </div>
+              <Field label="Icon" hint="used for the card + project filter"><Select value={e.icon} options={EXPERTISE_ICONS} onChange={(v) => update(i, 'icon', v)} /></Field>
+            </ListItem>
+          )} />
+      </Panel>
+    </div>
+  );
+}
+
+/* ============ ACHIEVEMENTS / EDUCATION / CERTS (cards) ============ */
+function CardsEditor({ content, setAt }) {
+  const { PageHead, Panel, Field, Input, TextArea, Btn, BulletEditor, AdminIcon } = window.ADMIN_UI;
+  const cards = content.cards;
+  const update = (i, key, val) => setAt('cards', cards.map((c, j) => j === i ? { ...c, [key]: val } : c));
+  return (
+    <div className="canvas--narrow">
+      <PageHead eyebrow="/WORK.HISTORY → INFO CARDS" title="Education · Achievements · Certifications">The four info cards beneath the work timeline. Each has a heading, subtitle and either a list or a body paragraph.</PageHead>
+      {cards.map((c, i) => (
+        <Panel key={c.id} title={c.title || c.eyebrow} sub={c.eyebrow}>
+          <div className="row">
+            <Field label="Eyebrow label"><Input value={c.eyebrow} onChange={(v) => update(i, 'eyebrow', v)} /></Field>
+            <Field label="Meta (right)"><Input value={c.meta} onChange={(v) => update(i, 'meta', v)} /></Field>
+          </div>
+          <div className="row">
+            <Field label="Title"><Input value={c.title} onChange={(v) => update(i, 'title', v)} /></Field>
+            <Field label="Subtitle"><Input value={c.sub} onChange={(v) => update(i, 'sub', v)} /></Field>
+          </div>
+          {c.body !== undefined && (c.items.length === 0 || c.id === 'offduty' || c.id === 'education') && (
+            <Field label="Body paragraph"><TextArea rows={3} value={c.body} onChange={(v) => update(i, 'body', v)} /></Field>
+          )}
+          {(c.items.length > 0 || (c.id !== 'offduty' && c.id !== 'education')) && (
+            <Field label="List items"><BulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder="List item" /></Field>
+          )}
+          {c.scores && c.scores.length >= 0 && c.id === 'education' && (
+            <Field label="Score chips">
+              {c.scores.map((s, k) => (
+                <div className="row" key={k} style={{ marginBottom: 8 }}>
+                  <Field label="Label"><Input value={s.label} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, label: v } : x))} /></Field>
+                  <Field label="Value"><Input value={s.value} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, value: v } : x))} /></Field>
+                  <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                    <span className="iconbtn iconbtn--danger" onClick={() => update(i, 'scores', c.scores.filter((_, m) => m !== k))}><AdminIcon name="trash" size={14} /></span>
+                  </div>
+                </div>
+              ))}
+              <Btn sm icon="plus" kind="ghost" onClick={() => update(i, 'scores', [...c.scores, { label: '', value: '' }])}>Add score</Btn>
+            </Field>
+          )}
+        </Panel>
+      ))}
+    </div>
+  );
+}
+
+/* ============ CONTACT ============ */
+function ContactEditor({ content, setAt }) {
+  const { PageHead, Panel, Field, Input, TextArea, Select, Btn, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const c = content.contact;
+  const setSocial = (i, key, val) => setAt('contact.socials', c.socials.map((s, j) => j === i ? { ...s, [key]: val } : s));
+  return (
+    <div className="canvas--narrow">
+      <PageHead eyebrow="/CONTACT.SH" title="Contact & socials">Reach-me details and the social links shown in the contact window and footer.</PageHead>
+      <Panel title="Message">
+        <Field label="Heading" hint="<em> accent, <br/> line break"><TextArea rows={2} value={c.heading} onChange={(v) => setAt('contact.heading', v)} /></Field>
+        <Field label="Intro paragraph"><TextArea rows={2} value={c.intro} onChange={(v) => setAt('contact.intro', v)} /></Field>
+      </Panel>
+      <Panel title="Reach me at">
+        <div className="row">
+          <Field label="Email"><Input value={c.email} onChange={(v) => setAt('contact.email', v)} /></Field>
+          <Field label="Phone"><Input value={c.phone} onChange={(v) => setAt('contact.phone', v)} /></Field>
+        </div>
+      </Panel>
+      <Panel title="Social links" sub={`${c.socials.length} links`}
+        actions={<Btn sm icon="plus" kind="primary" onClick={() => setAt('contact.socials', [...c.socials, { label: '', icon: 'web', href: '' }])}>Add link</Btn>}>
+        <Reorderable items={c.socials} getKey={(_, i) => i} onReorder={(next) => setAt('contact.socials', next)}
+          renderItem={(s, i, { gripProps }) => (
+            <ListItem gripProps={gripProps} title={s.label || '(unnamed)'} sub={s.href}
+              icon={<AdminIcon name="link" size={15} />}
+              onDelete={() => setAt('contact.socials', c.socials.filter((_, j) => j !== i))}
+              headRight={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input className="inp" style={{ width: 120 }} value={s.label} placeholder="Label" onClick={(e) => e.stopPropagation()} onChange={(e) => setSocial(i, 'label', e.target.value)} />
+                <select className="sel" style={{ width: 130 }} value={s.icon} onClick={(e) => e.stopPropagation()} onChange={(e) => setSocial(i, 'icon', e.target.value)}>
+                  {SOCIAL_ICONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
+                </select>
+                <input className="inp" style={{ width: 220 }} value={s.href} placeholder="https://" onClick={(e) => e.stopPropagation()} onChange={(e) => setSocial(i, 'href', e.target.value)} />
+              </div>} />
+          )} />
+      </Panel>
+    </div>
+  );
+}
+
+/* ============ MEDIA (CV files) ============ */
+function MediaEditor({ content, setAt, analytics }) {
+  const { PageHead, Panel, Field, Btn, AdminIcon, fileToDataURL, fmtBytes } = window.ADMIN_UI;
+  const m = content.media;
+  const upload = async (slot, file) => {
+    if (!file) return;
+    const url = await fileToDataURL(file);
+    setAt(`media.${slot}`, { name: file.name, url, size: fmtBytes(file.size) });
+  };
+  const CvBox = ({ slot, title }) => {
+    const f = m[slot];
+    const inputId = 'cv-' + slot;
+    return (
+      <Panel title={title} sub={slot === 'cvLight' ? 'served on light theme' : 'served on dark theme'}>
+        <div className="filebox">
+          <div className="filebox__ico" />
+          <div className="filebox__info">
+            <div className="nm">{f.name}</div>
+            <div className="meta">{f.size ? f.size + ' · ' : ''}{f.url.startsWith('data:') ? 'uploaded just now' : f.url}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a className="btn btn--sm" href={f.url} target="_blank" rel="noreferrer"><AdminIcon name="eye" size={13} />Preview</a>
+            <label className="btn btn--sm" htmlFor={inputId} style={{ cursor: 'pointer' }}><AdminIcon name="upload" size={13} />Replace</label>
+            <input id={inputId} type="file" accept="application/pdf" hidden onChange={(e) => upload(slot, e.target.files[0])} />
+          </div>
+        </div>
+      </Panel>
+    );
+  };
+  return (
+    <div className="canvas--narrow">
+      <PageHead eyebrow="/MEDIA.STORE" title="CV files & assets">Two CV variants are shipped — the site serves the one matching the visitor's theme. Replace either with a new PDF.</PageHead>
+      <div className="callout"><AdminIcon name="download" size={16} /><div><b>{(analytics.cvDownloads || 0).toLocaleString()}</b> CV download{analytics.cvDownloads === 1 ? '' : 's'} captured from the live site so far. Replace either PDF below — the cropped-down URL is what the portfolio's About window links to.</div></div>
+      <CvBox slot="cvLight" title="CV — Light variant" />
+      <CvBox slot="cvDark" title="CV — Dark variant" />
+      <Panel title="On Firebase" sub="after migration">
+        <p className="helptext">Uploaded PDFs are held as data URLs in the draft today. On migration these write to <code>Firebase Storage</code> under <code>cv/{'{'}variant{'}'}.pdf</code> and the field stores the download URL — the site link updates automatically on publish.</p>
+      </Panel>
+    </div>
+  );
+}
+
+/* ============ APPEARANCE (cosmetics) ============ */
+function AppearanceEditor({ content, setAt }) {
+  const { PageHead, Panel, Field, Select, Segmented, Swatches, ToggleRow, AdminIcon } = window.ADMIN_UI;
+  const c = content.cosmetics;
+  return (
+    <div className="canvas--narrow">
+      <PageHead eyebrow="/APPEARANCE.CFG" title="Appearance & cosmetics">Every site-wide tweak in one place — these become the published defaults visitors land on (they can still toggle theme themselves).</PageHead>
+      <div className="grid2">
+        <Panel title="Theme & color">
+          <Field label="Default mode"><Segmented value={c.theme} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} onChange={(v) => setAt('cosmetics.theme', v)} /></Field>
+          <Field label="Accent color"><Swatches value={c.accent} options={ACCENT_OPTIONS} onChange={(v) => setAt('cosmetics.accent', v)} /></Field>
+        </Panel>
+        <Panel title="Typography">
+          <Field label="Font set"><Select value={c.type} options={TYPE_OPTIONS} onChange={(v) => setAt('cosmetics.type', v)} /></Field>
+          <Field label="Base font size"><RangeRow label="Scale" value={c.fontScale} min={85} max={120} step={5} unit="%" onChange={(v) => setAt('cosmetics.fontScale', v)} /></Field>
+        </Panel>
+      </div>
+      <div className="grid2">
+        <Panel title="Bot avatar">
+          <Field label="Icon style"><Select value={c.botIcon} options={BOT_ICONS} onChange={(v) => setAt('cosmetics.botIcon', v)} /></Field>
+          <Field label="Icon color"><Segmented value={c.botIconColor} options={[{ value: 'white', label: 'White' }, { value: 'accent', label: 'Accent' }]} onChange={(v) => setAt('cosmetics.botIconColor', v)} /></Field>
+        </Panel>
+        <Panel title="Effects & cursor">
+          <ToggleRow title="CRT scanlines" sub="retro overlay across the page" value={c.scanlines} onChange={(v) => setAt('cosmetics.scanlines', v)} />
+          <div className="divider" />
+          <Field label="Cursor type"><Select value={c.cursorStyle} options={['ring', 'pixel', 'dot', 'cross']} onChange={(v) => setAt('cosmetics.cursorStyle', v)} /></Field>
+          <Field label="Cursor color"><Swatches value={c.cursorColor} options={CURSOR_COLOR_OPTIONS} onChange={(v) => setAt('cosmetics.cursorColor', v)} /></Field>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+window.ADMIN_EDITORS = { HeroEditor, AboutEditor, ExpertiseEditor, CardsEditor, ContactEditor, MediaEditor, AppearanceEditor, TARGETS, EXPERTISE_ICONS };
