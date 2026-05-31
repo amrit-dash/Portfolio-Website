@@ -14,3 +14,7 @@ window.FIREBASE_CONFIG = {
   appId: '1:685743056177:web:d371bcd3b8a63b62bbbc10',
 };
 window.FUNCTIONS_BASE = 'https://asia-south1-amrit-dash-portfolio.cloudfunctions.net';
+// Public portfolio origin — used by the admin's live-preview iframe when admin
+// is served from its own domain (amritos-admin.web.app). On localhost the admin
+// + portfolio share an origin, so the iframe uses a relative path instead.
+window.PORTFOLIO_URL = 'https://amritdash.web.app';

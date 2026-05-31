@@ -85,3 +85,6 @@ build/Release
 
 # Cloud Functions deps
 functions/node_modules/
+
+# build output (assembled at deploy)
+dist/

@@ -1,16 +1,19 @@
 {
   "hosting": [
     {
-      "target": "amrit-dash-portfolio",
-      "public": "public",
+      "target": "amritdash",
+      "public": "dist/site",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [{ "source": "**", "destination": "/index.html" }]
     },
     {
-      "target": "amritdash",
-      "public": "public",
+      "target": "amritos-admin",
+      "public": "dist/admin",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+      "rewrites": [{ "source": "**", "destination": "/index.html" }],
+      "headers": [
+        { "source": "**", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }
+      ]
     }
   ],
   "functions": {

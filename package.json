@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "npx --yes serve public -l 3000",
     "start": "npx --yes serve public -l 3000",
-    "deploy": "firebase deploy --only hosting"
+    "deploy": "firebase deploy --only hosting",
+    "build": "node scripts/build-dist.mjs",
+    "deploy:hosting": "npm run build && npx firebase-tools deploy --only hosting:amritdash,hosting:amritos-admin"
   },
   "dependencies": {
     "firebase-tools": "^14.7.0"

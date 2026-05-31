@@ -294,6 +294,13 @@ function PreviewDrawer({ open, mode, onClose, onMode }) {
   const [device, setDevice] = useAState('desktop');
   const [nonce, setNonce] = useAState(0);
   useAEffect(() => { if (open) setNonce((n) => n + 1); }, [open, mode]);
+  // Same origin on localhost (admin + portfolio both served from public/), so a
+  // relative path keeps the localStorage live-preview working. On the deployed
+  // admin (its own domain) point at the public portfolio origin.
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const portfolioBase = isLocal ? '' : ((window.PORTFOLIO_URL || '').replace(/\/$/, '') + '/');
+  const previewSrc = portfolioBase + 'index.html?adminpreview=' + nonce;
+  const openHref = portfolioBase + 'index.html';
   return (
     <>
       <div className="preview-scrim" data-open={open} onClick={onClose} />
@@ -310,15 +317,15 @@ function PreviewDrawer({ open, mode, onClose, onMode }) {
             <button data-on={device === 'desktop'} onClick={() => setDevice('desktop')} title="Desktop"><AdminIcon name="desktop" size={15} /></button>
             <button data-on={device === 'mobile'} onClick={() => setDevice('mobile')} title="Mobile"><AdminIcon name="mobile" size={15} /></button>
           </div>
-          <a className="btn btn--sm" href="index.html" target="_blank" rel="noreferrer"><AdminIcon name="link" size={13} />Open</a>
+          <a className="btn btn--sm" href={openHref} target="_blank" rel="noreferrer"><AdminIcon name="link" size={13} />Open</a>
           <button className="iconbtn" onClick={onClose}><AdminIcon name="x" size={15} /></button>
         </div>
         {open && (
           device === 'mobile'
             ? <div style={{ flex: 1, display: 'grid', placeItems: 'center', background: '#060704', overflow: 'auto' }}>
-                <iframe key={nonce} title="preview" src={'index.html?adminpreview=' + nonce} style={{ width: 390, height: 760, border: '1px solid var(--line-2)', borderRadius: 14, background: '#000' }} />
+                <iframe key={nonce} title="preview" src={previewSrc} style={{ width: 390, height: 760, border: '1px solid var(--line-2)', borderRadius: 14, background: '#000' }} />
               </div>
-            : <iframe key={nonce} title="preview" src={'index.html?adminpreview=' + nonce} />
+            : <iframe key={nonce} title="preview" src={previewSrc} />
         )}
       </div>
     </>
