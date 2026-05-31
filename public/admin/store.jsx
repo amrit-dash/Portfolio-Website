@@ -240,6 +240,19 @@ const Store = {
       return r.ok;
     } catch (e) { return false; }
   },
+
+  /* ---------- Operational settings (config/settings, owner-only) ---------- */
+  async fsLoadSettings() {
+    const defaults = { botRatePerHour: 30, trackRatePerHour: 120, eventRetentionDays: 30 };
+    if (!this.fsReady()) return defaults;
+    try { const s = await window.fb.db.doc('config/settings').get(); return { ...defaults, ...(s.exists ? s.data() : {}) }; }
+    catch (e) { return defaults; }
+  },
+  async fsSaveSettings(settings) {
+    if (!this.fsReady()) return false;
+    try { await window.fb.db.doc('config/settings').set({ ...settings, updatedAt: window.fb.serverTimestamp() }, { merge: true }); return true; }
+    catch (e) { console.warn('[store] fsSaveSettings failed', e && e.message); return false; }
+  },
   async fsLoadDraft() {
     if (!this.fsReady()) return null;
     try {
@@ -421,7 +434,7 @@ function useAnalytics() {
       if (u1) u1(); if (u2) u2(); u1 = u2 = null;
       if (u) {
         u1 = Store.fsStatsListen(setCounters);
-        u2 = Store.fsEventsListen(setRecent, 25);
+        u2 = Store.fsEventsListen(setRecent, 150); // full feed for the Analytics page; Overview slices to 5
         try { setDaily(await Store.fsDailyRange(30)); } catch (e) {}
       } else { setCounters(null); setRecent([]); setDaily([]); }
     });

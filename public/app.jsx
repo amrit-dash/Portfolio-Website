@@ -1326,14 +1326,13 @@ function App() {
     setTweak(next);
   }, [liveCos]);
 
-  // Log one `view` event per session so the admin Overview reflects real visits.
+  // Log a page view on every load (skip the admin's live-preview iframe so
+  // editing doesn't inflate counts). Tracked regardless of geo — the event
+  // always carries a timestamp; location is best-effort on top.
   useEffect(() => {
     try {
-      if (!sessionStorage.getItem('amritos.viewlogged')) {
-        sessionStorage.setItem('amritos.viewlogged', '1');
-        logEvent('view');
-      }
-    } catch (e) { /* sessionStorage disabled — ignore */ }
+      if (!new URLSearchParams(location.search).has('adminpreview')) logEvent('view');
+    } catch (e) { logEvent('view'); }
   }, []);
 
   useEffect(() => {

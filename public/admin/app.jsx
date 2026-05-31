@@ -109,12 +109,12 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
       </div>
 
       <div className="grid2">
-        <Panel title="Recent activity" actions={hasData && onResetAnalytics ? <Btn sm kind="ghost" icon="trash" onClick={onResetAnalytics}>Reset</Btn> : null}>
+        <Panel title="Recent activity" sub="latest 5" actions={<Btn sm kind="ghost" onClick={() => go('analytics')}>View all →</Btn>}>
           {analytics.activity.length === 0 ? (
             <p className="helptext" style={{ margin: 0 }}>No activity captured yet.</p>
           ) : (
             <ul className="activity">
-              {analytics.activity.map((a, i) => (
+              {analytics.activity.slice(0, 5).map((a, i) => (
                 <li key={i}><span className="when">{a.when}</span><span className="dot" /><span>{a.what}</span><span className="who">{a.who}</span></li>
               ))}
             </ul>
@@ -195,6 +195,8 @@ function AnalyticsPage({ analytics, onReset }) {
         <Stat icon="chat" label="BOT CHATS" num={a.botChats.toLocaleString()} />
         <Stat icon="contact" label="SOCIAL CLICKS" num={(a.socialClicks || 0).toLocaleString()} />
         <Stat icon="link" label="LINK CLICKS" num={(a.linkClicks || 0).toLocaleString()} />
+        <Stat icon="hero" label="CTA CLICKS" num={(a.ctaClicks || 0).toLocaleString()} />
+        <Stat icon="overview" label="TOTAL EVENTS" num={(a.totalEvents || 0).toLocaleString()} />
       </div>
 
       <Panel title="Traffic" sub="page views · last 14 days">

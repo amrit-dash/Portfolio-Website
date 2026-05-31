@@ -309,8 +309,10 @@ exports.track = onRequest(async (req, res) => {
   const ip = clientIp(req);
   const ipHash = hashIp(ip);
 
-  // Light anti-spam so nobody can inflate stats: 120 events / IP / hour.
-  if (await rateLimited(ipHash, 'track', 120, 3600_000)) return res.status(429).json({ error: 'rate-limit' });
+  // Anti-spam so nobody can inflate stats. Limit is admin-tunable (config/settings).
+  const settings = await getSettings();
+  const trackLimit = Number(settings.trackRatePerHour) || 120;
+  if (await rateLimited(ipHash, 'track', trackLimit, 3600_000)) return res.status(429).json({ error: 'rate-limit' });
 
   const geo = await geoLookup(ip);
   const source = categorizeSource(referrer);
@@ -341,6 +343,18 @@ exports.track = onRequest(async (req, res) => {
 
   await batch.commit().catch(() => {});
   res.status(204).send('');
+
+  // Opportunistic retention prune (~4% of calls) so the per-event feed stays
+  // within the configured window without a separate scheduler. Counters/buckets
+  // are never pruned — only individual event docs.
+  if (Math.random() < 0.04) {
+    try {
+      const days = Number(settings.eventRetentionDays) || 30;
+      const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - days * 86400000);
+      const old = await db.collection('events').where('at', '<', cutoff).limit(50).get();
+      if (!old.empty) { const b = db.batch(); old.docs.forEach((d) => b.delete(d.ref)); await b.commit(); }
+    } catch (e) { /* best-effort */ }
+  }
 });
 
 /* ===================================================== */

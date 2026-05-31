@@ -12,6 +12,7 @@ const BOT_TABS = [
   { id: 'commands', label: 'Commands' },
   { id: 'behavior', label: 'Behavior' },
   { id: 'providers', label: 'LLM Providers' },
+  { id: 'limits', label: 'Limits' },
   { id: 'review', label: 'Review / Inbox' },
   { id: 'test', label: 'Test bot' },
 ];
@@ -138,6 +139,17 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
     const ok = saveLLMConfig ? await saveLLMConfig(merged) : false; // activate config/llm now
     setSaveState(ok ? 'saved' : 'error');
     setTimeout(() => setSaveState(null), 3000);
+  };
+
+  // ---- Limits: operational settings stored in config/settings ----
+  const [limits, setLimits] = useBState(null);          // null = not loaded
+  const [limitsSaved, setLimitsSaved] = useBState(false);
+  useBEffect(() => { if (tab === 'limits' && limits === null) window.ADMIN_STORE.Store.fsLoadSettings().then(setLimits); }, [tab]);
+  const setLimit = (k, v) => { setLimits((l) => ({ ...l, [k]: v })); setLimitsSaved(false); };
+  const saveLimits = async () => {
+    const ok = await window.ADMIN_STORE.Store.fsSaveSettings(limits);
+    setLimitsSaved(ok);
+    if (ok) setTimeout(() => setLimitsSaved(false), 3000);
   };
 
   // ---- Review / Inbox: visitor bot questions captured server-side ----
@@ -309,6 +321,26 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === 'limits' && (
+        <div className="canvas--narrow">
+          <div className="callout"><AdminIcon name="key" size={16} /><div>Operational limits enforced server-side by the bot proxy and the analytics tracker. These protect against abuse and runaway cost. Stored in a private config the functions read.</div></div>
+          {limits === null ? <p className="helptext">Loading…</p> : (
+            <Panel title="Rate limits & retention" actions={<Btn sm kind="primary" icon="check" onClick={saveLimits}>{limitsSaved ? 'Saved ✓' : 'Save'}</Btn>}>
+              <Field label="Bot messages per IP / hour" hint="public bot throttle; the admin test bypasses it">
+                <div className="zoomrow" style={{ marginTop: 0 }}><span className="lbl" style={{ minWidth: 70 }}>{limits.botRatePerHour}</span><input className="rng" type="range" min="5" max="120" step="5" value={limits.botRatePerHour} onChange={(e) => setLimit('botRatePerHour', Number(e.target.value))} /></div>
+              </Field>
+              <Field label="Analytics events per IP / hour" hint="stops anyone inflating your stats">
+                <div className="zoomrow" style={{ marginTop: 0 }}><span className="lbl" style={{ minWidth: 70 }}>{limits.trackRatePerHour}</span><input className="rng" type="range" min="30" max="500" step="10" value={limits.trackRatePerHour} onChange={(e) => setLimit('trackRatePerHour', Number(e.target.value))} /></div>
+              </Field>
+              <Field label="Event retention (days)" hint="how long the recent-activity feed keeps individual events">
+                <div className="zoomrow" style={{ marginTop: 0 }}><span className="lbl" style={{ minWidth: 70 }}>{limits.eventRetentionDays}d</span><input className="rng" type="range" min="7" max="180" step="7" value={limits.eventRetentionDays} onChange={(e) => setLimit('eventRetentionDays', Number(e.target.value))} /></div>
+              </Field>
+              <p className="helptext" style={{ marginTop: 4 }}>Rate limits take effect immediately on save. Counters (totals) are never deleted — only the per-event feed is pruned to the retention window.</p>
+            </Panel>
+          )}
         </div>
       )}
 
