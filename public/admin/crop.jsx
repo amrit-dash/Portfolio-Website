@@ -152,11 +152,16 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
   );
 }
 
-/* ImageSlot — preview + upload/crop/replace controls for one fixed-size asset */
-function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'image/jpeg', onChange }) {
-  const { AdminIcon, Btn, Field, fileToDataURL } = window.ADMIN_UI;
-  const [raw, setRaw] = useState(null);     // freshly uploaded data url, awaiting crop
+/* ImageSlot — preview + upload/crop/replace controls for one fixed-size asset.
+   The cropped result is uploaded to Firebase Storage and the field stores the
+   download URL (never a giant data-URL — that would blow the content doc's 1MB
+   limit). `storageKey` namespaces the file, e.g. "projects/rx-thumb". */
+function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'image/jpeg', onChange, storageKey }) {
+  const { AdminIcon, Btn, Field, fileToDataURL, uploadToStorage, storageReady } = window.ADMIN_UI;
+  const [raw, setRaw] = useState(null);     // freshly selected data url, awaiting crop
   const [over, setOver] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
   const inputRef = useRef(null);
 
   const ratio = target.h / target.w;
@@ -165,8 +170,23 @@ function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'im
   const handleFiles = async (files) => {
     const f = files && files[0];
     if (!f || !f.type.startsWith('image/')) return;
-    const url = await fileToDataURL(f);
-    setRaw(url);
+    setRaw(await fileToDataURL(f));
+  };
+
+  const onCropped = async (dataUrl) => {
+    setRaw(null); setErr(null);
+    const ext = outputType === 'image/png' ? 'png' : 'jpg';
+    const key = (storageKey || (label || 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '-' + Date.now() + '.' + ext;
+    if (!storageReady()) {
+      setErr('Sign in to upload images to Storage.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const url = await uploadToStorage('images/' + key, dataUrl);
+      onChange(url);
+    } catch (e) { setErr((e && e.message) || 'upload failed'); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -180,10 +200,10 @@ function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'im
           : <div className="drop__preview" style={{ width: pw, height: ph, display: 'grid', placeItems: 'center', color: 'var(--fg-mute)' }}><AdminIcon name="image" size={22} /></div>}
         <div className="drop__info">
           <div className="nm">{label}</div>
-          <div className="dim">{hint || 'Drop an image or browse — you\'ll crop it to size'}</div>
+          <div className="dim">{busy ? 'Uploading…' : (err ? '⚠ ' + err : (hint || 'Drop an image or browse — you\'ll crop it to size'))}</div>
           <div className="act">
-            <Btn sm icon="upload" onClick={() => inputRef.current.click()}>{value ? 'Replace' : 'Upload'}</Btn>
-            {value && <Btn sm icon="crop" onClick={() => setRaw(value)}>Re-crop</Btn>}
+            <Btn sm icon="upload" onClick={() => inputRef.current.click()} disabled={busy}>{value ? 'Replace' : 'Upload'}</Btn>
+            {value && <Btn sm icon="crop" onClick={() => setRaw(value)} disabled={busy}>Re-crop</Btn>}
           </div>
         </div>
         <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => handleFiles(e.target.files)} />
@@ -191,7 +211,7 @@ function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'im
       {raw && (
         <CropModal src={raw} target={target} outputType={outputType} title={`Crop · ${label}`}
           onCancel={() => setRaw(null)}
-          onSave={(url) => { onChange(url); setRaw(null); }} />
+          onSave={onCropped} />
       )}
     </Field>
   );

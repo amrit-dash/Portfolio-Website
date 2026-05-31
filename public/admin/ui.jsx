@@ -309,7 +309,27 @@ function fileToDataURL(file) {
 }
 function fmtBytes(n) { if (!n) return ''; const u = ['B', 'KB', 'MB']; let i = 0; while (n >= 1024 && i < 2) { n /= 1024; i++; } return n.toFixed(n < 10 && i ? 1 : 0) + ' ' + u[i]; }
 
+// Whether Storage uploads are available (Firebase loaded + owner signed in).
+function storageReady() { return !!(window.fb && window.fb.storage && window.fb.auth && window.fb.auth.currentUser); }
+
+/* Upload a File or data-URL to Firebase Storage under public/<path> and return
+   the public download URL. Throws if Storage isn't ready so callers can decide
+   whether to fall back (we never silently keep a huge data-URL — it would blow
+   Firestore's 1MB content-doc limit). */
+async function uploadToStorage(path, fileOrDataUrl, contentType) {
+  if (!storageReady()) throw new Error('Sign in required to upload (Storage).');
+  const ref = window.fb.storage.ref().child('public/' + path);
+  let snap;
+  if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
+    snap = await ref.putString(fileOrDataUrl, 'data_url');
+  } else {
+    snap = await ref.put(fileOrDataUrl, contentType ? { contentType } : undefined);
+  }
+  return await snap.ref.getDownloadURL();
+}
+
 window.ADMIN_UI = {
   AdminIcon, PageHead, Panel, Btn, Field, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
   Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes,
+  storageReady, uploadToStorage,
 };

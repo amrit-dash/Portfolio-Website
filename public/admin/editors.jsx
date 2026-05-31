@@ -90,7 +90,7 @@ function AboutEditor({ content, setAt }) {
       <PageHead eyebrow="/ABOUT.ME" title="About section">Your photo, the readme-style bio and the Now / Then / Before timeline.</PageHead>
       <div className="grid2">
         <Panel title="Photo">
-          <ImageSlot label="About photo" value={a.photo} target={TARGETS.aboutPhoto} previewW={120}
+          <ImageSlot label="About photo" value={a.photo} target={TARGETS.aboutPhoto} previewW={120} storageKey="about/photo"
             hint="Portrait — shown in the about window" onChange={(url) => setAt('about.photo', url)} />
           <Field label="Photo stamp caption"><Input value={a.photoStamp} onChange={(v) => setAt('about.photoStamp', v)} /></Field>
         </Panel>
@@ -248,12 +248,22 @@ function ContactEditor({ content, setAt }) {
 
 /* ============ MEDIA (CV files) ============ */
 function MediaEditor({ content, setAt, analytics }) {
-  const { PageHead, Panel, Field, Btn, AdminIcon, fileToDataURL, fmtBytes } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, Btn, AdminIcon, fmtBytes, uploadToStorage, storageReady } = window.ADMIN_UI;
+  const { useState } = React;
   const m = content.media;
+  const [busy, setBusy] = useState(null);   // slot currently uploading
+  const [err, setErr] = useState(null);
   const upload = async (slot, file) => {
     if (!file) return;
-    const url = await fileToDataURL(file);
-    setAt(`media.${slot}`, { name: file.name, url, size: fmtBytes(file.size) });
+    setErr(null);
+    if (!storageReady()) { setErr('Sign in to upload the CV to Storage.'); return; }
+    if (file.type !== 'application/pdf') { setErr('Please choose a PDF.'); return; }
+    setBusy(slot);
+    try {
+      const url = await uploadToStorage(`cv/${slot}.pdf`, file, 'application/pdf');
+      setAt(`media.${slot}`, { name: file.name, url, size: fmtBytes(file.size) });
+    } catch (e) { setErr((e && e.message) || 'upload failed'); }
+    finally { setBusy(null); }
   };
   const CvBox = ({ slot, title }) => {
     const f = m[slot];
@@ -264,14 +274,15 @@ function MediaEditor({ content, setAt, analytics }) {
           <div className="filebox__ico" />
           <div className="filebox__info">
             <div className="nm">{f.name}</div>
-            <div className="meta">{f.size ? f.size + ' · ' : ''}{f.url.startsWith('data:') ? 'uploaded just now' : f.url}</div>
+            <div className="meta">{busy === slot ? 'uploading…' : (f.size ? f.size + ' · ' : '') + (f.url && f.url.indexOf('firebasestorage') > -1 ? 'in Storage' : f.url)}</div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <a className="btn btn--sm" href={f.url} target="_blank" rel="noreferrer"><AdminIcon name="eye" size={13} />Preview</a>
-            <label className="btn btn--sm" htmlFor={inputId} style={{ cursor: 'pointer' }}><AdminIcon name="upload" size={13} />Replace</label>
-            <input id={inputId} type="file" accept="application/pdf" hidden onChange={(e) => upload(slot, e.target.files[0])} />
+            <label className="btn btn--sm" htmlFor={inputId} style={{ cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.5 : 1 }}><AdminIcon name="upload" size={13} />{busy === slot ? 'Uploading…' : 'Replace'}</label>
+            <input id={inputId} type="file" accept="application/pdf" hidden disabled={!!busy} onChange={(e) => upload(slot, e.target.files[0])} />
           </div>
         </div>
+        {err && <div className="helptext" style={{ color: '#e0a341', marginTop: 8 }}>⚠ {err}</div>}
       </Panel>
     );
   };

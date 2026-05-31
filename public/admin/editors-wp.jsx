@@ -120,9 +120,9 @@ function ProjectBody({ p, expertise, onChange }) {
       </div>
       <Field label="Description"><TextArea rows={3} value={p.desc} onChange={(v) => set('desc', v)} /></Field>
       <div className="grid2">
-        <ImageSlot label="Folder / thumbnail image" value={p.image} target={TARGETS.projThumb} outputType="image/png"
+        <ImageSlot label="Folder / thumbnail image" value={p.image} target={TARGETS.projThumb} outputType="image/png" storageKey={'projects/' + (p.id || 'p') + '-thumb'}
           hint="Shown on the project desktop" onChange={(url) => set('image', url)} />
-        <ImageSlot label="Gallery image (modal)" value={p.gallery} target={TARGETS.projGallery} outputType="image/jpeg"
+        <ImageSlot label="Gallery image (modal)" value={p.gallery} target={TARGETS.projGallery} outputType="image/jpeg" storageKey={'projects/' + (p.id || 'p') + '-gallery'}
           hint="Large image inside the open modal" onChange={(url) => set('gallery', url)} />
       </div>
       <Field label="Tags" hint="multiple"><TagInput value={p.tags || []} onChange={(v) => set('tags', v)} placeholder="Add tag + Enter" /></Field>
