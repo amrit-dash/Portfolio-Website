@@ -196,7 +196,7 @@ function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'im
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); handleFiles(e.dataTransfer.files); }}>
         {value
-          ? <img className="drop__preview" src={value} alt="" style={{ width: pw, height: ph }} />
+          ? <img className="drop__preview" src={window.assetUrl(value)} alt="" style={{ width: pw, height: ph }} />
           : <div className="drop__preview" style={{ width: pw, height: ph, display: 'grid', placeItems: 'center', color: 'var(--fg-mute)' }}><AdminIcon name="image" size={22} /></div>}
         <div className="drop__info">
           <div className="nm">{label}</div>

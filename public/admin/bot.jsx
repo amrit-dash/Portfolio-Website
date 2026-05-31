@@ -89,7 +89,7 @@ function LiveTest({ bot }) {
 
 /* ---- Main bot admin ---- */
 function BotAdmin({ content, setAt, saveLLMConfig }) {
-  const { PageHead, Panel, Field, Input, SecretInput, TextArea, Select, Btn, AdminIcon, TagInput, BulletEditor } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, SecretInput, TextArea, Select, Btn, AdminIcon, TagInput, BulletEditor } = window.ADMIN_UI;
   const bot = content.bot;
   const [tab, setTab] = useBState('context');
   const [openQA, setOpenQA] = useBState(null);
@@ -245,9 +245,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                     <Field label="Command" hint="without /"><Input value={c.id} onChange={(v) => setCmd(i, 'id', v)} /></Field>
                     <Field label="Chip label"><Input value={c.label} onChange={(v) => setCmd(i, 'label', v)} /></Field>
                     <Field label="Tooltip"><Input value={c.desc} onChange={(v) => setCmd(i, 'desc', v)} /></Field>
-                    <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                      <span className="iconbtn iconbtn--danger" onClick={() => setAt('bot.commands', bot.commands.filter((_, j) => j !== i))}><AdminIcon name="trash" size={14} /></span>
-                    </div>
+                    <DelBtn onClick={() => setAt('bot.commands', bot.commands.filter((_, j) => j !== i))} />
                   </div>
                   {c.id !== 'clear' && <Field label="Response card text" hint="leave blank for built-in commands"><TextArea rows={2} value={c.card} onChange={(v) => setCmd(i, 'card', v)} /></Field>}
                 </div>

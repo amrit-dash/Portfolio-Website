@@ -4,6 +4,20 @@
    ===================================================== */
 const { useState, useRef, useEffect, useCallback } = React;
 
+/* Resolve an image src for display in the admin console. Bundled relative
+   assets (e.g. the project SVG thumbnails) live on the portfolio origin, not
+   the admin origin — so a bare "assets/x.svg" 404s here. Absolute http/data/
+   blob URLs (Storage uploads) pass through untouched. Mirrors the isLocal
+   handling used elsewhere so it still works when serving admin locally. */
+window.assetUrl = function (u) {
+  if (!u || typeof u !== 'string') return u;
+  if (/^(https?:|data:|blob:)/i.test(u)) return u;
+  const isLocal = /^(localhost|127\.0\.0\.1)/.test(location.host);
+  if (isLocal) return u;
+  const base = (window.PORTFOLIO_URL || '').replace(/\/$/, '');
+  return base ? base + '/' + u.replace(/^\//, '') : u;
+};
+
 /* ---------- Icons ---------- */
 function AdminIcon({ name, size = 16 }) {
   const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { display: 'block' } };
@@ -29,6 +43,8 @@ function AdminIcon({ name, size = 16 }) {
     case 'upload': return (<svg {...p}><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v3a1 1 0 001 1h12a1 1 0 001-1v-3"/></svg>);
     case 'crop': return (<svg {...p}><path d="M6 2v14a2 2 0 002 2h14"/><path d="M2 6h14a2 2 0 012 2v14"/></svg>);
     case 'menu': return (<svg {...p}><path d="M3 6h18M3 12h18M3 18h18"/></svg>);
+    case 'chevron-down': return (<svg {...p}><path d="M6 9l6 6 6-6"/></svg>);
+    case 'chevron-up': return (<svg {...p}><path d="M6 15l6-6 6 6"/></svg>);
     case 'eye': return (<svg {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>);
     case 'eye-off': return (<svg {...p}><path d="M2 12s3.5-7 10-7c1.6 0 3 .4 4.3 1M22 12s-3.5 7-10 7c-1.6 0-3-.4-4.3-1"/><path d="M9.9 9.9a3 3 0 004.2 4.2"/><path d="M3 3l18 18"/></svg>);
     case 'check': return (<svg {...p}><path d="M5 12l5 5L20 6"/></svg>);
@@ -106,6 +122,18 @@ function Field({ label, hint, req, children }) {
 function Input({ value, onChange, placeholder, ...rest }) {
   const v = value == null ? '' : (typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '');
   return <input className="inp" value={v} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} {...rest} />;
+}
+
+/* Delete button that sits inside a `.row` and lines up with sibling input
+   fields (invisible label spacer + button matched to input height). Replaces
+   ad-hoc flex-end delete divs that drifted below the input. */
+function DelBtn({ onClick, title = 'Delete' }) {
+  return (
+    <div className="field field--del">
+      <label aria-hidden="true">&nbsp;</label>
+      <span className="iconbtn iconbtn--danger" onClick={onClick} title={title}><AdminIcon name="trash" size={14} /></span>
+    </div>
+  );
 }
 
 /* SecretInput — for API keys / tokens.
@@ -273,7 +301,7 @@ function ListItem({ gripProps, num, thumb, icon, title, sub, open, onToggle, onD
       <div className={'item__hd' + (onToggle ? ' clickable' : '')} onClick={onToggle}>
         <span className="item__grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
         {num != null && <span className="item__num">{num}</span>}
-        {thumb && <img className="minithumb" src={thumb} alt="" />}
+        {thumb && <img className="minithumb" src={window.assetUrl(thumb)} alt="" />}
         {icon && <span className="miniico">{icon}</span>}
         <div style={{ minWidth: 0 }}>
           <div className="item__title">{title}</div>
@@ -330,7 +358,7 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 }
 
 window.ADMIN_UI = {
-  AdminIcon, PageHead, Panel, Btn, Field, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
+  AdminIcon, PageHead, Panel, Btn, Field, DelBtn, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
   Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes,
   storageReady, uploadToStorage,
 };

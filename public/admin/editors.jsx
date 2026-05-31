@@ -80,7 +80,7 @@ function HeroEditor({ content, setAt }) {
 
 /* ============ ABOUT ============ */
 function AboutEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, Input, TextArea, Btn, AdminIcon } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon } = window.ADMIN_UI;
   const { ImageSlot } = window.ADMIN_CROP;
   const a = content.about;
   const setMeta = (i, key, val) => setAt('about.meta', a.meta.map((m, j) => j === i ? { ...m, [key]: val } : m));
@@ -99,9 +99,7 @@ function AboutEditor({ content, setAt }) {
             <div className="row" key={i} style={{ marginBottom: 10 }}>
               <Field label="Label"><Input value={m.label} onChange={(v) => setMeta(i, 'label', v)} /></Field>
               <Field label="Value"><Input value={m.value} onChange={(v) => setMeta(i, 'value', v)} /></Field>
-              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                <span className="iconbtn iconbtn--danger" onClick={() => setAt('about.meta', a.meta.filter((_, j) => j !== i))}><AdminIcon name="trash" size={14} /></span>
-              </div>
+              <DelBtn onClick={() => setAt('about.meta', a.meta.filter((_, j) => j !== i))} />
             </div>
           ))}
           <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.meta', [...a.meta, { label: '', value: '' }])}>Add meta row</Btn>
@@ -117,9 +115,7 @@ function AboutEditor({ content, setAt }) {
             <div className="item__bd" style={{ borderTop: 0, paddingTop: 14 }}>
               <div className="row">
                 <Field label="Label"><Input value={m.label} onChange={(v) => setImpact(i, 'label', v)} /></Field>
-                <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                  <span className="iconbtn iconbtn--danger" onClick={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))}><AdminIcon name="trash" size={14} /></span>
-                </div>
+                <DelBtn onClick={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))} />
               </div>
               <Field label="Description" hint="<em> for accent"><TextArea rows={2} value={m.html} onChange={(v) => setImpact(i, 'html', v)} /></Field>
             </div>
@@ -166,7 +162,7 @@ function ExpertiseEditor({ content, setAt }) {
 
 /* ============ ACHIEVEMENTS / EDUCATION / CERTS (cards) ============ */
 function CardsEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, Input, TextArea, Btn, BulletEditor, AdminIcon } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, BulletEditor, AdminIcon } = window.ADMIN_UI;
   const cards = content.cards;
   const update = (i, key, val) => setAt('cards', cards.map((c, j) => j === i ? { ...c, [key]: val } : c));
   return (
@@ -194,9 +190,7 @@ function CardsEditor({ content, setAt }) {
                 <div className="row" key={k} style={{ marginBottom: 8 }}>
                   <Field label="Label"><Input value={s.label} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, label: v } : x))} /></Field>
                   <Field label="Value"><Input value={s.value} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, value: v } : x))} /></Field>
-                  <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                    <span className="iconbtn iconbtn--danger" onClick={() => update(i, 'scores', c.scores.filter((_, m) => m !== k))}><AdminIcon name="trash" size={14} /></span>
-                  </div>
+                  <DelBtn onClick={() => update(i, 'scores', c.scores.filter((_, m) => m !== k))} />
                 </div>
               ))}
               <Btn sm icon="plus" kind="ghost" onClick={() => update(i, 'scores', [...c.scores, { label: '', value: '' }])}>Add score</Btn>

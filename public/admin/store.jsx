@@ -462,7 +462,7 @@ function useAnalytics() {
     else if (ev.type === 'link:click') what = 'Link · ' + (meta.label || meta.href || '');
     else if (ev.type === 'cta:click') what = 'CTA · ' + (meta.label || '');
     const where = [ev.city, ev.country].filter(Boolean).join(', ') || (ev.source || 'visitor');
-    return { when: fmtRelative(Date.now() - evMs(ev)), what, who: where };
+    return { when: fmtRelative(Date.now() - evMs(ev)), what, who: where, type: ev.type, city: ev.city || null, region: ev.region || null, country: ev.country || null };
   });
   const totalEvents = ['views', 'cvDownloads', 'botChats', 'projectOpens', 'socialClicks', 'linkClicks', 'ctaClicks']
     .reduce((s, k) => s + (c[k] || 0), 0);

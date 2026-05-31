@@ -142,27 +142,56 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
 }
 
 /* ---------- Analytics (dedicated page) ---------- */
+const ACT_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'view', label: 'Views' },
+  { value: 'project:open', label: 'Projects' },
+  { value: 'cv:download', label: 'CV' },
+  { value: 'bot:chat', label: 'Bot' },
+  { value: 'social:click', label: 'Social' },
+  { value: 'link:click', label: 'Links' },
+  { value: 'cta:click', label: 'CTA' },
+];
+
 function AnalyticsPage({ analytics, onReset }) {
-  const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
+  const { PageHead, Panel, Btn, AdminIcon, Segmented } = window.ADMIN_UI;
   const a = analytics;
   const daily = a.daily || [];
+  const [actFilter, setActFilter] = useAState('all');
+  const [actExpanded, setActExpanded] = useAState(false);
 
-  // Aggregate breakdowns across the loaded day-buckets.
+  // Aggregate map-style breakdowns across the loaded day-buckets.
   const agg = (field) => {
     const out = {};
     daily.forEach((d) => { const m = d[field] || {}; for (const k in m) out[k] = (out[k] || 0) + m[k]; });
     return Object.entries(out).sort((x, y) => y[1] - x[1]);
   };
+  // Aggregate a label off the recent event feed (region/city aren't in daily buckets).
+  const aggEvents = (key) => {
+    const out = {};
+    a.activity.forEach((e) => { const v = e[key]; if (v) out[v] = (out[v] || 0) + 1; });
+    return Object.entries(out).sort((x, y) => y[1] - x[1]);
+  };
   const bySource = agg('bySource');
   const byCountry = agg('byCountry');
   const bySocial = agg('bySocial');
+  const byCity = aggEvents('city');
+  const byRegion = aggEvents('region');
+  const eventMix = [
+    ['Page views', a.pageViews], ['Project opens', a.projectOpens], ['CV downloads', a.cvDownloads],
+    ['Bot chats', a.botChats], ['Social clicks', a.socialClicks || 0], ['Link clicks', a.linkClicks || 0],
+    ['CTA clicks', a.ctaClicks || 0],
+  ].filter((r) => r[1] > 0).sort((x, y) => y[1] - x[1]);
   const maxHist = Math.max(1, ...a.history);
   const hasData = (a.totalEvents || 0) > 0;
 
-  const Bars = ({ rows, label, empty }) => {
+  const filteredActivity = actFilter === 'all' ? a.activity : a.activity.filter((e) => e.type === actFilter);
+  const shownActivity = actExpanded ? filteredActivity : filteredActivity.slice(0, 8);
+
+  const Bars = ({ rows, label, empty, sub }) => {
     const max = Math.max(1, ...rows.map((r) => r[1]));
     return (
-      <Panel title={label}>
+      <Panel title={label} sub={sub}>
         {rows.length === 0 ? <p className="helptext" style={{ margin: 0 }}>{empty}</p> : (
           <div className="bars">
             {rows.slice(0, 8).map(([name, n]) => (
@@ -208,21 +237,42 @@ function AnalyticsPage({ analytics, onReset }) {
       </Panel>
 
       <div className="grid2">
+        <Bars rows={eventMix} label="Engagement mix" sub="by event type" empty="No events yet." />
         <Bars rows={a.topProjects.map((p) => [p.name, p.opens])} label="Most-opened projects" empty="No project opens yet." />
+      </div>
+      <div className="grid2">
         <Bars rows={bySource} label="Traffic sources" empty="No referrers captured yet." />
+        <Bars rows={bySocial} label="Social link clicks" empty="No social clicks yet." />
       </div>
       <div className="grid2">
         <Bars rows={byCountry} label="By country" empty="No location data yet." />
-        <Bars rows={bySocial} label="Social link clicks" empty="No social clicks yet." />
+        <Bars rows={byCity} label="By city" sub="recent visitors" empty="No city data yet." />
       </div>
+      {byRegion.length > 0 && (
+        <Bars rows={byRegion} label="By region" sub="recent visitors" empty="No region data yet." />
+      )}
 
-      <Panel title="Recent activity" sub="live feed">
-        {a.activity.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No activity captured yet.</p> : (
-          <ul className="activity">
-            {a.activity.map((ev, i) => (
-              <li key={i}><span className="when">{ev.when}</span><span className="dot" /><span>{ev.what}</span><span className="who">{ev.who}</span></li>
-            ))}
-          </ul>
+      <Panel
+        title="Recent activity"
+        sub={filteredActivity.length + (actFilter === 'all' ? ' events' : ' matching')}
+        actions={
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <Segmented value={actFilter} options={ACT_FILTERS} onChange={(v) => { setActFilter(v); setActExpanded(false); }} />
+          </div>
+        }>
+        {filteredActivity.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No matching activity.</p> : (
+          <>
+            <ul className="activity">
+              {shownActivity.map((ev, i) => (
+                <li key={i}><span className="when">{ev.when}</span><span className="dot" /><span>{ev.what}</span><span className="who">{ev.who}</span></li>
+              ))}
+            </ul>
+            {filteredActivity.length > 8 && (
+              <Btn sm kind="ghost" icon={actExpanded ? 'chevron-up' : 'chevron-down'} onClick={() => setActExpanded((s) => !s)}>
+                {actExpanded ? 'Show less' : `Show all ${filteredActivity.length}`}
+              </Btn>
+            )}
+          </>
         )}
       </Panel>
     </div>
