@@ -1329,10 +1329,14 @@ function App() {
   // Log a page view on every load (skip the admin's live-preview iframe so
   // editing doesn't inflate counts). Tracked regardless of geo — the event
   // always carries a timestamp; location is best-effort on top.
+  // Also warm the bot proxy now so the first chat reply isn't a cold start.
   useEffect(() => {
-    try {
-      if (!new URLSearchParams(location.search).has('adminpreview')) logEvent('view');
-    } catch (e) { logEvent('view'); }
+    let preview = false;
+    try { preview = new URLSearchParams(location.search).has('adminpreview'); } catch (e) {}
+    if (!preview) {
+      logEvent('view');
+      try { if (window.FUNCTIONS_BASE) fetch(window.FUNCTIONS_BASE + '/warmup', { mode: 'cors' }).catch(() => {}); } catch (e) {}
+    }
   }, []);
 
   useEffect(() => {
