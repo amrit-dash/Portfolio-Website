@@ -126,6 +126,17 @@ async function geoLookup(ip) {
   return { country: null, region: null, city: null };
 }
 
+// Pure salutations → handled with a canned reply, never sent to the LLM or
+// logged for review. Matches the whole message (after stripping punctuation),
+// not substrings, so "hey, what do you build?" still goes to the model.
+const GREETINGS = new Set(['hi', 'hii', 'hiii', 'hey', 'heyy', 'hello', 'helo', 'hullo', 'yo', 'sup', 'wassup', 'hola', 'namaste', 'howdy', 'hiya', 'greetings', 'gm', 'good morning', 'good afternoon', 'good evening', 'hey there', 'hi there', 'hello there', 'hey bot', 'hello bot', 'test', 'testing', 'ping']);
+function isGreeting(s) {
+  const t = String(s || '').toLowerCase().replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+  if (!t) return true;
+  if (t.length <= 2) return true;
+  return GREETINGS.has(t);
+}
+
 function categorizeSource(referrer) {
   if (!referrer) return 'direct';
   try {
@@ -160,6 +171,12 @@ exports.chat = onRequest(async (req, res) => {
   const { message, suggestion } = req.body || {};
   if (!message || typeof message !== 'string') return res.status(400).json({ error: 'no-message' });
 
+  // Greetings: answer with a canned line — no LLM call, no review-inbox capture.
+  // Keeps salutations from burning quota or bloating the training queue.
+  if (isGreeting(message)) {
+    return res.status(200).json({ text: "hey 👋 ask me anything about amrit — his work, projects, automation, or comedy. or try /stats, /work, /links." });
+  }
+
   // Owner (admin test panel) bypasses the rate limit entirely.
   const owner = await verifyOwner(req);
   if (!owner) {
@@ -169,8 +186,11 @@ exports.chat = onRequest(async (req, res) => {
     if (limited) return res.status(429).json({ error: 'rate-limit', message: "you've hit the chat limit for now — try again in a bit." });
   }
 
-  // Log the question for the bot-training view (best-effort).
-  db.collection('bot_questions').add({ at: FieldValue.serverTimestamp(), q: String(message).slice(0, 500) }).catch(() => {});
+  // Capture real questions for the bot-training inbox (greetings already filtered
+  // above; also skip very short/low-signal input).
+  if (String(message).trim().length >= 4) {
+    db.collection('bot_questions').add({ at: FieldValue.serverTimestamp(), q: String(message).slice(0, 500) }).catch(() => {});
+  }
 
   let cfg;
   try {
