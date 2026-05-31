@@ -28,6 +28,7 @@ function AdminIcon({ name, size = 16 }) {
     case 'image': return (<svg {...p}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.6"/><path d="M21 16l-5-4-7 6"/></svg>);
     case 'upload': return (<svg {...p}><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v3a1 1 0 001 1h12a1 1 0 001-1v-3"/></svg>);
     case 'crop': return (<svg {...p}><path d="M6 2v14a2 2 0 002 2h14"/><path d="M2 6h14a2 2 0 012 2v14"/></svg>);
+    case 'menu': return (<svg {...p}><path d="M3 6h18M3 12h18M3 18h18"/></svg>);
     case 'eye': return (<svg {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>);
     case 'eye-off': return (<svg {...p}><path d="M2 12s3.5-7 10-7c1.6 0 3 .4 4.3 1M22 12s-3.5 7-10 7c-1.6 0-3-.4-4.3-1"/><path d="M9.9 9.9a3 3 0 004.2 4.2"/><path d="M3 3l18 18"/></svg>);
     case 'check': return (<svg {...p}><path d="M5 12l5 5L20 6"/></svg>);

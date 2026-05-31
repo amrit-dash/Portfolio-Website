@@ -354,13 +354,14 @@ const NAV = [
 
 const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
 
-function Sidebar({ route, go, content, onLogout }) {
+function Sidebar({ route, go, content, onLogout, open, onClose }) {
   const { AdminIcon } = window.ADMIN_UI;
   return (
-    <aside className="side">
+    <aside className={'side' + (open ? ' side--open' : '')}>
       <div className="side__brand">
         <span className="side__mark" />
         <span className="side__name">amrit.os<small>ADMIN CONSOLE</small></span>
+        <button className="side__close" onClick={onClose} aria-label="Close menu"><AdminIcon name="x" size={16} /></button>
       </div>
       <nav className="side__nav">
         {NAV.map((g) => (
@@ -402,6 +403,7 @@ function AdminApp() {
   const [authReady, setAuthReady] = useAState(false);
   const [authError, setAuthError] = useAState(null);
   const [authBusy, setAuthBusy] = useAState(false);
+  const [navOpen, setNavOpen] = useAState(false); // mobile sidebar drawer
 
   useAEffect(() => {
     if (!window.fb || !window.fb.auth) { setAuthError('Firebase failed to load.'); setAuthReady(true); return; }
@@ -444,7 +446,7 @@ function AdminApp() {
   const { AdminIcon, Btn } = window.ADMIN_UI;
 
   useAEffect(() => { const onHash = () => setRoute((location.hash || '').replace('#', '') || 'overview'); window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash); }, []);
-  const go = (r) => { setRoute(r); location.hash = r; document.querySelector('.canvas')?.scrollTo(0, 0); };
+  const go = (r) => { setRoute(r); location.hash = r; setNavOpen(false); document.querySelector('.canvas')?.scrollTo(0, 0); };
 
   const openPreview = (mode = 'draft') => {
     setPreviewMode(mode);
@@ -480,15 +482,17 @@ function AdminApp() {
 
   return (
     <div className="shell">
-      <Sidebar route={route} go={go} content={content} onLogout={signOut} />
+      <div className="nav-scrim" data-open={navOpen} onClick={() => setNavOpen(false)} />
+      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)} />
       <div className="main">
         <div className="topbar">
+          <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu"><AdminIcon name="menu" size={18} /></button>
           <span className="topbar__crumb">amrit.os / <b>{TITLES[route] || route}</b></span>
           <span className="topbar__spacer" />
           {flash
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
-            : <span className={'dirty' + (dirty ? '' : ' saved')}><span className="dot" />{dirty ? 'Draft · unpublished changes' : 'All changes published'}</span>}
-          <Btn icon="eye" onClick={() => openPreview('draft')}>Preview</Btn>
+            : <span className={'dirty topbar__hide-sm' + (dirty ? '' : ' saved')}><span className="dot" />{dirty ? 'Draft · unpublished changes' : 'All changes published'}</span>}
+          <span className="topbar__hide-sm"><Btn icon="eye" onClick={() => openPreview('draft')}>Preview</Btn></span>
           <Btn kind="primary" icon="rocket" onClick={doPublish} disabled={!dirty}>Publish</Btn>
         </div>
         <div className="canvas">{renderRoute()}</div>

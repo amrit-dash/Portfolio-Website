@@ -1204,14 +1204,17 @@ function Dock() {
     if (root) root.scrollTo({ top: 0, behavior: 'smooth' });
   };
   return (
-    <footer className="dock-wrap" data-comment-anchor="f372480402-footer-706-5">
-      <div className="dock-rail">
+    <footer className="dock-wrap">
+      <div className="dock-top">
         <div className="signal"><span className="dot" /> SESSION_ACTIVE</div>
-        <div><span style={{ color: 'var(--accent)' }}>©</span> <span style={{ color: 'var(--accent)' }}>AMRIT DASH</span> <span style={{ color: 'var(--accent)' }}>2026</span> · BUILT WITH STACKS OF RED BULLS, PUNCHLINES &amp; QUERY LOGS</div>
         <button className="dock-go-top" onClick={goTop} title="Back to top">
           <Icon name="arrow-up" size={12} />
           <span>TOP</span>
         </button>
+      </div>
+      <div className="dock-rail">
+        <div className="dock-copy"><span style={{ color: 'var(--accent)' }}>©</span> <span style={{ color: 'var(--accent)' }}>AMRIT DASH</span> <span style={{ color: 'var(--accent)' }}>2026</span></div>
+        <div className="dock-built">BUILT WITH STACKS OF RED BULLS, PUNCHLINES &amp; QUERY LOGS</div>
       </div>
     </footer>);
 
@@ -1456,8 +1459,13 @@ function App() {
 function CustomCursor({ cursorStyle }) {
   const primaryRef = useRef(null);
   const trailRef = useRef(null);
+  // No custom cursor on touch / no-hover devices — it would sit frozen and jump
+  // on tap. Native cursor is restored via CSS for these devices too.
+  const isTouch = typeof window !== 'undefined' && window.matchMedia &&
+    window.matchMedia('(hover: none), (pointer: coarse)').matches;
 
   useEffect(() => {
+    if (isTouch) return;
     const primary = primaryRef.current;
     const trail = trailRef.current;
     if (!primary) return;
@@ -1496,6 +1504,8 @@ function CustomCursor({ cursorStyle }) {
       cancelAnimationFrame(raf);
     };
   }, [cursorStyle]);
+
+  if (isTouch) return null;
 
   if (cursorStyle === 'ring') {
     return (
