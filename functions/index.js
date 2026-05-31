@@ -99,13 +99,30 @@ async function rateLimited(ipHash, key, limit, windowMs) {
   });
 }
 
+// Skip obviously non-routable IPs (localhost / private ranges) — no point
+// geo-locating them and they only waste a lookup.
+function isPublicIp(ip) {
+  if (!ip || ip === '0.0.0.0') return false;
+  if (/^(10\.|127\.|192\.168\.|169\.254\.|::1|fc|fd)/i.test(ip)) return false;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return false;
+  return true;
+}
+
 async function geoLookup(ip) {
-  // Free, no-key geo-IP. Best-effort; failures degrade to nulls.
+  // Free, no-key geo-IP. Best-effort; failures degrade to nulls. ip-api.com is
+  // built for server-side use (generous free tier) — primary; ipwho.is is the
+  // HTTPS fallback. Some free services rate-limit datacenter IPs, hence two.
+  if (!isPublicIp(ip)) return { country: null, region: null, city: null };
   try {
-    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { signal: AbortSignal.timeout(2500) });
+    const r = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city`, { signal: AbortSignal.timeout(4500) });
+    const d = await r.json();
+    if (d && d.status === 'success') return { country: d.country || null, region: d.regionName || null, city: d.city || null };
+  } catch (e) { console.warn('[geo] ip-api failed for', ip, e && e.message); }
+  try {
+    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { signal: AbortSignal.timeout(4500) });
     const d = await r.json();
     if (d && d.success !== false) return { country: d.country || null, region: d.region || null, city: d.city || null };
-  } catch (e) { /* ignore */ }
+  } catch (e) { console.warn('[geo] ipwho failed for', ip, e && e.message); }
   return { country: null, region: null, city: null };
 }
 

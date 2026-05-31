@@ -106,6 +106,13 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const localCfg = (id) => (pcfg.byProvider && pcfg.byProvider[id]) || {};
   const setLocal = (id, key, val) => setPcfg((p) => ({ ...p, byProvider: { ...p.byProvider, [id]: { ...(p.byProvider[id] || {}), [key]: val } } }));
   const setActiveProvider = (id) => setPcfg((p) => ({ ...p, active: id }));
+  // Model dropdown options: the fetched catalog if we have it, else the seed
+  // list — always include the current value so a custom/saved model isn't lost.
+  const modelOptions = (p, cfg) => {
+    const base = (fetchedModels[p.id] || p.models || []).slice();
+    if (cfg.model && !base.includes(cfg.model)) base.unshift(cfg.model);
+    return base;
+  };
 
   const authHeaders = async () => {
     const h = { 'Content-Type': 'application/json' };
@@ -290,19 +297,12 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                   <Field label="API key" hint={p.keyHint}>
                     <SecretInput name={'llm-key-' + p.id} value={cfg.apiKey || ''} placeholder={'paste your ' + p.label + ' key'} onChange={(v) => setLocal(p.id, 'apiKey', v)} />
                   </Field>
-                  <Field label="Model" hint="type any model id, or fetch the list">
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <Input value={cfg.model || ''} placeholder={p.models[0]} onChange={(v) => setLocal(p.id, 'model', v)} />
-                      </div>
-                      <Btn sm icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Fetching…' : 'Fetch models'}</Btn>
+                  <Field label="Model" hint={fetchedModels[p.id] ? `${opts.length} models from ${p.label}` : 'pick a model, or refresh the list from the provider'}>
+                    <div className="modelrow">
+                      <Select value={cfg.model || ''} options={modelOptions(p, cfg)} onChange={(v) => setLocal(p.id, 'model', v)} />
+                      <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</Btn>
                     </div>
                     {modelErr[p.id] && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {modelErr[p.id]}</div>}
-                    {fetchedModels[p.id] && (
-                      <div style={{ marginTop: 8 }}>
-                        <Select value={opts.includes(cfg.model) ? cfg.model : ''} options={[{ value: '', label: `— ${opts.length} models — pick one —` }].concat(opts.map((m) => ({ value: m, label: m })))} onChange={(v) => v && setLocal(p.id, 'model', v)} />
-                      </div>
-                    )}
                   </Field>
                   <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>
                 </div>

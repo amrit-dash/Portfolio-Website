@@ -452,7 +452,7 @@ const DEFAULT_COSMETICS = {
 };
 
 const LLM_PROVIDERS = [
-  { id: 'gemini',     label: 'Google Gemini',    tag: 'default', endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent', keyHint: 'AIza…',    docs: 'https://aistudio.google.com/apikey',                  models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'] },
+  { id: 'gemini',     label: 'Google Gemini',    tag: 'free tier', endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent', keyHint: 'AIza…',    docs: 'https://aistudio.google.com/apikey',                  models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'] },
   { id: 'openai',     label: 'OpenAI',           tag: '',        endpoint: 'https://api.openai.com/v1/chat/completions',                                       keyHint: 'sk-…',     docs: 'https://platform.openai.com/api-keys',                models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
   { id: 'anthropic',  label: 'Anthropic Claude', tag: '',        endpoint: 'https://api.anthropic.com/v1/messages',                                            keyHint: 'sk-ant-…', docs: 'https://console.anthropic.com/settings/keys',         models: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest'] },
   { id: 'openrouter', label: 'OpenRouter',       tag: '',        endpoint: 'https://openrouter.ai/api/v1/chat/completions',                                    keyHint: 'sk-or-…',  docs: 'https://openrouter.ai/keys',                          models: ['meta-llama/llama-3.1-70b-instruct', 'google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'mistralai/mistral-large'] },
