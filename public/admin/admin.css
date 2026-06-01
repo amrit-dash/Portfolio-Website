@@ -173,11 +173,14 @@ body::before {
 .dirty .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 7px var(--warn); }
 .dirty.saved { color: var(--fg-mute); } .dirty.saved .dot { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
 
-/* header console-theme control — a glowing rounded-square icon + popover */
+/* header console-theme control — a small filled glowing accent square + popover */
 .cthm { position: relative; flex-shrink: 0; }
-.cthm__btn { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--line-2)); border-radius: 9px; background: color-mix(in oklab, var(--accent) 9%, var(--bg-elev)); color: var(--accent); cursor: pointer; transition: all .14s; box-shadow: 0 0 13px -5px var(--accent); }
-.cthm__btn:hover, .cthm__btn[data-on="true"] { border-color: var(--accent); box-shadow: 0 0 17px -3px var(--accent); }
-.cthm__pop { position: absolute; top: calc(100% + 9px); left: 0; z-index: 60; width: 252px; padding: 13px; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 11px; box-shadow: var(--shadow); }
+.cthm__btn { width: 26px; height: 26px; border: 1px solid color-mix(in oklab, var(--accent) 70%, #000); border-radius: 7px; background: var(--accent); cursor: pointer; transition: all .14s; box-shadow: 0 0 12px -3px var(--accent); padding: 0; }
+.cthm__btn:hover, .cthm__btn[data-on="true"] { box-shadow: 0 0 16px -1px var(--accent); transform: translateY(-1px); }
+.cthm__pop { position: absolute; top: calc(100% + 9px); left: 0; z-index: 60; width: 256px; padding: 13px; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 11px; box-shadow: var(--shadow); }
+/* compact, single-row accent swatches inside the console popover */
+.cthm__pop .swatches { flex-wrap: nowrap; gap: 6px; }
+.cthm__pop .swatch, .cthm__pop .swatch--custom { width: 27px; height: 27px; border-radius: 7px; }
 .qa__lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--fg-mute); text-transform: uppercase; margin: 2px 0 8px; }
 
 .canvas { flex: 1; overflow-y: auto; padding: 28px 32px 80px; min-height: 0; }

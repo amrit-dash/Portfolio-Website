@@ -481,7 +481,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose }) {
    across sessions and devices. */
 const CONSOLE_ACCENTS = ['#c8e856', '#ff7a3d', '#7a9eff', '#ffd25a', '#9d7cff'];
 function ConsoleThemeMenu({ theme, setTheme, accent, setAccent }) {
-  const { AdminIcon, Segmented, Swatches } = window.ADMIN_UI;
+  const { Segmented, Swatches } = window.ADMIN_UI;
   const [open, setOpen] = useAState(false);
   const ref = useARef(null);
   useAEffect(() => {
@@ -494,9 +494,8 @@ function ConsoleThemeMenu({ theme, setTheme, accent, setAccent }) {
   }, [open]);
   return (
     <div className="cthm" ref={ref}>
-      <button className="cthm__btn" data-on={open} onClick={() => setOpen((o) => !o)} title="Console theme" aria-label="Console theme" aria-expanded={open}>
-        <AdminIcon name="palette" size={17} />
-      </button>
+      <button className="cthm__btn" data-on={open} onClick={() => setOpen((o) => !o)} title="Console theme" aria-label="Console theme" aria-expanded={open} />
+
       {open && (
         <div className="cthm__pop">
           <div className="qa__lbl">Console mode</div>

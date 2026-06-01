@@ -67,8 +67,8 @@ const VIBES = [
     cos: { theme: 'dark', accent: '#9d7cff', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'starfield', glow: 120, radius: 'soft' } },
   { id: 'crimson', label: 'Crimson', desc: 'Dark · rose editorial',
     cos: { theme: 'dark', accent: '#e85c89', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#e85c89', scanlines: false, bgPattern: 'starfield', glow: 120, radius: 'soft' } },
-  { id: 'terminal', label: 'Terminal', desc: 'Dark · heavy CRT',
-    cos: { theme: 'dark', accent: '#c8e856', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#c8e856', scanlines: true, bgPattern: 'scan', glow: 150, radius: 'sharp' } },
+  { id: 'lilac', label: 'Lilac', desc: 'Light · violet',
+    cos: { theme: 'light', accent: '#9d7cff', type: 'default', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'dots', glow: 90, radius: 'soft' } },
   { id: 'sunset', label: 'Sunset', desc: 'Light · amber soft',
     cos: { theme: 'light', accent: '#ff7a3d', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ff7a3d', scanlines: false, bgPattern: 'dots', glow: 110, radius: 'round' } },
   { id: 'solar', label: 'Solar', desc: 'Light · gold',
@@ -381,7 +381,7 @@ function AppearanceEditor({ content, setAt }) {
         <Panel title="Theme & color">
           <Field label="Default mode" hint="visitors can still toggle"><Segmented value={c.theme} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} onChange={(v) => setAt('cosmetics.theme', v)} /></Field>
           <Field label="Accent color"><Swatches value={c.accent} options={ACCENT_OPTIONS} onChange={(v) => setAt('cosmetics.accent', v)} /></Field>
-          <p className="helptext" style={{ margin: '2px 0 0' }}>The browser-tab favicon (an Amrit OS window glyph) tints to this accent automatically.</p>
+          <p className="helptext" style={{ margin: '2px 0 0' }}>The browser-tab favicon (the Amrit OS spark) tints to this accent automatically.</p>
         </Panel>
         <Panel title="Typography">
           <Field label="Font set" hint="display + body + mono"><Select value={c.type} options={TYPE_OPTIONS} onChange={(v) => setAt('cosmetics.type', v)} /></Field>
