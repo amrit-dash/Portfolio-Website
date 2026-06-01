@@ -253,6 +253,20 @@ const Store = {
     try { await window.fb.db.doc('config/settings').set({ ...settings, updatedAt: window.fb.serverTimestamp() }, { merge: true }); return true; }
     catch (e) { console.warn('[store] fsSaveSettings failed', e && e.message); return false; }
   },
+  /* ---------- Console theme (config/console, owner-only) ----------
+     The admin console's own mode + accent, stored per-owner so the look
+     follows across sessions and devices. Distinct from the portfolio's
+     published cosmetics. */
+  async fsLoadConsole() {
+    if (!this.fsReady()) return null;
+    try { const s = await window.fb.db.doc('config/console').get(); return s.exists ? s.data() : null; }
+    catch (e) { return null; }
+  },
+  async fsSaveConsole(theme, accent) {
+    if (!this.fsReady()) return false;
+    try { await window.fb.db.doc('config/console').set({ theme, accent, updatedAt: window.fb.serverTimestamp() }, { merge: true }); return true; }
+    catch (e) { console.warn('[store] fsSaveConsole failed', e && e.message); return false; }
+  },
   async fsLoadDraft() {
     if (!this.fsReady()) return null;
     try {
@@ -293,6 +307,11 @@ const Store = {
       });
       return true;
     } catch (e) { console.warn('[store] fsSaveLLMConfig failed', e && e.message); return false; }
+  },
+  async fsLoadPublished() {
+    if (!this.fsReady()) return null;
+    try { const s = await window.fb.db.doc('content/published').get(); return s.exists ? (s.data().content || s.data()) : null; }
+    catch (e) { return null; }
   },
   async fsPublish(content) {
     if (!this.fsReady()) return;
@@ -400,6 +419,22 @@ function useContent() {
     setContent(def); setDirty(true); scheduleDraftSync(def);
   }, [scheduleDraftSync]);
 
+  // Discard the draft and revert to the last PUBLISHED version (the live site),
+  // dropping all unpublished edits. Prefers the cloud-published snapshot, falls
+  // back to the local copy, then to defaults. Leaves the draft == published, so
+  // the console returns to a clean (non-dirty) state.
+  const discardDraft = React.useCallback(async () => {
+    let pub = Store.loadPublished();
+    if (!pub) { try { pub = await Store.fsLoadPublished(); } catch (e) {} }
+    const base = normalizeContent(deepMerge(buildDefaultContent(), pub || {}));
+    setContent(base);
+    Store.saveDraft(base);
+    Store.fsSaveDraft(base);
+    Store.clearPreview();
+    setDirty(false);
+    return true;
+  }, []);
+
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
   }, []);
@@ -414,7 +449,7 @@ function useContent() {
     });
   }, []);
 
-  return { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig };
+  return { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig };
 }
 
 /* ---------- Analytics hook (real-time, Firestore-backed) ----------

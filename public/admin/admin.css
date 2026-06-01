@@ -50,8 +50,7 @@
   --shadow-sm: 0 10px 30px -10px rgba(60,55,30,.18), 0 1px 0 0 rgba(255,255,255,.8) inset;
   --grid:      color-mix(in oklab, var(--accent) 26%, transparent);
 }
-[data-theme="light"] .swatch[data-on="true"],
-[data-theme="light"] .qa__swatch[data-on="true"] { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent); }
+[data-theme="light"] .swatch[data-on="true"] { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent); }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; }
@@ -143,14 +142,15 @@ body::before {
 /* ---- Sidebar ---- */
 .side { background: var(--bg-elev); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
 .side__brand { display: flex; align-items: center; gap: 10px; height: var(--topbar-h); padding: 0 16px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-.side__mark { width: 38px; height: 38px; border-radius: 10px; background: var(--bg); border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--line-2)); color: var(--accent); display: grid; place-items: center; flex-shrink: 0; box-shadow: 0 0 16px -5px var(--accent); }
+/* Brand mark — no box, just the glowing window glyph. */
+.side__mark { display: grid; place-items: center; color: var(--accent); flex-shrink: 0; filter: drop-shadow(0 0 6px color-mix(in oklab, var(--accent) 65%, transparent)); }
 .side__name { font-family: var(--font-mono); font-weight: 600; font-size: 13px; letter-spacing: .02em; }
 .side__name small { display: block; color: var(--fg-mute); font-size: 9px; letter-spacing: .18em; font-weight: 500; }
 .side__nav { flex: 1; overflow-y: auto; padding: 6px 10px 14px; min-height: 0; }
 /* every group header gets identical top/bottom padding for a uniform rhythm;
    the nav's own top padding spaces the first one off the brand bar */
-.side__group { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .16em; color: var(--fg-mute); padding: 14px 10px 7px; }
-.navitem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 10px; border: 0; background: transparent; color: var(--fg-dim); font: inherit; font-size: 13px; text-align: left; border-radius: 8px; cursor: pointer; transition: background .12s, color .12s; position: relative; }
+.side__group { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .16em; color: var(--fg-mute); padding: 11px 10px 4px; }
+.navitem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7.5px 10px; border: 0; background: transparent; color: var(--fg-dim); font: inherit; font-size: 13px; text-align: left; border-radius: 8px; cursor: pointer; transition: background .12s, color .12s; position: relative; }
 .navitem:hover { background: var(--surface); color: var(--fg); }
 .navitem[data-active="true"] { background: color-mix(in oklab, var(--accent) 12%, var(--surface)); color: var(--fg); }
 .navitem[data-active="true"]::before { content: ''; position: absolute; left: 0; top: 5px; bottom: 5px; width: 3px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
@@ -173,16 +173,12 @@ body::before {
 .dirty .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 7px var(--warn); }
 .dirty.saved { color: var(--fg-mute); } .dirty.saved .dot { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
 
-/* sidebar console-theme control (pinned above the user footer) */
-.side__theme { position: relative; padding: 4px 12px 8px; border-top: 1px solid var(--line); }
-.side__themebtn { width: 100%; }
-.side__themedot { margin-left: auto; width: 13px; height: 13px; border-radius: 4px; box-shadow: 0 0 8px -1px currentColor; }
-.side__themepop { position: absolute; left: 12px; right: 12px; bottom: calc(100% - 2px); z-index: 60; padding: 13px; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 11px; box-shadow: var(--shadow); }
+/* header console-theme control — a glowing rounded-square icon + popover */
+.cthm { position: relative; flex-shrink: 0; }
+.cthm__btn { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--line-2)); border-radius: 9px; background: color-mix(in oklab, var(--accent) 9%, var(--bg-elev)); color: var(--accent); cursor: pointer; transition: all .14s; box-shadow: 0 0 13px -5px var(--accent); }
+.cthm__btn:hover, .cthm__btn[data-on="true"] { border-color: var(--accent); box-shadow: 0 0 17px -3px var(--accent); }
+.cthm__pop { position: absolute; top: calc(100% + 9px); left: 0; z-index: 60; width: 252px; padding: 13px; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 11px; box-shadow: var(--shadow); }
 .qa__lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--fg-mute); text-transform: uppercase; margin: 2px 0 8px; }
-.qa__swatches { display: flex; flex-wrap: wrap; gap: 7px; }
-.qa__swatch { width: 26px; height: 26px; border-radius: 7px; border: 1px solid rgba(255,255,255,.12); cursor: pointer; transition: transform .12s; }
-.qa__swatch:hover { transform: translateY(-2px); }
-.qa__swatch[data-on="true"] { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent); }
 
 .canvas { flex: 1; overflow-y: auto; padding: 28px 32px 80px; min-height: 0; }
 .canvas--narrow { max-width: 860px; }

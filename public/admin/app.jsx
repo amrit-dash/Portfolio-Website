@@ -49,7 +49,7 @@ function Stat({ icon, label, num, delta, down }) {
   );
 }
 
-function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview, onResetAnalytics, go }) {
+function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview, onDiscard, onResetAnalytics, go }) {
   const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
   const hasData = (analytics.totalEvents || 0) > 0;
   const max = Math.max(1, ...analytics.history);
@@ -62,6 +62,7 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
         <div className="callout" style={{ borderLeftColor: 'var(--warn)' }}>
           <AdminIcon name="info" size={16} />
           <div style={{ flex: 1 }}><b>You have unpublished changes.</b> They're saved to your draft but not live yet. Preview, then publish to push them to the site.</div>
+          <Btn sm kind="ghost" icon="reset" onClick={onDiscard}>Discard</Btn>
           <Btn sm icon="eye" onClick={onPreview}>Preview</Btn>
           <Btn sm kind="primary" icon="rocket" onClick={onPublish}>Publish</Btn>
         </div>
@@ -345,7 +346,7 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
    iframe announces 'amritos:preview-ready', we reply with the draft (or the
    published snapshot), and we re-push on every edit — so theme/accent/font/copy
    changes show live and never revert to the last published copy. */
-function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent }) {
+function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent, dirty, onDiscard }) {
   const { AdminIcon } = window.ADMIN_UI;
   const [device, setDevice] = useAState('desktop');
   const [nonce, setNonce] = useAState(0);
@@ -394,6 +395,7 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent 
             <button data-on={device === 'desktop'} onClick={() => setDevice('desktop')} title="Desktop"><AdminIcon name="desktop" size={15} /></button>
             <button data-on={device === 'mobile'} onClick={() => setDevice('mobile')} title="Mobile"><AdminIcon name="mobile" size={15} /></button>
           </div>
+          {dirty && <button className="btn btn--sm btn--danger" onClick={onDiscard} title="Discard unpublished changes and revert to the published version"><AdminIcon name="reset" size={13} />Discard draft</button>}
           <a className="btn btn--sm" href={openHref} target="_blank" rel="noreferrer"><AdminIcon name="link" size={13} />Open</a>
           <button className="iconbtn" onClick={onClose}><AdminIcon name="x" size={15} /></button>
         </div>
@@ -431,12 +433,12 @@ const NAV = [
 
 const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
 
-function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
+function Sidebar({ route, go, content, onLogout, open, onClose }) {
   const { AdminIcon } = window.ADMIN_UI;
   return (
     <aside className={'side' + (open ? ' side--open' : '')}>
       <div className="side__brand">
-        <span className="side__mark"><AdminIcon name="os-window" size={22} /></span>
+        <span className="side__mark"><AdminIcon name="os-window" size={30} /></span>
         <span className="side__name">amrit.os<small>ADMIN CONSOLE</small></span>
         <button className="side__close" onClick={onClose} aria-label="Close menu"><AdminIcon name="x" size={16} /></button>
       </div>
@@ -461,7 +463,6 @@ function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setA
           </div>
         ))}
       </nav>
-      <SidebarAppearance theme={adminTheme} setTheme={setAdminTheme} accent={adminAccent} setAccent={setAdminAccent} />
       <div className="side__foot">
         <div className="side__user">
           <span className="side__avatar">AD</span>
@@ -473,39 +474,36 @@ function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setA
   );
 }
 
-/* ---------- Sidebar console-theme control ----------
-   Pinned at the bottom of the sidebar. Adjusts the ADMIN CONSOLE's own theme +
-   accent only (persisted to amritos.admin.*) — it never touches the portfolio's
-   cosmetics, which are owned by the Appearance editor. */
-function SidebarAppearance({ theme, setTheme, accent, setAccent }) {
-  const { AdminIcon, Segmented } = window.ADMIN_UI;
-  const ACCENTS = (window.ADMIN_EDITORS && window.ADMIN_EDITORS.ACCENT_OPTIONS) || ['#c8e856', '#33ff66', '#ff7a3d', '#7a9eff', '#ffd25a', '#e85c89', '#9d7cff'];
+/* ---------- Console-theme menu (header) ----------
+   A glowing rounded-square icon in the topbar. Opens a popover that adjusts the
+   ADMIN CONSOLE's own theme + accent only — it never touches the portfolio's
+   cosmetics (owned by the Appearance editor). Persisted per-owner so it follows
+   across sessions and devices. */
+const CONSOLE_ACCENTS = ['#c8e856', '#ff7a3d', '#7a9eff', '#ffd25a', '#9d7cff'];
+function ConsoleThemeMenu({ theme, setTheme, accent, setAccent }) {
+  const { AdminIcon, Segmented, Swatches } = window.ADMIN_UI;
   const [open, setOpen] = useAState(false);
   const ref = useARef(null);
   useAEffect(() => {
     if (!open) return;
     const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onEsc = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onEsc);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc); };
   }, [open]);
   return (
-    <div className="side__theme" ref={ref}>
-      <button className="navitem side__themebtn" data-active={open} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <AdminIcon name="palette" size={16} />
-        <span>Console theme</span>
-        <span className="side__themedot" style={{ background: accent }} />
+    <div className="cthm" ref={ref}>
+      <button className="cthm__btn" data-on={open} onClick={() => setOpen((o) => !o)} title="Console theme" aria-label="Console theme" aria-expanded={open}>
+        <AdminIcon name="palette" size={17} />
       </button>
       {open && (
-        <div className="side__themepop">
+        <div className="cthm__pop">
           <div className="qa__lbl">Console mode</div>
           <Segmented value={theme} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} onChange={setTheme} />
-          <div className="qa__lbl" style={{ marginTop: 12 }}>Console accent</div>
-          <div className="qa__swatches">
-            {ACCENTS.map((col) => (
-              <button key={col} className="qa__swatch" data-on={(accent || '').toLowerCase() === col.toLowerCase()} style={{ background: col }} title={col} onClick={() => setAccent(col)} />
-            ))}
-          </div>
-          <p className="helptext" style={{ marginTop: 10, marginBottom: 0, fontSize: 11 }}>Styles this console only — the portfolio's look lives in <b style={{ color: 'var(--fg)' }}>Appearance</b>.</p>
+          <div className="qa__lbl" style={{ marginTop: 13 }}>Console accent</div>
+          <Swatches value={accent} options={CONSOLE_ACCENTS} onChange={setAccent} allowCustom={true} />
+          <p className="helptext" style={{ marginTop: 11, marginBottom: 0, fontSize: 11 }}>Styles this console only — the portfolio's look lives in <b style={{ color: 'var(--fg)' }}>Appearance</b>. Saved to your account.</p>
         </div>
       )}
     </div>
@@ -527,13 +525,31 @@ function AdminApp() {
   // admin shell and its terminal-window favicon.
   const [adminTheme, setAdminTheme] = useAState(() => { try { return localStorage.getItem('amritos.admin.theme') || 'dark'; } catch (e) { return 'dark'; } });
   const [adminAccent, setAdminAccent] = useAState(() => { try { return localStorage.getItem('amritos.admin.accent') || '#c8e856'; } catch (e) { return '#c8e856'; } });
+  const consoleHydrated = useARef(false);
+  // Apply + persist (localStorage for instant per-device, Firestore for cross-device).
   useAEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = adminTheme === 'light' ? 'light' : 'dark';
     root.style.setProperty('--accent-raw', adminAccent);
     try { localStorage.setItem('amritos.admin.theme', adminTheme); localStorage.setItem('amritos.admin.accent', adminAccent); } catch (e) {}
     if (window.applyFavicon) window.applyFavicon(adminAccent, 'os-window'); // admin keeps the terminal-window mark
+    // Only push to the cloud once we've hydrated from it, so the initial local
+    // default doesn't clobber a value saved on another device.
+    if (consoleHydrated.current) window.ADMIN_STORE.Store.fsSaveConsole(adminTheme, adminAccent);
   }, [adminTheme, adminAccent]);
+  // Once signed in, hydrate the console theme from Firestore so it follows the
+  // owner across devices. Falls back to the local value if nothing is stored.
+  useAEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    window.ADMIN_STORE.Store.fsLoadConsole().then((c) => {
+      if (cancelled) return;
+      if (c && (c.theme === 'dark' || c.theme === 'light')) setAdminTheme(c.theme);
+      if (c && typeof c.accent === 'string') setAdminAccent(c.accent);
+      consoleHydrated.current = true;
+    });
+    return () => { cancelled = true; };
+  }, [user]);
 
   useAEffect(() => {
     if (!window.fb || !window.fb.auth) { setAuthError('Firebase failed to load.'); setAuthReady(true); return; }
@@ -565,7 +581,7 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, reset, previewDraft, dirty, publishedAt, saveLLMConfig } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, saveLLMConfig } = window.ADMIN_STORE.useContent();
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
@@ -586,6 +602,13 @@ function AdminApp() {
   const changePreviewMode = (mode) => { setPreviewMode(mode); if (mode === 'draft') previewDraft(); else window.ADMIN_STORE.Store.clearPreview(); };
 
   const doPublish = () => { publish(); setFlash('Published to site ✓'); setTimeout(() => setFlash(null), 2600); };
+  const doDiscard = async () => {
+    if (!dirty) return;
+    if (!confirm('Discard all unpublished changes and revert to the published version? This cannot be undone.')) return;
+    await discardDraft();
+    window.ADMIN_STORE.Store.clearPreview();
+    setFlash('Draft discarded — reverted to published ✓'); setTimeout(() => setFlash(null), 2800);
+  };
 
   if (!authReady) return <div className="login"><div className="login__crt"><div className="login__body" style={{ textAlign: 'center', color: 'var(--fg-mute)' }}>Checking session…</div></div></div>;
   if (!user) return <Login onGoogle={signInGoogle} error={authError} busy={authBusy} />;
@@ -593,7 +616,7 @@ function AdminApp() {
   const E = window.ADMIN_EDITORS, WP = window.ADMIN_EDITORS_WP, BOT = window.ADMIN_BOT;
   const renderRoute = () => {
     switch (route) {
-      case 'overview': return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onResetAnalytics={resetAnalytics} go={go} />;
+      case 'overview': return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
       case 'analytics': return <AnalyticsPage analytics={analytics} onReset={resetAnalytics} />;
       case 'hero': return <E.HeroEditor content={content} setAt={setAt} />;
       case 'about': return <E.AboutEditor content={content} setAt={setAt} />;
@@ -606,18 +629,18 @@ function AdminApp() {
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={reset} onPreview={() => openPreview('draft')} />;
-      default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onResetAnalytics={resetAnalytics} go={go} />;
+      default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
     }
   };
 
   return (
     <div className="shell">
       <div className="nav-scrim" data-open={navOpen} onClick={() => setNavOpen(false)} />
-      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
-        adminTheme={adminTheme} setAdminTheme={setAdminTheme} adminAccent={adminAccent} setAdminAccent={setAdminAccent} />
+      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)} />
       <div className="main">
         <div className="topbar">
           <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu"><AdminIcon name="menu" size={18} /></button>
+          <ConsoleThemeMenu theme={adminTheme} setTheme={setAdminTheme} accent={adminAccent} setAccent={setAdminAccent} />
           <span className="topbar__crumb">amrit.os / <b>{TITLES[route] || route}</b></span>
           <span className="topbar__spacer" />
           {flash
@@ -629,7 +652,7 @@ function AdminApp() {
         <div className="canvas">{renderRoute()}</div>
       </div>
       <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
-        content={content} publishedContent={window.ADMIN_STORE.Store.loadPublished()} />
+        content={content} publishedContent={window.ADMIN_STORE.Store.loadPublished()} dirty={dirty} onDiscard={doDiscard} />
     </div>
   );
 }
