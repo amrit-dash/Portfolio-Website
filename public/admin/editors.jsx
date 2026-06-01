@@ -381,7 +381,7 @@ function AppearanceEditor({ content, setAt }) {
         <Panel title="Theme & color">
           <Field label="Default mode" hint="visitors can still toggle"><Segmented value={c.theme} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} onChange={(v) => setAt('cosmetics.theme', v)} /></Field>
           <Field label="Accent color"><Swatches value={c.accent} options={ACCENT_OPTIONS} onChange={(v) => setAt('cosmetics.accent', v)} /></Field>
-          <p className="helptext" style={{ margin: '2px 0 0' }}>The browser-tab favicon (the Amrit OS spark) tints to this accent automatically.</p>
+          <p className="helptext" style={{ margin: '2px 0 0' }}>The browser-tab favicon (the pixel “AD” monogram) tints to this accent automatically.</p>
         </Panel>
         <Panel title="Typography">
           <Field label="Font set" hint="display + body + mono"><Select value={c.type} options={TYPE_OPTIONS} onChange={(v) => setAt('cosmetics.type', v)} /></Field>

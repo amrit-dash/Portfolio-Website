@@ -622,13 +622,32 @@ window.LLM_PROVIDERS      = LLM_PROVIDERS;
    The portfolio and admin consoles each apply their own. */
 window.buildFavicon = function (accent) {
   const a = encodeURIComponent(accent || '#c8e856');
-  // "Spark" — a four-point star cut out of a solid accent app-tile. Keeps the
-  // tile-tints-to-accent dynamic style; reads as an AI/automation spark.
+  // Pixel "AD" monogram — dark 8-bit initials on a solid accent app-tile. Keeps
+  // the tile-tints-to-accent dynamic style, reads as a retro-OS app icon, and is
+  // distinct from the admin's terminal-window mark. Pixels are run-length merged
+  // per row + crispEdges so they stay sharp at any size.
+  const A = ['01110', '10001', '10001', '11111', '10001', '10001', '10001'];
+  const D = ['11110', '10001', '10001', '10001', '10001', '10001', '11110'];
+  const p = 2, y0 = 9;
+  let cells = '';
+  const draw = (g, ox) => {
+    for (let row = 0; row < g.length; row++) {
+      let c = 0;
+      while (c < g[row].length) {
+        if (g[row][c] === '1') {
+          let run = 1;
+          while (c + run < g[row].length && g[row][c + run] === '1') run++;
+          cells += "%3Crect x='" + (ox + c * p) + "' y='" + (y0 + row * p) + "' width='" + (run * p) + "' height='" + p + "'/%3E";
+          c += run;
+        } else c++;
+      }
+    }
+  };
+  draw(A, 5); draw(D, 5 + 6 * p);
   return "data:image/svg+xml,"
-    + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
+    + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'%3E"
     + "%3Crect width='32' height='32' rx='7' fill='" + a + "'/%3E"            // accent app tile
-    + "%3Cpath d='M16 4.2C17 12 20 15 27.8 16 20 17 17 20 16 27.8 15 20 12 17 4.2 16 12 15 15 12 16 4.2Z' fill='%230c0d0a'/%3E" // big spark
-    + "%3Cpath d='M25.2 5.2C25.5 7.7 26.3 8.5 28.8 8.8 26.3 9.1 25.5 9.9 25.2 12.4 24.9 9.9 24.1 9.1 21.6 8.8 24.1 8.5 24.9 7.7 25.2 5.2Z' fill='%230c0d0a'/%3E" // small accent spark
+    + "%3Cg fill='%230c0d0a'%3E" + cells + "%3C/g%3E"                          // dark pixel "AD"
     + "%3C/svg%3E";
 };
 window.buildOsWindowFavicon = function (accent) {
