@@ -409,7 +409,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose }) {
   return (
     <aside className={'side' + (open ? ' side--open' : '')}>
       <div className="side__brand">
-        <span className="side__mark" />
+        <span className="side__mark"><AdminIcon name="terminal" size={15} /></span>
         <span className="side__name">amrit.os<small>ADMIN CONSOLE</small></span>
         <button className="side__close" onClick={onClose} aria-label="Close menu"><AdminIcon name="x" size={16} /></button>
       </div>
@@ -442,6 +442,54 @@ function Sidebar({ route, go, content, onLogout, open, onClose }) {
         </div>
       </div>
     </aside>
+  );
+}
+
+/* ---------- Topbar quick-appearance ----------
+   Surfaces front-end customization in the console header: a terminal-mark
+   button that drops a panel of accent swatches + one-click vibes, writing
+   straight to the draft cosmetics (same store path as the Appearance editor). */
+function TopbarAppearance({ content, setAt, go }) {
+  const { AdminIcon } = window.ADMIN_UI;
+  const VIBES = (window.ADMIN_EDITORS && window.ADMIN_EDITORS.VIBES) || [];
+  const ACCENTS = (window.ADMIN_EDITORS && window.ADMIN_EDITORS.ACCENT_OPTIONS) || [];
+  const [open, setOpen] = useAState(false);
+  const ref = useARef(null);
+  useAEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  const c = (content && content.cosmetics) || {};
+  const applyVibe = (v) => { Object.entries(v.cos).forEach(([k, val]) => setAt('cosmetics.' + k, val)); setAt('cosmetics.vibe', v.id); };
+  return (
+    <div className="qa" ref={ref}>
+      <button className="qa__btn" onClick={() => setOpen((o) => !o)} title="Quick appearance" aria-expanded={open}>
+        <AdminIcon name="terminal" size={15} />
+        <span className="qa__dot" style={{ background: c.accent || 'var(--accent)' }} />
+        <AdminIcon name="chevron-down" size={13} />
+      </button>
+      {open && (
+        <div className="qa__pop">
+          <div className="qa__lbl">Accent</div>
+          <div className="qa__swatches">
+            {ACCENTS.map((col) => (
+              <button key={col} className="qa__swatch" data-on={(c.accent || '').toLowerCase() === col.toLowerCase()} style={{ background: col }} title={col} onClick={() => setAt('cosmetics.accent', col)} />
+            ))}
+          </div>
+          <div className="qa__lbl">Vibe</div>
+          <div className="qa__vibes">
+            {VIBES.map((v) => (
+              <button key={v.id} className="qa__vibe" data-on={c.vibe === v.id} onClick={() => applyVibe(v)} title={v.desc}>
+                <span className="qa__vibe-sw" style={{ background: v.cos.accent }} />{v.label}
+              </button>
+            ))}
+          </div>
+          <button className="qa__more" onClick={() => { setOpen(false); go('appearance'); }}>All appearance settings →</button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -539,6 +587,7 @@ function AdminApp() {
           <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu"><AdminIcon name="menu" size={18} /></button>
           <span className="topbar__crumb">amrit.os / <b>{TITLES[route] || route}</b></span>
           <span className="topbar__spacer" />
+          <span className="topbar__hide-sm"><TopbarAppearance content={content} setAt={setAt} go={go} /></span>
           {flash
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + (dirty ? '' : ' saved')}><span className="dot" />{dirty ? 'Draft · unpublished changes' : 'All changes published'}</span>}
