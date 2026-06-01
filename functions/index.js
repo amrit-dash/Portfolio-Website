@@ -6,6 +6,8 @@
      POST /chat       — multi-provider LLM bot proxy; keys read server-side from
                         Firestore config/llm and NEVER returned to the browser.
                         Per-IP rate limited; the authenticated owner bypasses.
+     POST /agent      — owner-only agentic tool loop; reads config/agent +
+                        config/llm keys server-side; writes content/draft.
      POST /track      — analytics ingest; increments counters + daily buckets,
                         appends a capped event feed, enriches with geo + source.
      POST /clearStats — owner-only; wipes analytics (counters, buckets, events).
@@ -429,5 +431,45 @@ async function getAgentProviderKey(provider) {
     return (pcfg && pcfg.apiKey) || null;
   } catch (e) { return null; }
 }
+
+/* ===================================================== */
+/*  /agent — owner-only agentic tool loop                */
+/* ===================================================== */
+const { runAgentTurn } = require('./agent/loop');
+
+exports.agent = onRequest(async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+
+  const owner = await verifyOwner(req);
+  if (!owner) return res.status(403).json({ error: 'forbidden' });
+
+  const { chatId, message, currentRoute, inboxMode } = req.body || {};
+  if (!message || typeof message !== 'string') return res.status(400).json({ error: 'no-message' });
+
+  const agentConfig = await getAgentConfig();
+  const providerKey = await getAgentProviderKey(agentConfig.provider || 'gemini');
+  const settings = await getSettings();
+
+  try {
+    const result = await runAgentTurn({
+      db,
+      FieldValue,
+      agentConfig,
+      providerKey,
+      providerCatalog: PROVIDERS,
+      message: String(message).slice(0, 8000),
+      chatId: chatId || 'default',
+      currentRoute: currentRoute || '/',
+      inboxMode: !!inboxMode,
+      settings,
+    });
+    return res.status(result.status).json(result.body);
+  } catch (e) {
+    console.error('[agent]', e && e.message);
+    return res.status(500).json({ error: 'internal', message: e && e.message });
+  }
+});
 
 module.exports._agentHelpers = { getAgentConfig, getAgentProviderKey, getSettings, db, FieldValue, verifyOwner, cors, PROVIDERS, deleteCollection, OWNER_EMAIL };
