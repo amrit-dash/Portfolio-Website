@@ -409,3 +409,25 @@ async function getSettings() {
     return snap.exists ? snap.data() : {};
   } catch (e) { return {}; }
 }
+
+/* ---------- agent config (config/agent — no keys, server-side only) ---------- */
+const AGENT_CONFIG_DEFAULTS = { provider: 'gemini', model: 'gemini-2.0-flash' };
+
+async function getAgentConfig() {
+  try {
+    const snap = await db.doc('config/agent').get();
+    return snap.exists ? { ...AGENT_CONFIG_DEFAULTS, ...snap.data() } : { ...AGENT_CONFIG_DEFAULTS };
+  } catch (e) { return { ...AGENT_CONFIG_DEFAULTS }; }
+}
+
+// Resolve the agent's API key from the shared config/llm umbrella store.
+async function getAgentProviderKey(provider) {
+  try {
+    const snap = await db.doc('config/llm').get();
+    const cfg = snap.exists ? snap.data() : null;
+    const pcfg = cfg && cfg.byProvider && cfg.byProvider[provider];
+    return (pcfg && pcfg.apiKey) || null;
+  } catch (e) { return null; }
+}
+
+module.exports._agentHelpers = { getAgentConfig, getAgentProviderKey, getSettings, db, FieldValue, verifyOwner, cors, PROVIDERS, deleteCollection, OWNER_EMAIL };

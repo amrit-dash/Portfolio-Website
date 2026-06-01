@@ -38,6 +38,29 @@ service cloud.firestore {
     // Rate-limit bookkeeping — server only.
     match /ratelimits/{doc} { allow read, write: if false; }
 
+    // Agent chat threads — owner read/write; messages nested under each chat.
+    match /agent_chats/{chatId} {
+      allow read, write: if isOwner();
+      match /messages/{msgId} {
+        allow read, write: if isOwner();
+      }
+    }
+
+    // Pre-turn draft snapshots for undo — written by Admin SDK only.
+    match /agent_snapshots/{chatId}/turns/{turnId} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+    // Turn audit trail — written by Admin SDK only.
+    match /agent_audit/{doc} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+    // Agent daily turn counter — server only.
+    match /agent_daily/{doc} { allow read, write: if false; }
+
     // Default deny.
     match /{document=**} { allow read, write: if false; }
   }

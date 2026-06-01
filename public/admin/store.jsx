@@ -272,6 +272,30 @@ const Store = {
     try { await window.fb.db.doc('config/console').set({ theme, accent, updatedAt: window.fb.serverTimestamp() }, { merge: true }); return true; }
     catch (e) { console.warn('[store] fsSaveConsole failed', e && e.message); return false; }
   },
+  /* ---------- Agent config (config/agent, owner-only) ----------
+     Provider/model for the agentic layer. API keys stay in config/llm
+     (byProvider) — this doc never stores secrets. */
+  async fsLoadAgentConfig() {
+    const defaults = { provider: 'gemini', model: 'gemini-2.0-flash' };
+    if (!this.fsReady()) return defaults;
+    try {
+      const s = await window.fb.db.doc('config/agent').get();
+      return { ...defaults, ...(s.exists ? s.data() : {}) };
+    } catch (e) { return defaults; }
+  },
+  async fsSaveAgentConfig(cfg) {
+    if (!this.fsReady()) return false;
+    try {
+      const { provider, model, refinerModel } = cfg || {};
+      await window.fb.db.doc('config/agent').set({
+        provider: provider || 'gemini',
+        model: model || 'gemini-2.0-flash',
+        ...(refinerModel ? { refinerModel } : {}),
+        updatedAt: window.fb.serverTimestamp(),
+      }, { merge: true });
+      return true;
+    } catch (e) { console.warn('[store] fsSaveAgentConfig failed', e && e.message); return false; }
+  },
   async fsLoadDraft() {
     if (!this.fsReady()) return null;
     try {
