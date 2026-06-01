@@ -370,10 +370,14 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent 
   // Re-push whenever the draft, mode, or drawer state changes (no reload needed).
   useAEffect(() => { if (open) post(); }, [open, content, mode, nonce, post]);
 
+  // Target the site ROOT (not index.html): hosts redirect /index.html → /
+  // (Firebase, and `serve` locally) and that 301 *drops the query string*, so
+  // ?adminpreview would be lost and the preview iframe would never enter preview
+  // mode (no postMessage handshake → shows published, never the draft).
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const portfolioBase = isLocal ? '' : ((window.PORTFOLIO_URL || '').replace(/\/$/, '') + '/');
-  const previewSrc = portfolioBase + 'index.html?adminpreview=' + nonce;
-  const openHref = portfolioBase + 'index.html';
+  const portfolioBase = isLocal ? '/' : ((window.PORTFOLIO_URL || '').replace(/\/$/, '') + '/');
+  const previewSrc = portfolioBase + '?adminpreview=' + nonce;
+  const openHref = portfolioBase;
   return (
     <>
       <div className="preview-scrim" data-open={open} onClick={onClose} />
