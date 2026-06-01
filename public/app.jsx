@@ -186,6 +186,12 @@ function Icon({ name, size = 18 }) {
           <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
         </svg>);
 
+    case 'close':
+      return (
+        <svg {...common}>
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>);
+
     case 'aboutme':
       return (
         <svg {...common}>
@@ -1052,6 +1058,9 @@ function ProjectModal({ project, onClose }) {
           </div>
           <div className="window__title">~/projects/{project.id}.{project.type.replace('.', '')}</div>
           <div className="window__meta">open</div>
+          <button className="modal-close" onClick={onClose} aria-label="Close" title="Close">
+            <Icon name="close" size={16} />
+          </button>
         </div>
         <div className="project-modal__body">
           <div className="project-modal__art" data-comment-anchor="3dd5f705f5-div-805-11">

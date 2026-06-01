@@ -257,24 +257,44 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 /* ---------- Boot sequence ---------- */
 .boot {
+  /* Boot-scoped palette — defaults to the dark CRT look. The light-theme
+     override below recolors the whole splash so it matches the resolved theme
+     (user choice or published default) instead of always flashing black. */
+  --boot-ink:        var(--accent-raw);
+  --boot-bg-core:    color-mix(in srgb, var(--accent-raw) 12%, #000);
+  --boot-bg-edge:    #000;
+  --boot-scan:       rgba(200,232,86,.04);
+  --boot-vignette:   rgba(0,0,0,.85);
+  --boot-track:      rgba(200,232,86,.12);
+  --boot-track-edge: rgba(200,232,86,.2);
+
   position: fixed; inset: 0;
-  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent-raw) 12%, #000) 0%, #000 75%);
-  color: var(--accent-raw);
+  background: radial-gradient(ellipse at center, var(--boot-bg-core) 0%, var(--boot-bg-edge) 75%);
+  color: var(--boot-ink);
   z-index: 5000;
   display: grid; place-items: center;
   font-family: var(--font-mono);
   font-size: 13px;
   overflow: hidden;
 }
+[data-theme="light"] .boot {
+  --boot-ink:        var(--accent);
+  --boot-bg-core:    color-mix(in srgb, var(--accent) 10%, var(--bg-elev));
+  --boot-bg-edge:    var(--bg);
+  --boot-scan:       rgba(26,28,20,.05);
+  --boot-vignette:   rgba(60,55,30,.12);
+  --boot-track:      color-mix(in srgb, var(--accent) 18%, transparent);
+  --boot-track-edge: color-mix(in srgb, var(--accent) 32%, transparent);
+}
 .boot::before {
   content: ''; position: absolute; inset: 0;
-  background: repeating-linear-gradient(0deg, rgba(200,232,86,.04) 0 1px, transparent 1px 4px);
+  background: repeating-linear-gradient(0deg, var(--boot-scan) 0 1px, transparent 1px 4px);
   pointer-events: none;
   z-index: 1;
 }
 .boot::after {
   content: ''; position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.85) 100%);
+  background: radial-gradient(ellipse at center, transparent 50%, var(--boot-vignette) 100%);
   pointer-events: none;
   z-index: 1;
 }
@@ -290,7 +310,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .boot__header {
   display: flex; align-items: center; gap: 10px;
   margin-bottom: 10px;
-  color: var(--accent-raw);
+  color: var(--boot-ink);
   letter-spacing: .1em;
   text-transform: uppercase;
   font-size: 11px;
@@ -299,22 +319,22 @@ ul { margin: 0; padding: 0; list-style: none; }
 .boot__progress-num { margin-left: auto; opacity: .7; }
 .boot__progress {
   height: 4px;
-  background: rgba(200,232,86,.12);
+  background: var(--boot-track);
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 22px;
-  border: 1px solid rgba(200,232,86,.2);
+  border: 1px solid var(--boot-track-edge);
 }
 .boot__progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-raw) 0%, color-mix(in srgb, var(--accent-raw) 55%, #fff) 100%);
-  box-shadow: 0 0 14px var(--accent-raw);
+  background: linear-gradient(90deg, var(--boot-ink) 0%, color-mix(in srgb, var(--boot-ink) 55%, #fff) 100%);
+  box-shadow: 0 0 14px var(--boot-ink);
   transition: width .12s ease-out;
 }
 .boot__lines { min-height: 200px; }
 .boot__cursor {
   display: inline-block; width: .6em; height: 1em;
-  background: var(--accent-raw); vertical-align: -2px;
+  background: var(--boot-ink); vertical-align: -2px;
   animation: blink 1s steps(2) infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
@@ -333,8 +353,8 @@ ul { margin: 0; padding: 0; list-style: none; }
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.1;
-  color: var(--accent-raw);
-  text-shadow: 0 0 10px color-mix(in srgb, var(--accent-raw) 50%, transparent), 0 0 22px color-mix(in srgb, var(--accent-raw) 30%, transparent);
+  color: var(--boot-ink);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--boot-ink) 50%, transparent), 0 0 22px color-mix(in srgb, var(--boot-ink) 30%, transparent);
   margin: 0 0 18px;
   white-space: pre;
   display: inline-block;
@@ -343,7 +363,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .boot__tagline {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--accent-raw);
+  color: var(--boot-ink);
   opacity: .65;
   letter-spacing: .3em;
   text-transform: uppercase;
@@ -351,7 +371,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .boot__hint {
   font-size: 11px;
-  color: var(--accent-raw);
+  color: var(--boot-ink);
   opacity: .55;
   letter-spacing: .15em;
   animation: blink 1.6s steps(2) infinite;
@@ -1571,6 +1591,24 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .project-modal__buttons { display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* Touch-only close affordance — swapped in for the traffic-light dots on mobile
+   (see the coarse-pointer block below). Hidden on desktop, where the red dot closes. */
+.modal-close {
+  display: none;
+  margin-left: 10px;
+  width: 28px; height: 28px;
+  align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--titlebar-text);
+  cursor: pointer;
+  padding: 0;
+  flex: 0 0 auto;
+}
+.modal-close svg { display: block; }
+.modal-close:active { background: color-mix(in oklab, var(--accent) 16%, transparent); color: var(--accent); }
+
 @media (max-width: 720px) {
   /* top padding clears the fixed OS header so tall modals never sit flush with it */
   .project-modal-bg { padding: 72px 14px 24px; }
@@ -1764,7 +1802,17 @@ ul { margin: 0; padding: 0; list-style: none; }
   }
   .hero__bot { max-width: 100%; }
   .console { max-width: 100%; height: 460px; }
-  .about-grid { grid-template-columns: 1fr; }
+  /* single column + min-width:0 so nowrap children (the meta row) can't force
+     the grid wider than the viewport and bleed past the clipped .os-root */
+  .about-grid { grid-template-columns: 1fr; min-width: 0; }
+  .about-grid > * { min-width: 0; }
+  .about-text { min-width: 0; }
+  /* let the LOC / TZ / FUEL chips wrap instead of overflowing on the x-axis */
+  .about-meta { flex-wrap: wrap; justify-content: flex-start; gap: 8px 16px; }
+  .about-meta span { white-space: normal; }
+  /* the inline flex-end on this CTA row pushes buttons off-screen on narrow
+     widths — pin them left so both stay fully visible and wrap if needed */
+  .about-text .hero__cta-row { justify-content: flex-start !important; }
   .expertise-grid { grid-template-columns: repeat(2, 1fr); }
   .exp-folder__body { grid-template-columns: 1fr; }
   .exp-sidebar {
@@ -1821,6 +1869,30 @@ ul { margin: 0; padding: 0; list-style: none; }
 @media (hover: none), (pointer: coarse) {
   *, *::before, *::after { cursor: auto !important; }
   .cursor-dot, .cursor-ring, .cursor-pixel, .cursor-bigdot, .cursor-cross { display: none !important; }
+
+  /* iOS Safari / in-app browsers don't paint a position:fixed element's own
+     background when backdrop-filter is set and an ancestor has overflow:hidden
+     — the bar goes invisible while its buttons stay tappable. Drop the blur on
+     touch devices; the --titlebar gradient is already opaque, so the bar paints. */
+  .menubar {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  /* The macOS traffic-light dots are decorative + tiny on touch. Hide them on
+     the section windows (about, expertise, timeline, contact). Desktop keeps them. */
+  .window__lights { display: none; }
+  /* ...but the projects modal still needs a real close target — swap in the cross. */
+  .project-modal .modal-close { display: inline-flex; }
+
+  /* same fixed-element backdrop-filter risk as the menubar — keep the rgba dim,
+     drop the blur so the overlay reliably paints on iOS. */
+  .project-modal-bg {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 :root { --cursor-color: var(--accent); }
@@ -1931,10 +2003,10 @@ html[data-bg="starfield"] body::before {
 .window__tab[data-active="true"] .tab-dot { box-shadow: 0 0 calc(6px * var(--glow)) var(--accent); }
 .console__dot { box-shadow: 0 0 calc(8px * var(--glow)) var(--accent); }
 .signal .dot { box-shadow: 0 0 calc(6px * var(--glow)) var(--accent); }
-.boot__progress-fill { box-shadow: 0 0 calc(14px * var(--glow)) var(--accent-raw); }
+.boot__progress-fill { box-shadow: 0 0 calc(14px * var(--glow)) var(--boot-ink); }
 .boot__ascii {
-  text-shadow: 0 0 calc(10px * var(--glow)) color-mix(in srgb, var(--accent-raw) 50%, transparent),
-               0 0 calc(22px * var(--glow)) color-mix(in srgb, var(--accent-raw) 30%, transparent);
+  text-shadow: 0 0 calc(10px * var(--glow)) color-mix(in srgb, var(--boot-ink) 50%, transparent),
+               0 0 calc(22px * var(--glow)) color-mix(in srgb, var(--boot-ink) 30%, transparent);
 }
 .console::before {
   background: radial-gradient(ellipse at top, color-mix(in oklab, var(--accent) calc(14% * var(--glow)), transparent) 0%, transparent 60%);
