@@ -1274,7 +1274,12 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "botIcon": "brain-computer",
   "botIconColor": "accent",
   "type": "default",
-  "fontScale": 100
+  "fontScale": 100,
+  "headingFont": "match",
+  "tracking": "normal",
+  "bgPattern": "grid",
+  "glow": 100,
+  "radius": "soft"
 } /*EDITMODE-END*/;
 const TWEAK_DEFAULTS = (() => {
   const c = (CONTENT && CONTENT.cosmetics) || {};
@@ -1287,12 +1292,21 @@ const TWEAK_DEFAULTS = (() => {
     botIconColor: typeof c.botIconColor === 'string' ? c.botIconColor : _COSMETICS_BASE.botIconColor,
     type:         typeof c.type === 'string' ? c.type : _COSMETICS_BASE.type,
     fontScale:    typeof c.fontScale === 'number' ? c.fontScale : _COSMETICS_BASE.fontScale,
+    headingFont:  typeof c.headingFont === 'string' ? c.headingFont : _COSMETICS_BASE.headingFont,
+    tracking:     typeof c.tracking === 'string' ? c.tracking : _COSMETICS_BASE.tracking,
+    bgPattern:    typeof c.bgPattern === 'string' ? c.bgPattern : _COSMETICS_BASE.bgPattern,
+    glow:         typeof c.glow === 'number' ? c.glow : _COSMETICS_BASE.glow,
+    radius:       typeof c.radius === 'string' ? c.radius : _COSMETICS_BASE.radius,
   };
 })();
 
 const ACCENT_OPTIONS = ["#c8e856", "#33ff66", "#ff7a3d", "#7a9eff", "#ffd25a", "#e85c89", "#9d7cff"];
 const CURSOR_COLOR_OPTIONS = ["#ffffff", "#c8e856", "#33ff66", "#ff7a3d", "#7a9eff", "#ffd25a", "#ff4466"];
 const TYPE_OPTIONS = ['default', 'editorial', 'pixel', 'modern'];
+const HEADING_FONT_OPTIONS = ['match', 'serif', 'editorial', 'grotesk', 'mono', 'pixel'];
+const TRACKING_OPTIONS = ['tight', 'normal', 'wide'];
+const BG_PATTERN_OPTIONS = ['grid', 'dots', 'scan', 'starfield', 'none'];
+const RADIUS_OPTIONS = ['sharp', 'soft', 'round'];
 
 function App() {
   const [booted, setBooted] = useState(false);
@@ -1351,15 +1365,19 @@ function App() {
   // below it, so no scrollbar-width compensation is needed.)
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--accent-raw', t.accent);
-    document.documentElement.style.setProperty('--cursor-color', t.cursorColor || t.accent);
-    document.documentElement.style.setProperty('--font-scale', (t.fontScale / 100).toString());
-    document.documentElement.dataset.scanlines = t.scanlines ? 'on' : 'off';
-    if (t.type && t.type !== 'default') {
-      document.documentElement.dataset.type = t.type;
-    } else {
-      delete document.documentElement.dataset.type;
-    }
+    const root = document.documentElement;
+    root.style.setProperty('--accent-raw', t.accent);
+    root.style.setProperty('--cursor-color', t.cursorColor || t.accent);
+    root.style.setProperty('--font-scale', (t.fontScale / 100).toString());
+    root.style.setProperty('--glow', ((typeof t.glow === 'number' ? t.glow : 100) / 100).toString());
+    root.dataset.scanlines = t.scanlines ? 'on' : 'off';
+    if (t.type && t.type !== 'default') root.dataset.type = t.type; else delete root.dataset.type;
+    if (t.headingFont && t.headingFont !== 'match') root.dataset.heading = t.headingFont; else delete root.dataset.heading;
+    if (t.tracking && t.tracking !== 'normal') root.dataset.tracking = t.tracking; else delete root.dataset.tracking;
+    if (t.radius && t.radius !== 'soft') root.dataset.radius = t.radius; else delete root.dataset.radius;
+    root.dataset.bg = t.bgPattern || 'grid';
+    // Re-tint the browser-tab favicon to the live accent (the "Amrit OS" window glyph).
+    if (window.applyFavicon) window.applyFavicon(t.accent);
     // Update pixel cursor SVGs — style variants for contrast/visibility
     const accent = encodeURIComponent(t.accent);
     const cs = t.cursorStyle || 'halo';
@@ -1382,7 +1400,7 @@ function App() {
       }
       return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 22 22'>${inner}</svg>`;
     };
-  }, [t.accent, t.scanlines, t.type, t.fontScale, t.cursorColor]);
+  }, [t.accent, t.scanlines, t.type, t.fontScale, t.cursorColor, t.glow, t.headingFont, t.tracking, t.radius, t.bgPattern]);
 
   const handleBootDone = useCallback(() => {
     setBooted(true);
@@ -1428,8 +1446,19 @@ function App() {
           <TweakSection label="Typography" />
           <TweakSelect label="Font set" value={t.type} options={TYPE_OPTIONS}
         onChange={(v) => setTweak('type', v)} />
+          <TweakSelect label="Heading font" value={t.headingFont || 'match'} options={HEADING_FONT_OPTIONS}
+        onChange={(v) => setTweak('headingFont', v)} />
+          <TweakRadio label="Tracking" value={t.tracking || 'normal'} options={TRACKING_OPTIONS}
+        onChange={(v) => setTweak('tracking', v)} />
           <TweakSlider label="Font size" value={t.fontScale} min={85} max={120} step={5} unit="%"
         onChange={(v) => setTweak('fontScale', v)} />
+          <TweakSection label="Background & glow" />
+          <TweakSelect label="Wallpaper" value={t.bgPattern || 'grid'} options={BG_PATTERN_OPTIONS}
+        onChange={(v) => setTweak('bgPattern', v)} />
+          <TweakSlider label="Accent glow" value={t.glow == null ? 100 : t.glow} min={0} max={160} step={10} unit="%"
+        onChange={(v) => setTweak('glow', v)} />
+          <TweakRadio label="Corners" value={t.radius || 'soft'} options={RADIUS_OPTIONS}
+        onChange={(v) => setTweak('radius', v)} />
           <TweakSection label="Bot Icon" />
           <TweakSelect label="Icon style" value={t.botIcon || 'brain'}
         options={BOT_ICON_OPTIONS.map(o => o.value)}

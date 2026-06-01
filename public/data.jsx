@@ -444,11 +444,17 @@ const DEFAULT_COSMETICS = {
   accent: '#c8e856',
   type: 'default',
   fontScale: 100,
+  headingFont: 'match',   // 'match' follows `type`; else overrides --font-display only
+  tracking: 'normal',     // letter-spacing on labels/headings: tight | normal | wide
   scanlines: true,
   cursorStyle: 'ring',
   cursorColor: '#c8e856',
   botIcon: 'brain-computer',
   botIconColor: 'accent',
+  bgPattern: 'grid',      // wallpaper: grid | dots | scan | starfield | none
+  glow: 100,              // accent glow/bloom intensity (0–160, 100 = default)
+  radius: 'soft',         // UI corner style: sharp | soft | round
+  vibe: 'classic',        // last-applied preset (admin convenience; front-end ignores)
 };
 
 const LLM_PROVIDERS = [
@@ -600,6 +606,31 @@ window.PORTFOLIO_DEFAULTS = PORTFOLIO_DEFAULTS;
 window.PORTFOLIO_CONTENT  = PORTFOLIO_CONTENT;
 window.LLM_PROVIDERS      = LLM_PROVIDERS;
 
+/* Color-changing favicon — an "Amrit OS" window glyph whose title bar tints to
+   the live accent. Shared by the synchronous first paint below and the React
+   accent effect in app.jsx, so the tab icon always matches the active accent. */
+window.buildFavicon = function (accent) {
+  const a = encodeURIComponent(accent || '#c8e856');
+  return "data:image/svg+xml,"
+    + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
+    + "%3Crect width='32' height='32' rx='7' fill='%230c0d0a'/%3E"          // app tile
+    + "%3Crect x='6' y='7' width='20' height='18' rx='3' fill='" + a + "'/%3E" // accent window frame
+    + "%3Crect x='7.6' y='12.4' width='16.8' height='11' rx='1.6' fill='%230c0d0a'/%3E" // dark body
+    + "%3Ccircle cx='9.5' cy='9.7' r='1.05' fill='%230c0d0a'/%3E"           // traffic-light dots
+    + "%3Ccircle cx='12.7' cy='9.7' r='1.05' fill='%230c0d0a'/%3E"
+    + "%3Ccircle cx='15.9' cy='9.7' r='1.05' fill='%230c0d0a'/%3E"
+    + "%3Cpath d='M10.3 16.4l2.2 1.9-2.2 1.9' fill='none' stroke='" + a + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E" // prompt caret
+    + "%3Crect x='14' y='19.4' width='4.6' height='1.5' rx='.75' fill='" + a + "'/%3E"
+    + "%3C/svg%3E";
+};
+window.applyFavicon = function (accent) {
+  try {
+    let link = document.querySelector("link[rel='icon']");
+    if (!link) { link = document.createElement('link'); link.setAttribute('rel', 'icon'); document.head.appendChild(link); }
+    link.setAttribute('href', window.buildFavicon(accent));
+  } catch (e) { /* non-fatal */ }
+};
+
 /* Apply core cosmetics to the document root synchronously, before React (and
    the boot splash) first paints — so the splash and first frame already use the
    published accent/theme instead of flashing the hardcoded default. The App
@@ -610,9 +641,22 @@ try {
   if (_cos.accent) _root.style.setProperty('--accent-raw', _cos.accent);
   if (_cos.cursorColor || _cos.accent) _root.style.setProperty('--cursor-color', _cos.cursorColor || _cos.accent);
   if (typeof _cos.fontScale === 'number') _root.style.setProperty('--font-scale', (_cos.fontScale / 100).toString());
+  if (typeof _cos.glow === 'number') _root.style.setProperty('--glow', (_cos.glow / 100).toString());
   _root.dataset.scanlines = _cos.scanlines === false ? 'off' : 'on';
   if (_cos.type && _cos.type !== 'default') _root.dataset.type = _cos.type;
-  if (!localStorage.getItem('amritos.theme') && _cos.theme) _root.dataset.theme = _cos.theme === 'light' ? 'light' : 'dark';
+  if (_cos.headingFont && _cos.headingFont !== 'match') _root.dataset.heading = _cos.headingFont;
+  if (_cos.tracking && _cos.tracking !== 'normal') _root.dataset.tracking = _cos.tracking;
+  if (_cos.bgPattern) _root.dataset.bg = _cos.bgPattern;
+  if (_cos.radius && _cos.radius !== 'soft') _root.dataset.radius = _cos.radius;
+  // In the admin preview iframe the published default mode should always show;
+  // otherwise honour an explicit visitor choice, else fall back to the default.
+  let _isPreview = false;
+  try { _isPreview = new URLSearchParams(location.search).has('adminpreview'); } catch (e) {}
+  const _explicit = localStorage.getItem('amritos.theme.explicit') === '1';
+  if (_cos.theme && (_isPreview || !_explicit)) {
+    _root.dataset.theme = _cos.theme === 'light' ? 'light' : 'dark';
+  }
+  window.applyFavicon(_cos.accent);
 } catch (e) { /* non-fatal */ }
 window.mergeContent = (over) => over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS));
 
