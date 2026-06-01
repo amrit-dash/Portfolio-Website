@@ -276,7 +276,8 @@ const Store = {
      Provider/model for the agentic layer. API keys stay in config/llm
      (byProvider) — this doc never stores secrets. */
   async fsLoadAgentConfig() {
-    const defaults = { provider: 'gemini', model: 'gemini-2.0-flash' };
+    const defaults = (typeof window !== 'undefined' && window.SHARED_SCHEMA && window.SHARED_SCHEMA.AGENT_CONFIG_DEFAULTS)
+      || { provider: 'gemini', model: 'gemini-2.0-flash' };
     if (!this.fsReady()) return defaults;
     try {
       const s = await window.fb.db.doc('config/agent').get();

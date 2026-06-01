@@ -33,6 +33,7 @@
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
   <!-- Site data (seeds the dashboard with current content) -->
+  <script src="shared-schema.js"></script>
   <script type="text/babel" data-presets="env,react" src="data.jsx"></script>
 
   <!-- Admin app (order matters: store → ui → crop → editors → bot → app) -->
@@ -44,6 +45,7 @@
   <script type="text/babel" data-presets="env,react" src="admin/bot.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/refiner.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/agent.jsx"></script>
+  <script type="text/babel" data-presets="env,react" src="admin/agent-settings.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/app.jsx"></script>
 </body>
 </html>

@@ -442,12 +442,13 @@ const NAV = [
   ] },
   { group: 'ASSISTANT', items: [
     { id: 'agent', label: 'Agent', icon: 'sparkle' },
+    { id: 'agent-settings', label: 'Agent settings', icon: 'key' },
     { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
   ] },
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
 ];
 
-const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', sync: 'Sync & deploy' };
+const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', 'agent-settings': 'Agent settings', bot: 'AmritBot', sync: 'Sync & deploy' };
 
 function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
@@ -629,7 +630,7 @@ function AdminApp() {
   if (!authReady) return <div className="login"><div className="login__crt"><div className="login__body" style={{ textAlign: 'center', color: 'var(--fg-mute)' }}>Checking session…</div></div></div>;
   if (!user) return <Login onGoogle={signInGoogle} error={authError} busy={authBusy} />;
 
-  const E = window.ADMIN_EDITORS, WP = window.ADMIN_EDITORS_WP, BOT = window.ADMIN_BOT, AGENT = window.ADMIN_AGENT;
+  const E = window.ADMIN_EDITORS, WP = window.ADMIN_EDITORS_WP, BOT = window.ADMIN_BOT, AGENT = window.ADMIN_AGENT, AGSET = window.ADMIN_AGENT_SETTINGS;
   const fieldProps = { registerFieldFocus, unregisterFieldFocus };
   const renderRoute = () => {
     switch (route) {
@@ -645,6 +646,7 @@ function AdminApp() {
       case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} {...fieldProps} />;
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} {...fieldProps} />;
       case 'agent': return <AGENT.AgentPage />;
+      case 'agent-settings': return AGSET ? <AGSET.AgentSettingsPage /> : null;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} {...fieldProps} />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={reset} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
