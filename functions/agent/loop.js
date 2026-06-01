@@ -1,8 +1,9 @@
 /* Agent tool loop — canonical messages, sequential mutating tools, caps. */
 
-const { GENERIC_TOOLS, executeTool } = require('./tools');
+const { ALL_TOOLS, executeTool } = require('./tools');
 const { DraftSession, buildOutline } = require('./content-ops');
 const { filterToolsForMode, INBOX_SYSTEM_GUARD, wrapVisitorText } = require('./guards');
+const { persistAudit } = require('./audit');
 const {
   makeUserMessage,
   makeAssistantMessage,
@@ -20,7 +21,8 @@ const BASE_SYSTEM = [
   'Never claim changes were made unless a mutating tool succeeded.',
   'Use readContent to inspect paths before editing. Prefer setContentPath for leaf updates.',
   'You cannot change bot LLM providers, API keys, or behavior toggles.',
-  'Publishing is not available in this mode — edits land in draft for owner review.',
+  'Use publish() only when the owner explicitly asks to ship changes live.',
+  'Structured tools (addItem, reorder, applyVibePreset, setProjectImage) handle arrays and presets safely.',
 ].join(' ');
 
 async function loadChatHistory(db, chatId) {
@@ -85,7 +87,8 @@ async function runAgentTurn({
 
   const outline = buildOutline(session.content);
   const history = await loadChatHistory(db, chatId || 'default');
-  const tools = filterToolsForMode(GENERIC_TOOLS, { inboxMode });
+  const tools = filterToolsForMode(ALL_TOOLS, { inboxMode });
+  const toolCtx = { session, db, FieldValue, chatId: chatId || 'default' };
   const userText = inboxMode ? wrapVisitorText(message) : String(message || '');
 
   let systemPrompt = BASE_SYSTEM;
@@ -134,7 +137,7 @@ async function runAgentTurn({
       if (!toolDef) {
         result = { ok: false, error: 'unknown-tool' };
       } else {
-        result = executeTool(tc.name, tc.args, session);
+        result = await executeTool(tc.name, tc.args, toolCtx);
       }
       toolLog.push({ name: tc.name, args: tc.args, result });
       responseParts.push({
@@ -168,12 +171,20 @@ async function runAgentTurn({
   await persistMessages(db, FieldValue, chatId || 'default', newMessages);
 
   const perPathUndo = session.perPathRevertData();
+  const auditId = await persistAudit(db, FieldValue, {
+    chatId: chatId || 'default',
+    turnId,
+    toolLog,
+    changedPaths: session.changedPaths,
+    perPathUndo,
+  });
 
   return {
     status: 200,
     body: {
       reply,
       turnId,
+      auditId,
       toolCalls: toolLog,
       changedPaths: session.changedPaths,
       perPathUndo,

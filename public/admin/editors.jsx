@@ -5,8 +5,9 @@
    ===================================================== */
 const { useState } = React;
 
-const EXPERTISE_ICONS = ['automation', 'rag', 'gas', 'flutter', 'bots', 'shopify', 'web', 'ios', 'comedy', 'brain'];
-const SOCIAL_ICONS = ['whatsapp', 'linkedin', 'github', 'instagram', 'email', 'web'];
+const _SCHEMA = (typeof window !== 'undefined' && window.SHARED_SCHEMA) || {};
+const EXPERTISE_ICONS = _SCHEMA.EXPERTISE_ICONS || ['automation', 'rag', 'gas', 'flutter', 'bots', 'shopify', 'web', 'ios', 'comedy', 'brain'];
+const SOCIAL_ICONS = _SCHEMA.SOCIAL_ICONS || ['whatsapp', 'linkedin', 'github', 'instagram', 'email', 'web'];
 const ACCENT_OPTIONS = ['#c8e856', '#33ff66', '#ff7a3d', '#7a9eff', '#ffd25a', '#e85c89', '#9d7cff'];
 const CURSOR_COLOR_OPTIONS = ['#ffffff', '#c8e856', '#33ff66', '#ff7a3d', '#7a9eff', '#ffd25a', '#ff4466'];
 const TYPE_OPTIONS = [
@@ -58,7 +59,7 @@ const TRACKING_OPTIONS = [
    effects + background + glow + radius together. Each writes the full cosmetic
    set (including dark/light mode) so a switch is fully deterministic — no
    leftover state from the previous vibe. */
-const VIBES = [
+const VIBES = _SCHEMA.VIBES || [
   { id: 'classic', label: 'Classic', desc: 'Dark · lime CRT',
     cos: { theme: 'dark', accent: '#c8e856', type: 'default', headingFont: 'match', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#c8e856', scanlines: true, bgPattern: 'grid', glow: 100, radius: 'soft' } },
   { id: 'matrix', label: 'Matrix', desc: 'Dark · green pixel',
