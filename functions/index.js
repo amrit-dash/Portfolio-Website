@@ -409,3 +409,112 @@ async function getSettings() {
     return snap.exists ? snap.data() : {};
   } catch (e) { return {}; }
 }
+
+/* ===================================================== */
+/*  Agent config — config/agent holds the agent's OWN     */
+/*  keys, fully SEPARATE from the bot's config/llm. The    */
+/*  owner supplies billable keys here for better models;   */
+/*  the public bot never reads them, and they never reach  */
+/*  the browser or any content/published doc.              */
+/* ===================================================== */
+const sharedSchema = require('../public/shared-schema');
+
+async function getAgentConfig() {
+  try {
+    const snap = await db.doc('config/agent').get();
+    const data = snap.exists ? snap.data() : {};
+    return {
+      active: data.active || sharedSchema.AGENT_CONFIG_DEFAULTS.active,
+      byProvider: (data.byProvider && typeof data.byProvider === 'object') ? data.byProvider : {},
+      refinerModel: data.refinerModel || null,
+    };
+  } catch (e) {
+    return { active: 'gemini', byProvider: {}, refinerModel: null };
+  }
+}
+
+// Resolve the agent's OWN key for a provider — from config/agent, NOT config/llm.
+function resolveAgentKey(config, provider) {
+  const pcfg = config && config.byProvider && Reflect.get(config.byProvider, provider);
+  return (pcfg && pcfg.apiKey) || null;
+}
+
+// Drop raw keys so the loop + audit only ever see provider/model, never secrets.
+function stripAgentConfigKeys(config) {
+  const by = {};
+  const src = (config && config.byProvider) || {};
+  for (const id of Object.keys(src)) {
+    if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+    const p = Reflect.get(src, id) || {};
+    by[id] = { model: p.model || null };
+  }
+  return { active: config.active, byProvider: by, refinerModel: config.refinerModel || null };
+}
+
+/* ===================================================== */
+/*  /agent — owner-only agentic tool loop                */
+/* ===================================================== */
+const { runAgentTurn } = require('./agent/loop');
+const { undoLastChange, revertPath } = require('./agent/content-ops');
+
+exports.agent = onRequest(async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+
+  const owner = await verifyOwner(req);
+  if (!owner) return res.status(403).json({ error: 'forbidden' });
+
+  const body = req.body || {};
+  const { action, chatId, path: revertPathStr, before } = body;
+
+  // Lightweight, non-LLM actions: turn-level undo and per-path revert.
+  if (action === 'undo') {
+    try {
+      const result = await undoLastChange({ db, FieldValue, chatId: chatId || 'default' });
+      return res.status(result.ok ? 200 : 404).json(result);
+    } catch (e) {
+      console.error('[agent/undo]', e && e.message);
+      return res.status(500).json({ error: 'internal', message: e && e.message });
+    }
+  }
+
+  if (action === 'revert-path') {
+    if (!revertPathStr || typeof revertPathStr !== 'string') return res.status(400).json({ error: 'no-path' });
+    try {
+      const result = await revertPath({ db, FieldValue, path: revertPathStr, beforeValue: before });
+      return res.status(result.ok ? 200 : 400).json(result);
+    } catch (e) {
+      console.error('[agent/revert]', e && e.message);
+      return res.status(500).json({ error: 'internal', message: e && e.message });
+    }
+  }
+
+  const { message, currentRoute, inboxMode } = body;
+  if (!message || typeof message !== 'string') return res.status(400).json({ error: 'no-message' });
+
+  const fullConfig = await getAgentConfig();
+  const providerKey = resolveAgentKey(fullConfig, fullConfig.active || 'gemini');
+  const settings = await getSettings();
+
+  try {
+    const result = await runAgentTurn({
+      db,
+      FieldValue,
+      agentConfig: stripAgentConfigKeys(fullConfig),   // model/provider only — no secrets pass deeper
+      providerKey,                                      // the one resolved key, used to call the provider
+      providerCatalog: PROVIDERS,
+      message: String(message).slice(0, 8000),
+      chatId: chatId || 'default',
+      currentRoute: currentRoute || '/',
+      inboxMode: !!inboxMode,
+      settings,
+    });
+    return res.status(result.status).json(result.body);
+  } catch (e) {
+    console.error('[agent]', e && e.message);
+    return res.status(500).json({ error: 'internal', message: e && e.message });
+  }
+});
+
+module.exports._agentHelpers = { getAgentConfig, resolveAgentKey, stripAgentConfigKeys, getSettings, db, FieldValue, verifyOwner, PROVIDERS, OWNER_EMAIL };
