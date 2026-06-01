@@ -4,6 +4,7 @@
   "private": true,
   "description": "amrit.os — retro-OS portfolio with a localStorage-backed admin console",
   "scripts": {
+    "help": "node scripts/help.mjs",
     "dev": "npx --yes serve public -l 3000",
     "start": "npx --yes serve public -l 3000",
     "build": "node scripts/build-dist.mjs",
