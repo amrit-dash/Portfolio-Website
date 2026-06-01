@@ -626,8 +626,9 @@ window.buildFavicon = function (accent) {
   // the tile-tints-to-accent dynamic style, reads as a retro-OS app icon, and is
   // distinct from the admin's terminal-window mark. Pixels are run-length merged
   // per row + crispEdges so they stay sharp at any size.
-  const A = ['01110', '10001', '10001', '11111', '10001', '10001', '10001'];
-  const D = ['11110', '10001', '10001', '10001', '10001', '10001', '11110'];
+  // Bold 6-wide glyphs — 2-pixel-thick stems for a heavier monogram.
+  const A = ['011110', '111111', '110011', '111111', '110011', '110011', '110011'];
+  const D = ['111110', '111111', '110011', '110011', '110011', '111111', '111110'];
   const p = 2, y0 = 9;
   let cells = '';
   const draw = (g, ox) => {
@@ -643,7 +644,7 @@ window.buildFavicon = function (accent) {
       }
     }
   };
-  draw(A, 5); draw(D, 5 + 6 * p);
+  draw(A, 3); draw(D, 3 + 7 * p);
   return "data:image/svg+xml,"
     + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'%3E"
     + "%3Crect width='32' height='32' rx='7' fill='" + a + "'/%3E"            // accent app tile
