@@ -303,10 +303,38 @@ const Store = {
       return snap.exists ? (snap.data().content || null) : null;
     } catch (e) { console.warn('[store] fsLoadDraft failed', e && e.message); return null; }
   },
-  async fsSaveDraft(content) {
-    if (!this.fsReady()) return;
-    try { await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() }); }
-    catch (e) { console.warn('[store] fsSaveDraft failed', e && e.message); }
+  async fsLoadDraftMeta() {
+    if (!this.fsReady()) return { content: null, updatedAt: null };
+    try {
+      const snap = await window.fb.db.doc('content/draft').get();
+      if (!snap.exists) return { content: null, updatedAt: null };
+      const data = snap.data();
+      return { content: data.content || null, updatedAt: data.updatedAt || null };
+    } catch (e) { return { content: null, updatedAt: null }; }
+  },
+  fsDraftListen(cb) {
+    if (!this.fsReady()) return null;
+    return window.fb.db.doc('content/draft').onSnapshot(
+      (snap) => {
+        if (!snap.exists) { cb(null, null); return; }
+        const data = snap.data();
+        cb(data.content || null, data.updatedAt || null);
+      },
+      (e) => console.warn('[store] fsDraftListen', e && e.message),
+    );
+  },
+  async fsSaveDraft(content, lastKnownUpdateTime) {
+    if (!this.fsReady()) return { ok: false };
+    try {
+      const ref = window.fb.db.doc('content/draft');
+      const snap = await ref.get();
+      const remoteTs = snap.exists ? snap.data().updatedAt : null;
+      if (lastKnownUpdateTime != null && remoteTs && !tsEqual(remoteTs, lastKnownUpdateTime)) {
+        return { ok: false, conflict: true };
+      }
+      await ref.set({ content, updatedAt: window.fb.serverTimestamp() });
+      return { ok: true };
+    } catch (e) { console.warn('[store] fsSaveDraft failed', e && e.message); return { ok: false }; }
   },
   // Deep-clone content with every LLM apiKey blanked — for the PUBLIC published
   // doc, which must never carry a secret.
@@ -358,6 +386,56 @@ const Store = {
   },
 };
 
+/* Timestamp helpers for draft concurrency (U14). */
+function tsMillis(ts) {
+  if (!ts) return 0;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  if (ts.seconds) return ts.seconds * 1000;
+  return 0;
+}
+function tsEqual(a, b) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return tsMillis(a) === tsMillis(b);
+}
+
+function getAtPath(obj, path) {
+  const keys = Array.isArray(path) ? path : String(path || '').split('.');
+  let cur = obj;
+  for (const k of keys) {
+    if (cur == null || k === '__proto__' || k === 'constructor' || k === 'prototype') return undefined;
+    cur = Reflect.get(cur, k);
+  }
+  return cur;
+}
+
+function setAtPath(obj, path, value) {
+  const keys = Array.isArray(path) ? path.slice() : String(path || '').split('.');
+  if (!keys.length) return obj;
+  const root = clone(obj);
+  let node = root;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') return root;
+    const child = Reflect.get(node, k);
+    const next = Array.isArray(child) ? child.slice() : (isPlain(child) ? { ...child } : {});
+    Reflect.set(node, k, next);
+    node = next;
+  }
+  const last = keys[keys.length - 1];
+  if (last !== '__proto__' && last !== 'constructor' && last !== 'prototype') Reflect.set(node, last, value);
+  return root;
+}
+
+/** Adopt a remote draft while preserving the field the owner is actively editing. */
+function mergeDraftRemote(local, remote, focusedPath) {
+  const base = normalizeContent(deepMerge(buildDefaultContent(), remote));
+  if (!focusedPath) return base;
+  const localVal = getAtPath(local, focusedPath);
+  if (localVal === undefined) return base;
+  return setAtPath(base, focusedPath, localVal);
+}
+
 function fmtRelative(ms) {
   if (!Number.isFinite(ms) || ms < 0) return 'just now';
   const s = Math.floor(ms / 1000);
@@ -380,34 +458,71 @@ function useContent() {
   const [publishedAt, setPublishedAt] = React.useState(() => Store.read('amritos.publishedAt'));
   const [synced, setSynced] = React.useState(false); // true once Firestore draft adopted/seeded
   const draftTimer = React.useRef(null);
+  const draftUpdateTime = React.useRef(null);
+  const focusedField = React.useRef(null);
+  const agentTurnPending = React.useRef(false);
+  const localWritePending = React.useRef(false);
+  const draftSeeded = React.useRef(false);
 
-  // When the owner signs in, adopt the Firestore draft (or seed it from the
-  // current local content if none exists). After this, Firestore is the source
-  // of truth and localStorage trails as a cache.
+  const setAgentTurnPending = React.useCallback((v) => { agentTurnPending.current = !!v; }, []);
+  const registerFieldFocus = React.useCallback((path) => { focusedField.current = path; }, []);
+  const unregisterFieldFocus = React.useCallback(() => { focusedField.current = null; }, []);
+
+  // When the owner signs in, adopt the Firestore draft (or seed it), then keep
+  // a live listener so agent writes appear without clobbering in-progress edits.
   React.useEffect(() => {
     if (!window.fb || !window.fb.auth) return;
-    const unsub = window.fb.auth.onAuthStateChanged(async (u) => {
+    let draftUnsub = null;
+    const unsubAuth = window.fb.auth.onAuthStateChanged(async (u) => {
+      if (draftUnsub) { draftUnsub(); draftUnsub = null; }
+      draftSeeded.current = false;
       if (!u) { setSynced(false); return; }
-      const remote = await Store.fsLoadDraft();
-      if (remote) {
-        const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
+
+      const meta = await Store.fsLoadDraftMeta();
+      draftUpdateTime.current = meta.updatedAt;
+      if (meta.content) {
+        const merged = normalizeContent(deepMerge(buildDefaultContent(), meta.content));
         Store.saveDraft(merged);
         setContent(merged);
       } else {
-        // No remote draft yet — seed it from whatever we have locally.
-        setContent((cur) => { Store.fsSaveDraft(cur); return cur; });
+        setContent((cur) => {
+          Store.fsSaveDraft(cur, null);
+          return cur;
+        });
       }
       setSynced(true);
+      draftSeeded.current = true;
+
+      draftUnsub = Store.fsDraftListen((remoteContent, remoteTs) => {
+        if (!remoteContent || !draftSeeded.current) return;
+        draftUpdateTime.current = remoteTs;
+        if (localWritePending.current) return;
+        setContent((local) => {
+          const merged = mergeDraftRemote(local, remoteContent, focusedField.current);
+          Store.saveDraft(merged);
+          setDirty(true);
+          return merged;
+        });
+      });
     });
-    return () => unsub();
+    return () => { if (draftUnsub) draftUnsub(); unsubAuth(); };
   }, []);
 
-  // Debounced Firestore draft write (1s after the last edit) to avoid a write
-  // per keystroke while still keeping the cross-device draft current.
+  // Debounced Firestore draft write (1s after the last edit). Paused while an
+  // agent turn is in flight; uses an updateTime precondition to avoid clobber.
   const scheduleDraftSync = React.useCallback((next) => {
     if (!Store.fsReady()) return;
+    if (agentTurnPending.current) return;
     if (draftTimer.current) clearTimeout(draftTimer.current);
-    draftTimer.current = setTimeout(() => { Store.fsSaveDraft(next); }, 1000);
+    draftTimer.current = setTimeout(async () => {
+      if (agentTurnPending.current) return;
+      localWritePending.current = true;
+      const result = await Store.fsSaveDraft(next, draftUpdateTime.current);
+      if (result && result.conflict) {
+        console.warn('[admin] draft autosave skipped — remote changed since last read');
+      }
+      setTimeout(() => { localWritePending.current = false; }, 400);
+    }, 1000);
   }, []);
 
   const setAt = React.useCallback((path, value) => {
@@ -463,7 +578,8 @@ function useContent() {
     const base = normalizeContent(deepMerge(buildDefaultContent(), pub || {}));
     setContent(base);
     Store.saveDraft(base);
-    Store.fsSaveDraft(base);
+    const saved = await Store.fsSaveDraft(base, draftUpdateTime.current);
+    if (saved && saved.ok) draftUpdateTime.current = null;
     Store.clearPreview();
     setDirty(false);
     return true;
@@ -483,7 +599,10 @@ function useContent() {
     });
   }, []);
 
-  return { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig };
+  return {
+    content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig,
+    setAgentTurnPending, registerFieldFocus, unregisterFieldFocus,
+  };
 }
 
 /* ---------- Analytics hook (real-time, Firestore-backed) ----------
@@ -550,4 +669,4 @@ function useAnalytics() {
   };
 }
 
-window.ADMIN_STORE = { Store, buildDefaultContent, useContent, useAnalytics, LLM_PROVIDERS, LS };
+window.ADMIN_STORE = { Store, buildDefaultContent, useContent, useAnalytics, LLM_PROVIDERS, LS, mergeDraftRemote, getAtPath };
