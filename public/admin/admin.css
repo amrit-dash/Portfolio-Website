@@ -258,6 +258,16 @@ body::before {
 .swatch--custom { display: grid; place-items: center; background: var(--bg-elev); color: var(--fg-mute); overflow: hidden; }
 .swatch--custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
+/* vibe presets — one-click appearance bundles */
+.vibes { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.vibe { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg-elev); color: var(--fg); cursor: pointer; transition: all .14s; }
+.vibe:hover { border-color: var(--accent); transform: translateY(-1px); }
+.vibe[data-on="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 22px -14px var(--accent); }
+.vibe__swatch { width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; box-shadow: 0 0 10px -2px currentColor; }
+.vibe__txt { min-width: 0; line-height: 1.25; }
+.vibe__txt b { display: block; font-size: 13px; font-weight: 600; }
+.vibe__txt span { display: block; font-size: 10.5px; color: var(--fg-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* =====================================================
    BUTTONS
    ===================================================== */

@@ -25,6 +25,51 @@ const BOT_ICONS = [
   { value: 'brain-pc', label: 'Brain + Computer 3' },
 ];
 
+/* Appearance-engine option sets — mirror the data-* hooks consumed by
+   styles.css + app.jsx (background pattern, corner radius, heading font,
+   letter-spacing). Keep values in sync with the CSS selectors. */
+const BG_PATTERNS = [
+  { value: 'grid', label: 'Grid' },
+  { value: 'dots', label: 'Dots' },
+  { value: 'scan', label: 'Scanlines' },
+  { value: 'starfield', label: 'Starfield' },
+  { value: 'none', label: 'None' },
+];
+const RADIUS_OPTIONS = [
+  { value: 'sharp', label: 'Sharp' },
+  { value: 'soft', label: 'Soft' },
+  { value: 'round', label: 'Round' },
+];
+const HEADING_FONTS = [
+  { value: 'match', label: 'Match font set' },
+  { value: 'serif', label: 'Newsreader · serif' },
+  { value: 'editorial', label: 'Playfair · editorial' },
+  { value: 'grotesk', label: 'Space Grotesk' },
+  { value: 'mono', label: 'JetBrains Mono' },
+  { value: 'pixel', label: 'VT323 · pixel' },
+];
+const TRACKING_OPTIONS = [
+  { value: 'tight', label: 'Tight' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'wide', label: 'Wide' },
+];
+
+/* One-click "vibes" — bundles that set accent + fonts + cursor + effects +
+   background + glow + radius together. Each writes the full cosmetic set so a
+   switch is fully deterministic (no leftover state from the previous vibe). */
+const VIBES = [
+  { id: 'classic', label: 'Classic', desc: 'Lime CRT · Newsreader',
+    cos: { accent: '#c8e856', type: 'default', headingFont: 'match', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#c8e856', scanlines: true, bgPattern: 'grid', glow: 100, radius: 'soft' } },
+  { id: 'matrix', label: 'Matrix', desc: 'Green · pixel · scan',
+    cos: { accent: '#33ff66', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#33ff66', scanlines: true, bgPattern: 'scan', glow: 140, radius: 'sharp' } },
+  { id: 'sunset', label: 'Sunset', desc: 'Amber · soft · dots',
+    cos: { accent: '#ff7a3d', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ffd25a', scanlines: false, bgPattern: 'dots', glow: 110, radius: 'round' } },
+  { id: 'royal', label: 'Royal', desc: 'Violet · editorial · stars',
+    cos: { accent: '#9d7cff', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'starfield', glow: 120, radius: 'soft' } },
+  { id: 'mono', label: 'Mono', desc: 'Slate · mono · flat',
+    cos: { accent: '#7a9eff', type: 'default', headingFont: 'mono', tracking: 'normal', cursorStyle: 'cross', cursorColor: '#7a9eff', scanlines: false, bgPattern: 'none', glow: 60, radius: 'sharp' } },
+];
+
 const TARGETS = {
   aboutPhoto: { w: 720, h: 880 },
   projThumb: { w: 480, h: 360 },
@@ -294,26 +339,56 @@ function MediaEditor({ content, setAt, analytics }) {
 }
 
 /* ============ APPEARANCE (cosmetics) ============ */
+
+/* One vibe button — shows the preset's accent + a label, highlights when active. */
+function VibeButton({ vibe, active, onClick }) {
+  return (
+    <button type="button" className="vibe" data-on={active} onClick={onClick} title={vibe.desc}>
+      <span className="vibe__swatch" style={{ background: vibe.cos.accent }} />
+      <span className="vibe__txt"><b>{vibe.label}</b><span>{vibe.desc}</span></span>
+    </button>
+  );
+}
+
 function AppearanceEditor({ content, setAt }) {
   const { PageHead, Panel, Field, Select, Segmented, Swatches, ToggleRow, AdminIcon } = window.ADMIN_UI;
   const c = content.cosmetics;
+  // Apply a vibe: write the whole bundle so the switch is deterministic, then
+  // tag the active vibe id. setAt is a functional update, so the calls compose.
+  const applyVibe = (v) => {
+    Object.entries(v.cos).forEach(([k, val]) => setAt('cosmetics.' + k, val));
+    setAt('cosmetics.vibe', v.id);
+  };
   return (
     <div className="canvas--narrow">
-      <PageHead eyebrow="/APPEARANCE.CFG" title="Appearance & cosmetics">Every site-wide tweak in one place — these become the published defaults visitors land on (they can still toggle theme themselves).</PageHead>
+      <PageHead eyebrow="/APPEARANCE.CFG" title="Appearance & cosmetics">Every site-wide tweak in one place — these become the published defaults visitors land on. Start from a vibe, then fine-tune below.</PageHead>
+
+      <Panel title="Vibes" sub="one-click presets">
+        <div className="vibes">
+          {VIBES.map((v) => <VibeButton key={v.id} vibe={v} active={c.vibe === v.id} onClick={() => applyVibe(v)} />)}
+        </div>
+        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>A vibe sets accent, fonts, cursor, background, glow &amp; corner style together — then tweak any of them in the panels below.</p>
+      </Panel>
+
       <div className="grid2">
         <Panel title="Theme & color">
-          <Field label="Default mode"><Segmented value={c.theme} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} onChange={(v) => setAt('cosmetics.theme', v)} /></Field>
+          <Field label="Default mode" hint="visitors can still toggle"><Segmented value={c.theme} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} onChange={(v) => setAt('cosmetics.theme', v)} /></Field>
           <Field label="Accent color"><Swatches value={c.accent} options={ACCENT_OPTIONS} onChange={(v) => setAt('cosmetics.accent', v)} /></Field>
+          <p className="helptext" style={{ margin: '2px 0 0' }}>The browser-tab favicon (an Amrit OS window glyph) tints to this accent automatically.</p>
         </Panel>
         <Panel title="Typography">
-          <Field label="Font set"><Select value={c.type} options={TYPE_OPTIONS} onChange={(v) => setAt('cosmetics.type', v)} /></Field>
+          <Field label="Font set" hint="display + body + mono"><Select value={c.type} options={TYPE_OPTIONS} onChange={(v) => setAt('cosmetics.type', v)} /></Field>
+          <Field label="Heading font" hint="overrides headings only"><Select value={c.headingFont || 'match'} options={HEADING_FONTS} onChange={(v) => setAt('cosmetics.headingFont', v)} /></Field>
+          <Field label="Letter spacing"><Segmented value={c.tracking || 'normal'} options={TRACKING_OPTIONS} onChange={(v) => setAt('cosmetics.tracking', v)} /></Field>
           <Field label="Base font size"><RangeRow label="Scale" value={c.fontScale} min={85} max={120} step={5} unit="%" onChange={(v) => setAt('cosmetics.fontScale', v)} /></Field>
         </Panel>
       </div>
+
       <div className="grid2">
-        <Panel title="Bot avatar">
-          <Field label="Icon style"><Select value={c.botIcon} options={BOT_ICONS} onChange={(v) => setAt('cosmetics.botIcon', v)} /></Field>
-          <Field label="Icon color"><Segmented value={c.botIconColor} options={[{ value: 'white', label: 'White' }, { value: 'accent', label: 'Accent' }]} onChange={(v) => setAt('cosmetics.botIconColor', v)} /></Field>
+        <Panel title="Background & glow">
+          <Field label="Wallpaper pattern"><Select value={c.bgPattern || 'grid'} options={BG_PATTERNS} onChange={(v) => setAt('cosmetics.bgPattern', v)} /></Field>
+          <Field label="Accent glow"><RangeRow label="Intensity" value={c.glow == null ? 100 : c.glow} min={0} max={160} step={10} unit="%" onChange={(v) => setAt('cosmetics.glow', v)} /></Field>
+          <Field label="Corner radius"><Segmented value={c.radius || 'soft'} options={RADIUS_OPTIONS} onChange={(v) => setAt('cosmetics.radius', v)} /></Field>
         </Panel>
         <Panel title="Effects & cursor">
           <ToggleRow title="CRT scanlines" sub="retro overlay across the page" value={c.scanlines} onChange={(v) => setAt('cosmetics.scanlines', v)} />
@@ -322,8 +397,15 @@ function AppearanceEditor({ content, setAt }) {
           <Field label="Cursor color"><Swatches value={c.cursorColor} options={CURSOR_COLOR_OPTIONS} onChange={(v) => setAt('cosmetics.cursorColor', v)} /></Field>
         </Panel>
       </div>
+
+      <Panel title="Bot avatar">
+        <div className="grid2" style={{ marginBottom: 0 }}>
+          <Field label="Icon style"><Select value={c.botIcon} options={BOT_ICONS} onChange={(v) => setAt('cosmetics.botIcon', v)} /></Field>
+          <Field label="Icon color"><Segmented value={c.botIconColor} options={[{ value: 'white', label: 'White' }, { value: 'accent', label: 'Accent' }]} onChange={(v) => setAt('cosmetics.botIconColor', v)} /></Field>
+        </div>
+      </Panel>
     </div>
   );
 }
 
-window.ADMIN_EDITORS = { HeroEditor, AboutEditor, ExpertiseEditor, CardsEditor, ContactEditor, MediaEditor, AppearanceEditor, TARGETS, EXPERTISE_ICONS };
+window.ADMIN_EDITORS = { HeroEditor, AboutEditor, ExpertiseEditor, CardsEditor, ContactEditor, MediaEditor, AppearanceEditor, TARGETS, EXPERTISE_ICONS, VIBES, ACCENT_OPTIONS };
