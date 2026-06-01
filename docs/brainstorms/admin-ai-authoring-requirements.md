@@ -1,133 +1,293 @@
 ---
-date: 2026-05-31
-topic: admin-ai-authoring
+date: 2026-06-01
+topic: admin-agentic-ai
+supersedes: admin-ai-authoring (2026-05-31 inline-assistant framing)
+status: requirements — ready for planning
 ---
 
-# Admin AI Authoring Tooling
+# Admin Agentic AI — amrit.os console
 
 ## Summary
 
-An admin-only AI authoring layer for the amrit.os dashboard: an inline writing assistant on text fields, agentic "add/edit a section" operations, and a global command bar. It drafts content in Amrit's established voice and writes only into the **draft** content — the existing Publish step remains the human gate to the live site. It runs on its own authoring model, separate from the public bot, and reuses the owner-authenticated server-side proxy so keys never reach the browser.
+An **owner-only agentic layer** for the amrit.os admin console. A single
+tool-calling agent — reachable both as a dedicated **Agent page** and a
+**floating dock on every screen** — drives every admin control through natural
+language: hero, about, expertise, work history, projects (incl. images),
+education/awards, contacts, CV/media, appearance, and bot configuration. It
+writes **only to `content/draft`**, never publishes on its own, snapshots before
+every turn so changes are undoable, and links to the relevant page/preview for
+review. A second, lightweight **inline refiner** lives in large text fields for
+in-place "tighten this" rewrites.
+
+The public **AmritBot and its multi-provider proxy are untouched.** The agent
+reuses that same server-side key infrastructure but runs its own tool-calling
+loop on its own configurable provider/model.
 
 ---
 
 ## Problem Frame
 
-Editing the portfolio today means typing every field by hand in the admin editors — hero pitch, About copy, project descriptions, work bullets, tags, links. For a site that's updated a few times a year, that's not painful in volume, but it's where the quality bar slips: copy comes out inconsistent in tone, and adding a whole new project means manually filling ~8 fields (title, category, type, description, tags, skills, links) in the right shape.
+Editing the portfolio today means hand-typing every field across the admin
+editors — hero pitch, About copy, project objects (~8 fields each), work bullets,
+tags, links, Q&A pairs. Two costs compound: **blank-page friction** (writing
+copy that matches the site's voice) and **structural busywork** (a new project
+is a multi-field object assembled by hand — exactly the repetitive work Amrit
+automates everywhere else). The admin is also a deliberate showcase of what Amrit
+builds, so the bar is "impressive to demo," not just "works for me."
 
-Two costs compound. First, blank-page friction — staring at an empty "description" box and writing something that matches the voice of the rest of the site. Second, structural busywork — a new project is a multi-field object, and assembling it by hand is exactly the kind of repetitive task Amrit automates everywhere else. The admin is also a deliberate showcase of what Amrit builds, so the bar is "this is impressive to demo," not just "it works for me."
+The agent collapses both: "add a project for X with these links and tags," "tighten
+my hero," "validate the inbox and turn the good questions into Q&A pairs" — done in
+one turn, applied to draft, reviewed, then published by hand.
+
+---
+
+## Goals
+
+- G1. Drive **every** admin action via conversation — parity with the manual UI.
+- G2. Multi-intent in one turn ("update hero **and** add 3 Q&A pairs").
+- G3. Safe by construction: draft-only writes, per-turn undo, explicit human publish.
+- G4. Provider-flexible and cheap: run on free/low-cost models the owner selects.
+- G5. Multimodal: understand uploaded images and (when asked) generate/edit them.
+- G6. Turn the bot inbox from a dumping ground into curated Q&A.
+- G7. Low-friction inline rewriting without leaving the field you're editing.
+
+## Non-Goals
+
+- N1. The agent **cannot** change LLM providers or bot *behaviors* (it may add
+  commands / Q&A and adjust limits, but not flip provider config or system
+  behavior toggles).
+- N2. **No auto-publish.** Publishing is a separate tool the owner explicitly invokes.
+- N3. **No changes to the public AmritBot** or its proxy.
+- N4. **No Genkit / heavy agent framework** — a thin provider-agnostic loop instead.
+- N5. Not multi-user — owner-only, same Google auth gate as the rest of the console.
 
 ---
 
 ## Actors
 
-- A1. Owner (Amrit): the sole authenticated admin user. The only actor who can see or invoke any AI authoring tool.
-- A2. Authoring LLM: the provider/model configured specifically for authoring (separate from the public bot's provider), invoked server-side through the proxy.
+- **A1. Owner (Amrit)** — the sole authenticated admin; the only actor who can
+  see or invoke the agent or the inline refiner.
+- **A2. Agent model** — the provider/model the owner selects for tool-calling
+  (default Gemini 2.5 Flash), invoked server-side; key never reaches the browser.
+- **A3. Refiner model** — a small/cheap model for inline text rewrites (may be the
+  same provider, a lighter model, e.g. Gemini Flash Lite).
+- **A4. Image model** — multimodal/generation model, used only when a request
+  needs vision-understanding or image generation.
 
 ---
 
 ## Key Flows
 
-- F1. Inline field assist (low blast radius → auto-apply)
-  - **Trigger:** Owner clicks the AI affordance on a text field/textarea and picks an action (e.g. refine, shorten, punch-up, apply emphasis).
-  - **Actors:** A1, A2
-  - **Steps:** Owner invokes assist on a field → request goes to the proxy with the field's current text, the field's allowed formatting, and voice grounding → model returns revised text → text is applied to the field immediately, with an undo affordance.
-  - **Outcome:** The field's draft value is updated in Amrit's voice; owner can undo to restore the prior text.
-  - **Covered by:** R1, R2, R3, R7, R9
+1. **Multi-intent edit.** Owner: "Shorten my hero tagline and add two Q&A pairs
+   about whether I freelance and my stack." → Agent snapshots draft → calls
+   `updateHero`, `addQAPair`×2 → replies "Done · 3 changes · [Undo] [Review Hero ↗]
+   [Review Bot ↗]". Owner reviews via preview, then clicks **Publish**.
 
-- F2. Agentic section add/edit (higher blast radius → preview-then-confirm)
-  - **Trigger:** Owner asks to add or substantially edit a section, e.g. "add a project about X" or "rewrite my About to mention Y."
-  - **Actors:** A1, A2
-  - **Steps:** Owner states intent → if required fields are missing, the AI asks for them (or proceeds with sensible drafts) → model returns a structured object matching the target content shape → object is validated against that shape → owner sees a preview/diff → owner accepts (inserts into draft), edits, or rejects.
-  - **Outcome:** On accept, a well-formed entry is inserted/updated in the draft; on reject, nothing changes.
-  - **Covered by:** R4, R5, R6, R8, R9, R10
+2. **Image place (no model spend).** Owner drops an image: "use this as the
+   GenkiFlow gallery image." → Agent recognizes a pure placement → uploads to
+   Storage → `setProjectImage('genkiflow','gallery', url)`. No vision/gen call.
 
-- F3. Global command bar
-  - **Trigger:** Owner opens the admin command bar and issues a natural-language instruction targeting any section.
-  - **Actors:** A1, A2
-  - **Steps:** Owner types a command → AI interprets which section/action is meant → routes to inline-style auto-apply or section-style preview-confirm based on blast radius → result lands per that path's rules.
-  - **Outcome:** The instruction is carried out against the draft using the same autonomy rules as F1/F2.
-  - **Covered by:** R6, R8, R9, R10
+3. **Image understand / generate.** Owner: "look at this screenshot and write alt
+   text + pick which expertise tags fit" (vision-in) — or "generate a minimal
+   lime-on-dark folder icon for this project" (generation). → routes to the
+   multimodal/image model → applies result to draft → review link.
 
----
+4. **Inbox curation.** Owner: "validate the inbox and turn the good ones into Q&A."
+   → Agent reads `bot_questions`, discards junk/greetings, for each kept question
+   generates several Q&A phrasings → stages them in Bot → review → publish.
 
-## Requirements
+5. **Inline refine.** In About → timeline → description, owner clicks ✨ →
+   refiner rewrites that field using its label as context → owner accepts/rejects.
+   No tool calls, no agent session.
 
-**Inline writing assistant**
-- R1. Each substantial text field/textarea in the admin editors exposes an AI assist affordance (About copy, hero pitch, project & work descriptions, bullets, card bodies, contact copy).
-- R2. Assist offers at least: refine/rewrite, shorten, lengthen/expand, and apply the field's allowed emphasis (e.g. `<b>`/`<em>`) — the action set is aware of what formatting that field accepts.
-- R3. Inline assist results auto-apply to the field (low blast radius) and provide a one-step undo to restore the previous value.
-
-**Agentic section operations**
-- R4. The owner can ask the AI to add a new entry to a collection section (project, work history) by stating intent; the AI assembles a full entry matching that section's content shape.
-- R5. When required fields for a new entry are missing, the AI either prompts the owner for them or fills sensible drafts the owner can edit — it never inserts a half-formed entry silently.
-- R6. The owner can ask the AI to edit/extend an existing section (e.g. About) and receive a revised version.
-- R8. Section-level adds/edits are presented as a preview (or diff) and require explicit owner confirmation before they write to the draft.
-
-**Command bar**
-- R10. A global admin command bar accepts natural-language instructions targeting any section and routes each to the correct autonomy path (auto-apply for field-level, preview-confirm for section-level) based on blast radius.
-
-**Cross-cutting**
-- R7. All authoring output is grounded in Amrit's voice — the request carries the owner's existing personal context (the bot's system-prompt knowledge) and relevant current content so drafts read like Amrit, not generic AI.
-- R9. Authoring uses a dedicated authoring provider/model + key, configured in the admin separately from the public bot's provider; the key is stored server-side and never exposed to the browser.
-- R11. Structured AI output (new/edited section objects) is validated against the target content shape before insertion; malformed output is rejected with a retry path, not committed.
-- R12. All authoring writes target the draft only — the AI never publishes; the existing Publish action remains the sole path to the live site.
-- R13. All authoring tooling is gated behind admin auth (owner-only); it is never reachable by public visitors.
+6. **Undo.** A turn produced a bad result → owner clicks "Undo last agent change"
+   → draft restored to the pre-turn snapshot.
 
 ---
 
-## Acceptance Examples
+## Functional Requirements
 
-- AE1. **Covers R3.** Given a project description field with text, when the owner runs "punch-up" inline assist, the field updates in place with the revised copy and an undo control appears that restores the original text.
-- AE2. **Covers R4, R5, R8, R11.** Given the owner says "add a project about the Coffee Mapper app" with no other details, when the AI responds, it asks for (or drafts) the missing fields, returns a complete project object validated against the project shape, and shows a preview the owner must confirm before it enters the draft.
-- AE3. **Covers R5, R11.** Given the AI returns a malformed project object (e.g. missing title), when validation runs, the entry is not inserted and the owner is offered a retry rather than a broken draft.
-- AE4. **Covers R12.** Given the owner accepts any AI-generated change, when it is applied, the live public site does not change until the owner separately clicks Publish.
-- AE5. **Covers R2, R7.** Given an About paragraph, when the owner asks the AI to "make this sound more like me and bold the key tools," the result applies `<em>`/`<b>` consistent with what the About field accepts and reflects Amrit's established voice/context.
+### FR1 — Agent surfaces (one agent, dual surface)
+- One agent, one chat session, full tool catalog, **page-aware** (told the current
+  route) but not page-limited.
+- **Dedicated `/agent` page**: full-width chat + tool/audit trail; sidebar collapsible
+  for width.
+- **Floating dock**: collapsible overlay reachable on every admin screen; same
+  session and history as the page.
+
+### FR2 — Tool catalog (parity with the UI)
+Medium granularity: **one tool per logical admin action**, each with its own input
+validation. Coverage by section:
+- **Hero/intro**: update fields.
+- **About**: bio/heading/intro; meta strip rows (add/update/remove/reorder);
+  impact-timeline sub-entries (add/update/remove/reorder); photo + stamp.
+- **Expertise**: add/update/remove/reorder modules; set icon.
+- **Work history**: add/update/remove/reorder entries; **sub-roles** within an
+  entry (add/update/remove/reorder); bullets; stack chips; clients.
+- **Projects**: add/update/remove/reorder; tags; links; skills/expertise filters;
+  **images** — thumbnail, gallery, label image (place / understand / generate).
+- **Education & awards**: add/update/remove cards; list items; score chips.
+- **Contacts**: email/phone; social links (add/update/remove/reorder).
+- **CV & media**: replace CV(s); media assets.
+- **Appearance**: theme/cosmetic settings the UI exposes.
+- **Bot config (allowed subset)**: context; Q&A pairs (add/update/remove);
+  commands (add/update/remove); limits (rate limits etc.); inbox triage. **Not**
+  provider/key/behavior config.
+- **System**: `publish` (explicit), `undoLastChange`.
+
+### FR3 — Write / undo / audit model
+- **Direct-apply to `content/draft`** (matches "make changes → review → publish").
+- **Snapshot before every agent turn** → "Undo last agent change" restores it.
+- **Audit trail**: every turn records which tools ran with what arguments and the
+  before/after for changed paths; visible in the Agent page.
+- Multi-tool per turn supported; tools may run in parallel where safe.
+
+### FR4 — Review & publish
+- After a turn, the agent posts **review links** to each affected admin page and a
+  **live preview** link (reusing the existing cross-origin `?adminpreview`
+  PreviewDrawer; admin is `amritos-admin.web.app`, site is `amritdash.web.app`).
+- **Publish is a separate explicit tool/button.** The agent only publishes when the
+  owner invokes it.
+
+### FR5 — Multimodal hybrid (cost-aware routing)
+- **Place-only** requests (set an uploaded/known image) → no model spend.
+- **Understand** (describe, alt text, suggest tags from pixels) → multimodal model.
+- **Generate/edit** (icons, banners) → image model. The agent picks the path from
+  intent; generation always lands in draft for review.
+
+### FR6 — Inbox intelligence
+- Validate captured `bot_questions`: drop greetings/junk/bloated entries; keep real
+  questions.
+- For kept questions, generate **multiple Q&A variations** the owner can accept into
+  the Q&A set.
+
+### FR7 — Inline refiner
+- A ✨ affordance in large textareas (e.g. About timeline description). Rewrites the
+  field using its **label/context**, returns a proposal the owner accepts/rejects.
+- Reuses the agent's text endpoint **minus tools**; small/cheap model.
+
+### FR8 — Backend (thin multi-provider tool loop)
+- A server-side **OpenAI-compatible tool-calling loop** (Cloud Functions Gen2,
+  Node 20, asia-south1) — ~one endpoint, not a framework.
+- Reuses the existing server-side **key infrastructure**; keys never reach the browser.
+- **Agent settings page** (mirrors the bot's key UI): pick provider + model, list
+  **filtered to tool-calling-capable models** with **"free" labels**; reuse the
+  existing "fetch models" affordance where a provider exposes a model list.
+- **Default model: Gemini 2.5 Flash** (free, parallel tool calls, multimodal,
+  generous limits). **OpenRouter** supported as a single multi-model gateway.
+- **Defensive argument parsing** regardless of provider (`strict` is OpenAI-only).
+- **Curated known-good tool-capable model list** (some tagged models silently
+  ignore tools); per-provider `tool_choice` shim (`required` vs `any`).
+
+### FR9 — Persistence
+- Chat history + per-turn audit persisted in **Firestore**, owner-only.
+- **Persists across sessions** until explicitly deleted via a **separate delete
+  function** (single message delete and/or clear-conversation).
+
+---
+
+## Guardrails & Safety
+
+- Owner-only auth on every agent/refiner endpoint (same gate as the console;
+  enforced server-side, not just UI).
+- Draft-only writes + per-turn snapshot + explicit publish = three independent
+  safety layers before anything reaches the live site.
+- Per-tool input validation; reject malformed/over-large arguments.
+- The agent cannot touch provider/key/behavior config (N1) or publish without an
+  explicit call (N2).
+- Rate-limit the agent endpoints (reuse the existing per-IP limiter; owner bypass
+  as the bot test path already does).
+- Image generation lands in draft only; the owner always reviews before publish
+  (mitigates brand/quality risk on a real portfolio).
+
+---
+
+## Data Model (high-level — schema details deferred to planning)
+
+- `agent_chats/{chatId}` + messages (role, content, attachments, toolCalls,
+  timestamps) — owner-only read/write per `firestore.rules`.
+- Per-turn **snapshot** of `content/draft` for undo (ring buffer / latest-N).
+- **Audit** entries: turn id, tools invoked, args, changed paths, before/after.
+- `config/agent` (or an `agent` section under the existing `config/llm`): selected
+  provider/model; key referenced from the existing umbrella key store, never
+  duplicated into public content.
 
 ---
 
 ## Success Criteria
 
-- Adding a new project via the AI takes one stated intent + one confirm, versus manually filling ~8 fields — and the inserted entry is shape-valid and on-voice.
-- Inline assist meaningfully improves field copy in Amrit's voice often enough that it's used during real edits, not just demoed once.
-- A downstream implementer can build each layer (inline → agentic add → command bar) independently, because requirements, autonomy rules, and the validation/confirm boundaries are specified per layer.
-- Nothing the AI does can reach the live site without an explicit human Publish, and no authoring surface is exposed to visitors.
+- SC1. Every manual admin action has a working tool equivalent (parity check).
+- SC2. A multi-intent request applies all changes in one turn and lists review links.
+- SC3. "Undo last agent change" restores the exact pre-turn draft.
+- SC4. Owner can switch the agent's provider/model from the settings page; only
+  tool-capable models are selectable; "free" models are labelled.
+- SC5. Place-only image requests incur no model spend; understand/generate work.
+- SC6. Inbox validation removes junk and produces accept-able Q&A variations.
+- SC7. Inline refiner rewrites a field using its label without opening the agent.
+- SC8. No key ever appears in browser/network payloads or published content.
+- SC9. Public AmritBot behavior unchanged.
 
 ---
 
-## Scope Boundaries
+## Dependencies / Assumptions / Risks
 
-- **Owner-only.** Authoring tools are never exposed to public visitors — only the authenticated owner. Visitors still get the public chat bot, nothing more.
-- **No model training/fine-tuning.** Authoring uses an off-the-shelf LLM via the proxy. The bot's curation loop — a dedicated "Review / Inbox" section in the AmritBot admin area that collects captured visitor questions + other inputs for the owner to review and one-click "add to Q&A" (tracked in `PLAN.md` Phase 6) — is the only "learning," and it is not part of this feature.
-- **Layered delivery, not big-bang.** Full suite is the target; it ships in layers (inline assist → agentic section ops → command bar), each independently shippable and testable.
-- **No image generation.** Authoring covers text/structured content, not generating project imagery or the cropped media assets.
-- **Not a public-facing content generator.** This is private authoring of the owner's own portfolio, not a tool that lets anyone generate site content.
-
----
-
-## Key Decisions
-
-- Mix-by-action-size autonomy: field-level tweaks auto-apply with undo; section-level adds/edits require preview-then-confirm. Rationale: scale friction and safety to blast radius — small edits stay fast, structural changes get a human gate.
-- Separate authoring model from the public bot: a dedicated provider/key for authoring lets a stronger writing model serve editing while visitors run a cheaper model. Rationale: editing quality matters more than per-call cost for the owner; visitor traffic is the cost-sensitive path. Cost: one extra key to manage.
-- Voice grounding is mandatory, not optional: every authoring call carries the owner's existing context + relevant current content. Rationale: ungrounded output reads as generic AI slop and undercuts the showcase.
-- Draft-only writes: the AI never publishes. Rationale: the existing draft→publish gate is already the safety net; authoring plugs in upstream of it for free.
-- Reuse the existing owner-authenticated proxy rather than a new client path: keeps keys server-side and inherits the owner rate-limit bypass.
+- **Assumption:** free-tier limits (Gemini Flash 15 RPM / 1,500 RPD / 1M TPM) are
+  ample for a single user. (Verified via 2026 research.)
+- **Risk:** some tool-tagged free models ignore tools or hallucinate tool names →
+  curated known-good list + defensive parsing.
+- **Risk:** OpenRouter free model IDs are volatile → keep model IDs configurable;
+  don't hardcode in a way that breaks silently.
+- **Risk:** multi-tool *workflow* reliability drops on weaker models → strong
+  default (Gemini Flash) + undo net.
+- **Dependency:** existing server-side key store, `content/draft`/`published`
+  model, PreviewDrawer (`?adminpreview`, `PORTFOLIO_URL`), per-IP rate limiter,
+  `assetUrl()` for cross-origin asset display.
+- **Cost:** Blaze cap already set; image generation is the only meaningful new spend
+  — gate behind explicit requests.
 
 ---
 
-## Dependencies / Assumptions
+## Out of Scope (this iteration)
 
-- Depends on the production migration (Firestore content model, Auth owner-gating, Functions proxy) being in place — this feature is built on top of that backend, not before it.
-- Assumes the content shapes for each section (project, work entry, etc.) are well-defined enough to validate AI output against — they are, per the existing `data.jsx` / store model.
-- Assumes the owner's voice context (the bot's system prompt) is rich enough to ground authoring — verified: it already contains education, comedy, work, and project detail.
+- Multi-user / role-based access.
+- Agent editing provider/key/behavior config or auto-publishing.
+- Any change to the public bot or its proxy.
+- A heavyweight agent framework (Genkit, LangChain).
 
 ---
 
-## Outstanding Questions
+## Appendix A — CI/CD: split deploy workflows (related workstream)
 
-### Deferred to Planning
+Separate from the agent, but captured here per request. Today
+`.github/workflows/firebase-hosting-merge.yml` deploys **both** sites on any push
+to `master`. Goal: **two path-filtered workflows** so admin and site deploy
+independently.
 
-- [Affects R9][Technical] Whether authoring reuses the bot's `/chat` proxy endpoint with an "authoring" mode flag, or gets a dedicated `/assist` endpoint — settle during planning.
-- [Affects R1, R10][Technical] Exact UI affordance for inline assist (per-field icon vs. focus-triggered popover) and how the command bar interprets/targets sections — design during planning.
-- [Affects R4, R11][Technical] How strictly to validate structured output and what the retry UX is (auto-retry vs. surface raw for manual fix) — settle during planning.
-- [Affects R10][Needs research] Whether the command bar needs intent-routing logic beyond simple section keyword matching for v1.
+- **WF-1 "deploy admin"** — triggers on push to `master` when **admin paths**
+  change (`public/admin/**`, `public/admin.html`, admin entries in
+  `firebase.json` / build script) → builds and deploys **`hosting:amritos-admin`** only.
+- **WF-2 "deploy site"** — triggers on push to `master` when **site paths** change
+  (`public/**` excluding `admin/**`, `public/index.html`, `public/app.jsx`,
+  `public/styles.css`, `public/data.jsx`) → builds and deploys
+  **`hosting:amritdash`** only.
+- Shared concerns: both run `npm run build` (two-bundle `scripts/build-dist.mjs`);
+  use `paths:` / `paths-ignore:` filters; never target `amrit-dash-portfolio`
+  (vanilla v1 stays preserved).
+- **Constraint:** auto-deploy stays **off / dormant** until the owner merges to
+  `master` (current work is on `amrit-os`). Workflows are added but only fire on a
+  master merge — matching the existing dormant setup.
+- **Open question for planning:** functions deploy ownership — does either workflow
+  deploy `functions/`, or is that a third manual/auto path? (The agent adds new
+  function endpoints, so functions deploy cadence matters.)
+
+---
+
+## Open Questions for Planning
+
+- OQ1. Exact tool list + JSON schemas per tool (parity audit against the editors).
+- OQ2. Snapshot retention (latest-N vs ring buffer) and undo depth (last turn vs stack).
+- OQ3. Streaming responses + tool-progress UI in the chat (nice-to-have vs v1).
+- OQ4. Model-capability source: curated map vs live `supported_parameters=tools`
+  fetch (OpenRouter) — likely both, curated as the floor.
+- OQ5. Refiner UX: inline diff/accept vs replace-in-place with undo.
+- OQ6. Functions deploy ownership in the split-workflow design (see Appendix A).
