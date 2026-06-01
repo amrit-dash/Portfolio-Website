@@ -442,6 +442,7 @@ const DEFAULT_MEDIA = {
 const DEFAULT_COSMETICS = {
   theme: 'dark',
   accent: '#c8e856',
+  accentTone: 50,         // accent brightness slider: 0 darkest · 50 neutral · 100 lightest
   type: 'default',
   fontScale: 100,
   headingFont: 'match',   // 'match' follows `type`; else overrides --font-display only
@@ -613,22 +614,36 @@ window.PORTFOLIO_DEFAULTS = PORTFOLIO_DEFAULTS;
 window.PORTFOLIO_CONTENT  = PORTFOLIO_CONTENT;
 window.LLM_PROVIDERS      = LLM_PROVIDERS;
 
-/* Color-changing favicons. Two distinct dynamic marks, both tint to a live
+/* Lighten/darken a hex accent toward white/black. tone is 0–100 (50 = neutral);
+   < 50 darkens, > 50 lightens, up to ~60% toward the target. Used so the admin's
+   "accent brightness" slider can fine-tune the shade for light vs dark mode. */
+window.toneAccent = function (hex, tone) {
+  try {
+    if (typeof tone !== 'number') tone = 50;
+    hex = (hex || '#c8e856').trim();
+    const m = hex.replace('#', '');
+    const f = m.length === 3 ? m.split('').map((c) => c + c).join('') : m;
+    let r = parseInt(f.slice(0, 2), 16), g = parseInt(f.slice(2, 4), 16), b = parseInt(f.slice(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+    const amt = Math.min(1, Math.abs(tone - 50) / 50) * 0.6;
+    const t = tone < 50 ? 0 : 255;
+    const h = (n) => Math.round(n + (t - n) * amt).toString(16).padStart(2, '0');
+    return '#' + h(r) + h(g) + h(b);
+  } catch (e) { return hex || '#c8e856'; }
+};
+
+/* Color-changing favicons. Two distinct dynamic marks, both tint to the live
    accent:
-   - buildFavicon (PORTFOLIO): an "orbit" glyph — an accent app-tile with a dark
-     planet + tilted orbit ring & moon, echoing the hero's orbit motif.
+   - buildFavicon (PORTFOLIO): a pixel "AD" monogram that ALSO follows light/dark
+     mode — light: accent tile + dark initials; dark: dark tile + accent initials.
    - buildOsWindowFavicon (ADMIN): the retro terminal window — dark tile, accent
      window with traffic-light "close" dots and a >_ prompt.
    The portfolio and admin consoles each apply their own. */
-window.buildFavicon = function (accent) {
-  const a = encodeURIComponent(accent || '#c8e856');
-  // Pixel "AD" monogram — dark 8-bit initials on a solid accent app-tile. Keeps
-  // the tile-tints-to-accent dynamic style, reads as a retro-OS app icon, and is
-  // distinct from the admin's terminal-window mark. Pixels are run-length merged
-  // per row + crispEdges so they stay sharp at any size.
-  // Bold 6-wide glyphs — 2-pixel-thick stems for a heavier monogram.
-  const A = ['011110', '111111', '110011', '111111', '110011', '110011', '110011'];
-  const D = ['111110', '111111', '110011', '110011', '110011', '111111', '111110'];
+window.buildFavicon = function (accent, theme) {
+  // Pixel "AD" monogram (run-length merged + crispEdges so it stays sharp).
+  // 6-wide glyphs with 2px stems but single-pixel bars — bold, not heavy.
+  const A = ['011110', '110011', '110011', '111111', '110011', '110011', '110011'];
+  const D = ['111110', '110011', '110011', '110011', '110011', '110011', '111110'];
   const p = 2, y0 = 9;
   let cells = '';
   const draw = (g, ox) => {
@@ -645,10 +660,15 @@ window.buildFavicon = function (accent) {
     }
   };
   draw(A, 3); draw(D, 3 + 7 * p);
+  // Mode-dynamic: dark mode = dark tile + accent initials; light mode = accent
+  // tile + dark initials.
+  const dark = theme !== 'light';
+  const tile = encodeURIComponent(dark ? '#0c0d0a' : (accent || '#c8e856'));
+  const ink = encodeURIComponent(dark ? (accent || '#c8e856') : '#0c0d0a');
   return "data:image/svg+xml,"
     + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'%3E"
-    + "%3Crect width='32' height='32' rx='7' fill='" + a + "'/%3E"            // accent app tile
-    + "%3Cg fill='%230c0d0a'%3E" + cells + "%3C/g%3E"                          // dark pixel "AD"
+    + "%3Crect width='32' height='32' rx='7' fill='" + tile + "'/%3E"
+    + "%3Cg fill='" + ink + "'%3E" + cells + "%3C/g%3E"
     + "%3C/svg%3E";
 };
 window.buildOsWindowFavicon = function (accent) {
@@ -665,12 +685,12 @@ window.buildOsWindowFavicon = function (accent) {
     + "%3Crect x='14' y='19.4' width='4.6' height='1.5' rx='.75' fill='" + a + "'/%3E"
     + "%3C/svg%3E";
 };
-window.applyFavicon = function (accent, kind) {
+window.applyFavicon = function (accent, kind, theme) {
   try {
     const build = kind === 'os-window' ? window.buildOsWindowFavicon : window.buildFavicon;
     let link = document.querySelector("link[rel='icon']");
     if (!link) { link = document.createElement('link'); link.setAttribute('rel', 'icon'); document.head.appendChild(link); }
-    link.setAttribute('href', build(accent));
+    link.setAttribute('href', build(accent, theme));
   } catch (e) { /* non-fatal */ }
 };
 
@@ -681,8 +701,9 @@ window.applyFavicon = function (accent, kind) {
 try {
   const _cos = (PORTFOLIO_CONTENT && PORTFOLIO_CONTENT.cosmetics) || {};
   const _root = document.documentElement;
-  if (_cos.accent) _root.style.setProperty('--accent-raw', _cos.accent);
-  if (_cos.cursorColor || _cos.accent) _root.style.setProperty('--cursor-color', _cos.cursorColor || _cos.accent);
+  const _toned = window.toneAccent(_cos.accent || '#c8e856', typeof _cos.accentTone === 'number' ? _cos.accentTone : 50);
+  _root.style.setProperty('--accent-raw', _toned);
+  if (_cos.cursorColor || _cos.accent) _root.style.setProperty('--cursor-color', _cos.cursorColor || _toned);
   if (typeof _cos.fontScale === 'number') _root.style.setProperty('--font-scale', (_cos.fontScale / 100).toString());
   if (typeof _cos.glow === 'number') _root.style.setProperty('--glow', (_cos.glow / 100).toString());
   _root.dataset.scanlines = _cos.scanlines === false ? 'off' : 'on';
@@ -699,7 +720,7 @@ try {
   if (_cos.theme && (_isPreview || !_explicit)) {
     _root.dataset.theme = _cos.theme === 'light' ? 'light' : 'dark';
   }
-  window.applyFavicon(_cos.accent);
+  window.applyFavicon(_toned, null, _root.dataset.theme === 'light' ? 'light' : 'dark');
 } catch (e) { /* non-fatal */ }
 window.mergeContent = (over) => over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS));
 

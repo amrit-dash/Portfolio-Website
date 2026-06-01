@@ -1268,6 +1268,7 @@ function BotAvatarIcon({ icon, size = 24, iconColor = 'white' }) {
    edits actually move the live site. */
 const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "accent": "#c8e856",
+  "accentTone": 50,
   "scanlines": true,
   "cursorStyle": "ring",
   "cursorColor": "#c8e856",
@@ -1285,6 +1286,7 @@ const TWEAK_DEFAULTS = (() => {
   const c = (CONTENT && CONTENT.cosmetics) || {};
   return {
     accent:       typeof c.accent === 'string' ? c.accent : _COSMETICS_BASE.accent,
+    accentTone:   typeof c.accentTone === 'number' ? c.accentTone : _COSMETICS_BASE.accentTone,
     scanlines:    c.scanlines == null ? _COSMETICS_BASE.scanlines : !!c.scanlines,
     cursorStyle:  typeof c.cursorStyle === 'string' ? c.cursorStyle : _COSMETICS_BASE.cursorStyle,
     cursorColor:  typeof c.cursorColor === 'string' ? c.cursorColor : _COSMETICS_BASE.cursorColor,
@@ -1350,7 +1352,7 @@ function App() {
   useEffect(() => {
     if (!liveCos) return;
     const next = {};
-    ['accent', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale',
+    ['accent', 'accentTone', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale',
      'headingFont', 'tracking', 'bgPattern', 'glow', 'radius'].forEach((k) => {
       if (liveCos[k] !== undefined) next[k] = liveCos[k];
     });
@@ -1386,8 +1388,11 @@ function App() {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty('--accent-raw', t.accent);
-    root.style.setProperty('--cursor-color', t.cursorColor || t.accent);
+    // Brightness-toned accent (the "accent brightness" slider). All accent-driven
+    // surfaces + the favicon use this so the shade stays consistent.
+    const tonedAccent = window.toneAccent ? window.toneAccent(t.accent, t.accentTone) : t.accent;
+    root.style.setProperty('--accent-raw', tonedAccent);
+    root.style.setProperty('--cursor-color', t.cursorColor || tonedAccent);
     root.style.setProperty('--font-scale', (t.fontScale / 100).toString());
     root.style.setProperty('--glow', ((typeof t.glow === 'number' ? t.glow : 100) / 100).toString());
     root.dataset.scanlines = t.scanlines ? 'on' : 'off';
@@ -1396,10 +1401,11 @@ function App() {
     if (t.tracking && t.tracking !== 'normal') root.dataset.tracking = t.tracking; else delete root.dataset.tracking;
     if (t.radius && t.radius !== 'soft') root.dataset.radius = t.radius; else delete root.dataset.radius;
     root.dataset.bg = t.bgPattern || 'grid';
-    // Re-tint the browser-tab favicon to the live accent (the "Amrit OS" window glyph).
-    if (window.applyFavicon) window.applyFavicon(t.accent);
+    // Re-tint the favicon to the toned accent AND the active light/dark mode
+    // (light: accent tile + dark "AD"; dark: dark tile + accent "AD").
+    if (window.applyFavicon) window.applyFavicon(tonedAccent, null, theme);
     // Update pixel cursor SVGs — style variants for contrast/visibility
-    const accent = encodeURIComponent(t.accent);
+    const accent = encodeURIComponent(tonedAccent);
     const cs = t.cursorStyle || 'halo';
     const arrowP = 'M2 2 L2 15 L6.5 11.5 L9.5 18 L13 16.5 L10 10.5 L15.5 10.5 Z';
     const pointerP = 'M7 3 V14 L4.5 11.5 L3 13 L7 19 H14 L17 14 V8 H15 V11 H14 V7 H12 V11 H11 V5 H9 V11 H8 V3 Z';
@@ -1420,7 +1426,7 @@ function App() {
       }
       return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 22 22'>${inner}</svg>`;
     };
-  }, [t.accent, t.scanlines, t.type, t.fontScale, t.cursorColor, t.glow, t.headingFont, t.tracking, t.radius, t.bgPattern]);
+  }, [t.accent, t.accentTone, t.scanlines, t.type, t.fontScale, t.cursorColor, t.glow, t.headingFont, t.tracking, t.radius, t.bgPattern, theme]);
 
   const handleBootDone = useCallback(() => {
     setBooted(true);
@@ -1463,6 +1469,8 @@ function App() {
         onChange={(v) => setTweak('accent', v)} />
           <TweakColor label="Accent (custom)" value={t.accent}
         onChange={(v) => setTweak('accent', v)} />
+          <TweakSlider label="Accent brightness" value={t.accentTone == null ? 50 : t.accentTone} min={0} max={100} step={5} unit=""
+        onChange={(v) => setTweak('accentTone', v)} />
           <TweakSection label="Typography" />
           <TweakSelect label="Font set" value={t.type} options={TYPE_OPTIONS}
         onChange={(v) => setTweak('type', v)} />

@@ -11,11 +11,42 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=VT323&display=swap" rel="stylesheet" />
 
+  <!-- Theme init: apply before first paint so the boot splash never flashes.
+       Mirrors the logic in data.jsx but runs synchronously in <head> — before
+       Babel compiles the JSX and before any stylesheet renders. -->
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var isPreview = location.search.indexOf('adminpreview') !== -1;
+
+      // 1. User's explicit toggle wins (not applicable in admin preview)
+      try {
+        var explicit = localStorage.getItem('amritos.theme.explicit') === '1';
+        var stored = localStorage.getItem('amritos.theme');
+        if (!isPreview && explicit && (stored === 'light' || stored === 'dark')) {
+          root.dataset.theme = stored;
+          return;
+        }
+      } catch (e) {}
+
+      // 2. Fall back to admin's Firestore-published theme (cached in localStorage)
+      try {
+        var raw = localStorage.getItem('amritos.published.cache') ||
+                  localStorage.getItem('amritos.published');
+        if (raw) {
+          var cos = (JSON.parse(raw) || {}).cosmetics || {};
+          if (cos.theme === 'light' || cos.theme === 'dark') {
+            root.dataset.theme = cos.theme;
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <!-- Front-end portfolio: pixel "AD" monogram app-tile (distinct from the admin's
        terminal-window mark). First-paint fallback at the default accent;
        data.jsx/app.jsx re-tint it to the live accent so it changes with the theme. -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'%3E%3Crect width='32' height='32' rx='7' fill='%23c8e856'/%3E%3Cg fill='%230c0d0a'%3E%3Crect x='5' y='9' width='8' height='2'/%3E%3Crect x='3' y='11' width='12' height='2'/%3E%3Crect x='3' y='13' width='4' height='2'/%3E%3Crect x='11' y='13' width='4' height='2'/%3E%3Crect x='3' y='15' width='12' height='2'/%3E%3Crect x='3' y='17' width='4' height='2'/%3E%3Crect x='11' y='17' width='4' height='2'/%3E%3Crect x='3' y='19' width='4' height='2'/%3E%3Crect x='11' y='19' width='4' height='2'/%3E%3Crect x='3' y='21' width='4' height='2'/%3E%3Crect x='11' y='21' width='4' height='2'/%3E%3Crect x='17' y='9' width='10' height='2'/%3E%3Crect x='17' y='11' width='12' height='2'/%3E%3Crect x='17' y='13' width='4' height='2'/%3E%3Crect x='25' y='13' width='4' height='2'/%3E%3Crect x='17' y='15' width='4' height='2'/%3E%3Crect x='25' y='15' width='4' height='2'/%3E%3Crect x='17' y='17' width='4' height='2'/%3E%3Crect x='25' y='17' width='4' height='2'/%3E%3Crect x='17' y='19' width='12' height='2'/%3E%3Crect x='17' y='21' width='10' height='2'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'%3E%3Crect width='32' height='32' rx='7' fill='%230c0d0a'/%3E%3Cg fill='%23c8e856'%3E%3Crect x='5' y='9' width='8' height='2'/%3E%3Crect x='3' y='11' width='4' height='2'/%3E%3Crect x='11' y='11' width='4' height='2'/%3E%3Crect x='3' y='13' width='4' height='2'/%3E%3Crect x='11' y='13' width='4' height='2'/%3E%3Crect x='3' y='15' width='12' height='2'/%3E%3Crect x='3' y='17' width='4' height='2'/%3E%3Crect x='11' y='17' width='4' height='2'/%3E%3Crect x='3' y='19' width='4' height='2'/%3E%3Crect x='11' y='19' width='4' height='2'/%3E%3Crect x='3' y='21' width='4' height='2'/%3E%3Crect x='11' y='21' width='4' height='2'/%3E%3Crect x='17' y='9' width='10' height='2'/%3E%3Crect x='17' y='11' width='4' height='2'/%3E%3Crect x='25' y='11' width='4' height='2'/%3E%3Crect x='17' y='13' width='4' height='2'/%3E%3Crect x='25' y='13' width='4' height='2'/%3E%3Crect x='17' y='15' width='4' height='2'/%3E%3Crect x='25' y='15' width='4' height='2'/%3E%3Crect x='17' y='17' width='4' height='2'/%3E%3Crect x='25' y='17' width='4' height='2'/%3E%3Crect x='17' y='19' width='4' height='2'/%3E%3Crect x='25' y='19' width='4' height='2'/%3E%3Crect x='17' y='21' width='10' height='2'/%3E%3C/g%3E%3C/svg%3E" />
 </head>
 <body style="font-family: &quot;Space Grotesk&quot;">
 
