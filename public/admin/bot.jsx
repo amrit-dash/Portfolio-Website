@@ -22,7 +22,7 @@ const B_STOP = new Set(['a', 'an', 'the', 'is', 'are', 'am', 'do', 'does', 'did'
 function bTok(s) { return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !B_STOP.has(w)).map((w) => w.replace(/(ing|tion|ed|er|ly)$/, '')); }
 function bJac(a, b) { const A = new Set(bTok(a)), B = new Set(bTok(b)); if (!A.size || !B.size) return 0; const i = [...A].filter((w) => B.has(w)).length; return i / new Set([...A, ...B]).size; }
 function localMatch(qa, query, threshold) {
-  const pick = (v) => Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] : v;
+  const pick = (v) => Array.isArray(v) ? v.at(Math.floor(Math.random() * v.length)) : v;
   let best = { s: 0, a: null };
   for (const item of qa) for (const q of (item.qs || [])) { const s = bJac(query, q); if (s > best.s) best = { s, a: pick(item.as) }; }
   return best.s >= threshold ? best.a : null;
@@ -104,13 +104,24 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const [saveState, setSaveState] = useBState(null);        // null | 'saving' | 'saved' | 'error'
   const provDirty = JSON.stringify(pcfg) !== JSON.stringify(bot.providers);
 
-  const localCfg = (id) => (pcfg.byProvider && pcfg.byProvider[id]) || {};
-  const setLocal = (id, key, val) => setPcfg((p) => ({ ...p, byProvider: { ...p.byProvider, [id]: { ...(p.byProvider[id] || {}), [key]: val } } }));
+  const localCfg = (id) => (pcfg.byProvider && id !== '__proto__' && id !== 'constructor' && id !== 'prototype' && Reflect.get(pcfg.byProvider, id)) || {};
+  const setLocal = (id, key, val) => {
+    if (id === '__proto__' || id === 'constructor' || id === 'prototype') return;
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return;
+    setPcfg((p) => {
+      const by = { ...p.byProvider };
+      const cur = Reflect.get(by, id) || {};
+      const nextItem = { ...cur };
+      Reflect.set(nextItem, key, val);
+      Reflect.set(by, id, nextItem);
+      return { ...p, byProvider: by };
+    });
+  };
   const setActiveProvider = (id) => setPcfg((p) => ({ ...p, active: id }));
   // Model dropdown options: the fetched catalog if we have it, else the seed
   // list — always include the current value so a custom/saved model isn't lost.
   const modelOptions = (p, cfg) => {
-    const base = (fetchedModels[p.id] || p.models || []).slice();
+    const base = ((fetchedModels && Reflect.get(fetchedModels, p.id)) || p.models || []).slice();
     if (cfg.model && !base.includes(cfg.model)) base.unshift(cfg.model);
     return base;
   };
@@ -289,7 +300,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
           {PROVS.map((p) => {
             const active = pcfg.active === p.id;
             const cfg = localCfg(p.id);
-            const opts = fetchedModels[p.id] || p.models;
+            const opts = (fetchedModels && Reflect.get(fetchedModels, p.id)) || p.models;
             return (
               <div key={p.id} className={'provcard' + (active ? ' provcard--active' : '')}>
                 <div className="provcard__hd">
@@ -307,12 +318,12 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                   <Field label="API key" hint={p.keyHint}>
                     <SecretInput name={'llm-key-' + p.id} value={cfg.apiKey || ''} placeholder={'paste your ' + p.label + ' key'} onChange={(v) => setLocal(p.id, 'apiKey', v)} />
                   </Field>
-                  <Field label="Model" hint={fetchedModels[p.id] ? `${opts.length} models from ${p.label}` : 'pick a model, or refresh the list from the provider'}>
+                  <Field label="Model" hint={(fetchedModels && Reflect.get(fetchedModels, p.id)) ? `${opts.length} models from ${p.label}` : 'pick a model, or refresh the list from the provider'}>
                     <div className="modelrow">
                       <Select value={cfg.model || ''} options={modelOptions(p, cfg)} onChange={(v) => setLocal(p.id, 'model', v)} />
                       <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</Btn>
                     </div>
-                    {modelErr[p.id] && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {modelErr[p.id]}</div>}
+                    {modelErr && Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
                   </Field>
                   <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>
                 </div>

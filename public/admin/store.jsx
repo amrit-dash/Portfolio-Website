@@ -66,7 +66,10 @@ function deepMerge(base, over) {
   if (!isPlain(over)) return over === undefined ? base : over;
   if (!isPlain(base)) return clone(over);
   const out = { ...base };
-  for (const k of Object.keys(over)) out[k] = deepMerge(base[k], over[k]);
+  for (const k of Object.keys(over)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    Reflect.set(out, k, deepMerge(Reflect.get(base, k), Reflect.get(over, k)));
+  }
   return out;
 }
 
@@ -87,16 +90,18 @@ function normalizeContent(content) {
   if (bot && bot.providers) {
     const by = bot.providers.byProvider = (bot.providers.byProvider && typeof bot.providers.byProvider === 'object') ? bot.providers.byProvider : {};
     for (const p of LLM_PROVIDERS) {
-      const cur = by[p.id];
-      const fallbackModel = (DEFAULT_BOT.providers.byProvider[p.id] || {}).model || p.models[0] || '';
+      if (p.id === '__proto__' || p.id === 'constructor' || p.id === 'prototype') continue;
+      const cur = Reflect.get(by, p.id);
+      const defProvider = DEFAULT_BOT.providers && DEFAULT_BOT.providers.byProvider ? Reflect.get(DEFAULT_BOT.providers.byProvider, p.id) : null;
+      const fallbackModel = (defProvider || {}).model || (p.models && p.models[0]) || '';
       if (!cur || typeof cur !== 'object' || Array.isArray(cur)) {
-        by[p.id] = { apiKey: typeof cur === 'string' ? cur : '', model: fallbackModel };
+        Reflect.set(by, p.id, { apiKey: typeof cur === 'string' ? cur : '', model: fallbackModel });
         continue;
       }
-      by[p.id] = {
+      Reflect.set(by, p.id, {
         apiKey: typeof cur.apiKey === 'string' ? cur.apiKey : '',
         model: typeof cur.model === 'string' && cur.model ? cur.model : fallbackModel,
-      };
+      });
     }
     if (typeof bot.providers.active !== 'string' || !LLM_PROVIDERS.some((p) => p.id === bot.providers.active)) {
       bot.providers.active = LLM_PROVIDERS[0].id;
@@ -285,7 +290,11 @@ const Store = {
     const c = JSON.parse(JSON.stringify(content || {}));
     try {
       const by = c.bot.providers.byProvider;
-      for (const id in by) if (by[id]) by[id].apiKey = '';
+      for (const id in by) {
+        if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+        const item = Reflect.get(by, id);
+        if (item) item.apiKey = '';
+      }
     } catch (e) { /* no providers */ }
     return c;
   },
@@ -388,9 +397,10 @@ function useContent() {
       const copyIn = (node, depth) => {
         if (depth === keys.length) return value;
         const k = keys[depth];
-        const child = node && typeof node === 'object' && !Array.isArray(node) ? node[k] : undefined;
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') return node;
+        const child = node && typeof node === 'object' && !Array.isArray(node) ? Reflect.get(node, k) : undefined;
         const base = node && typeof node === 'object' && !Array.isArray(node) ? { ...node } : {};
-        base[k] = copyIn(child, depth + 1);
+        Reflect.set(base, k, copyIn(child, depth + 1));
         return base;
       };
       const next = copyIn(prev, 0);
@@ -483,7 +493,13 @@ function useAnalytics() {
   const c = counters || {};
   const history = daily.slice(-14).map((d) => d.views || 0);
   const projAgg = {};
-  daily.forEach((d) => { const bp = d.byProject || {}; for (const k in bp) projAgg[k] = (projAgg[k] || 0) + bp[k]; });
+  daily.forEach((d) => {
+    const bp = d.byProject || {};
+    for (const k in bp) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+      Reflect.set(projAgg, k, (Reflect.get(projAgg, k) || 0) + Reflect.get(bp, k));
+    }
+  });
   const topProjects = Object.entries(projAgg).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, opens]) => ({ name, opens }));
   const evMs = (ev) => (ev.at && ev.at.toMillis ? ev.at.toMillis() : (ev.at && ev.at.seconds ? ev.at.seconds * 1000 : Date.now()));
   const activity = recent.map((ev) => {
@@ -500,7 +516,7 @@ function useAnalytics() {
     return { when: fmtRelative(Date.now() - evMs(ev)), what, who: where, type: ev.type, city: ev.city || null, region: ev.region || null, country: ev.country || null };
   });
   const totalEvents = ['views', 'cvDownloads', 'botChats', 'projectOpens', 'socialClicks', 'linkClicks', 'ctaClicks']
-    .reduce((s, k) => s + (c[k] || 0), 0);
+    .reduce((s, k) => s + (Reflect.get(c, k) || 0), 0);
 
   return {
     ready: counters != null,

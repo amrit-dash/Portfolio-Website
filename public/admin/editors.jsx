@@ -312,7 +312,7 @@ function MediaEditor({ content, setAt, analytics }) {
     finally { setBusy(null); }
   };
   const CvBox = ({ slot, title }) => {
-    const f = m[slot];
+    const f = slot !== '__proto__' && slot !== 'constructor' && slot !== 'prototype' ? Reflect.get(m, slot) : undefined;
     const inputId = 'cv-' + slot;
     return (
       <Panel title={title} sub={slot === 'cvLight' ? 'served on light theme' : 'served on dark theme'}>

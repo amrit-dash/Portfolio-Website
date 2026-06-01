@@ -53,14 +53,14 @@ function WorkItemBody({ e, onChange }) {
             ))}
             <span className="subtab" onClick={addRole} style={{ borderStyle: 'dashed' }}><AdminIcon name="plus" size={12} />sub-role</span>
           </div>
-          {e.roles[roleTab] && (
+          {e.roles && e.roles.at(roleTab) && (
             <div className="item" style={{ background: 'var(--bg-card)' }}>
               <div className="item__bd" style={{ borderTop: 0, paddingTop: 14 }}>
                 <div className="row">
-                  <Field label="Sub-role name"><Input value={e.roles[roleTab].name} onChange={(v) => setRole(roleTab, 'name', v)} /></Field>
-                  <Field label="Date"><Input value={e.roles[roleTab].date} onChange={(v) => setRole(roleTab, 'date', v)} /></Field>
+                  <Field label="Sub-role name"><Input value={e.roles.at(roleTab).name} onChange={(v) => setRole(roleTab, 'name', v)} /></Field>
+                  <Field label="Date"><Input value={e.roles.at(roleTab).date} onChange={(v) => setRole(roleTab, 'date', v)} /></Field>
                 </div>
-                <Field label="Bullets"><BulletEditor items={e.roles[roleTab].bullets || []} onChange={(v) => setRole(roleTab, 'bullets', v)} /></Field>
+                <Field label="Bullets"><BulletEditor items={e.roles.at(roleTab).bullets || []} onChange={(v) => setRole(roleTab, 'bullets', v)} /></Field>
               </div>
             </div>
           )}

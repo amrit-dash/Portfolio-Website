@@ -124,9 +124,9 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
         <Panel title="Content summary">
           <div className="bars">
             {[['expertise', 'Expertise modules', 'expertise'], ['work', 'Work entries', 'experience'], ['projects', 'Projects', 'projects'], ['contact', 'Social links', 'contact.socials'], ['bot', 'Bot Q&A pairs', 'bot.qa']].map(([icon, label, path]) => {
-              const arr = path.split('.').reduce((o, k) => (o ? o[k] : null), content);
+              const arr = path.split('.').reduce((o, k) => (o && k !== '__proto__' && k !== 'constructor' && k !== 'prototype' ? Reflect.get(o, k) : null), content);
               const n = Array.isArray(arr) ? arr.length : 0;
-              const route = { expertise: 'expertise', experience: 'work', projects: 'projects', 'contact.socials': 'contact', 'bot.qa': 'bot' }[path];
+              const route = Reflect.get({ expertise: 'expertise', experience: 'work', projects: 'projects', 'contact.socials': 'contact', 'bot.qa': 'bot' }, path);
               return (
                 <div className="barrow" key={path} style={{ gridTemplateColumns: '24px 1fr 70px' }}>
                   <AdminIcon name={icon} size={16} />
@@ -164,13 +164,26 @@ function AnalyticsPage({ analytics, onReset }) {
   // Aggregate map-style breakdowns across the loaded day-buckets.
   const agg = (field) => {
     const out = {};
-    daily.forEach((d) => { const m = d[field] || {}; for (const k in m) out[k] = (out[k] || 0) + m[k]; });
+    if (field === '__proto__' || field === 'constructor' || field === 'prototype') return [];
+    daily.forEach((d) => {
+      const m = Reflect.get(d, field) || {};
+      for (const k in m) {
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+        Reflect.set(out, k, (Reflect.get(out, k) || 0) + Reflect.get(m, k));
+      }
+    });
     return Object.entries(out).sort((x, y) => y[1] - x[1]);
   };
   // Aggregate a label off the recent event feed (region/city aren't in daily buckets).
   const aggEvents = (key) => {
     const out = {};
-    a.activity.forEach((e) => { const v = e[key]; if (v) out[v] = (out[v] || 0) + 1; });
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return [];
+    a.activity.forEach((e) => {
+      const v = Reflect.get(e, key);
+      if (v && typeof v === 'string' && v !== '__proto__' && v !== 'constructor' && v !== 'prototype') {
+        Reflect.set(out, v, (Reflect.get(out, v) || 0) + 1);
+      }
+    });
     return Object.entries(out).sort((x, y) => y[1] - x[1]);
   };
   const bySource = agg('bySource');
@@ -450,7 +463,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setA
             {g.items.map((it) => {
               let cnt = null;
               if (it.count) {
-                const arr = it.count.split('.').reduce((o, k) => (o != null ? o[k] : undefined), content);
+                const arr = it.count.split('.').reduce((o, k) => (o != null && k !== '__proto__' && k !== 'constructor' && k !== 'prototype' ? Reflect.get(o, k) : undefined), content);
                 cnt = Array.isArray(arr) ? arr.length : null;
               }
               return (
@@ -641,7 +654,7 @@ function AdminApp() {
       <div className="main">
         <div className="topbar">
           <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu"><AdminIcon name="menu" size={18} /></button>
-          <span className="topbar__crumb">amrit.os / <b>{TITLES[route] || route}</b></span>
+          <span className="topbar__crumb">amrit.os / <b>{Reflect.get(TITLES, route) || route}</b></span>
           <span className="topbar__spacer" />
           {flash
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
