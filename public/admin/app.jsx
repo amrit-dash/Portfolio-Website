@@ -338,15 +338,38 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
   );
 }
 
-/* ---------- Live preview drawer ---------- */
-function PreviewDrawer({ open, mode, onClose, onMode }) {
-  const { AdminIcon, Btn } = window.ADMIN_UI;
+/* ---------- Live preview drawer ----------
+   The preview iframe is the real portfolio loaded with ?adminpreview. It can be
+   a *different origin* than this console, so localStorage can't hand it the
+   draft. Instead we stream the current snapshot to it over postMessage: the
+   iframe announces 'amritos:preview-ready', we reply with the draft (or the
+   published snapshot), and we re-push on every edit — so theme/accent/font/copy
+   changes show live and never revert to the last published copy. */
+function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent }) {
+  const { AdminIcon } = window.ADMIN_UI;
   const [device, setDevice] = useAState('desktop');
   const [nonce, setNonce] = useAState(0);
+  const frameRef = useARef(null);
   useAEffect(() => { if (open) setNonce((n) => n + 1); }, [open, mode]);
-  // Same origin on localhost (admin + portfolio both served from public/), so a
-  // relative path keeps the localStorage live-preview working. On the deployed
-  // admin (its own domain) point at the public portfolio origin.
+
+  const post = React.useCallback(() => {
+    try {
+      const win = frameRef.current && frameRef.current.contentWindow;
+      if (!win) return;
+      const snap = mode === 'published' ? (publishedContent || content) : content;
+      win.postMessage({ type: 'amritos:preview', content: snap }, '*');
+    } catch (e) { /* cross-origin guard */ }
+  }, [mode, content, publishedContent]);
+
+  // Reply to the iframe's ready handshake (covers initial load + every reload).
+  useAEffect(() => {
+    const onMsg = (ev) => { if (ev && ev.data && ev.data.type === 'amritos:preview-ready') post(); };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [post]);
+  // Re-push whenever the draft, mode, or drawer state changes (no reload needed).
+  useAEffect(() => { if (open) post(); }, [open, content, mode, nonce, post]);
+
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   const portfolioBase = isLocal ? '' : ((window.PORTFOLIO_URL || '').replace(/\/$/, '') + '/');
   const previewSrc = portfolioBase + 'index.html?adminpreview=' + nonce;
@@ -373,9 +396,9 @@ function PreviewDrawer({ open, mode, onClose, onMode }) {
         {open && (
           device === 'mobile'
             ? <div style={{ flex: 1, display: 'grid', placeItems: 'center', background: '#060704', overflow: 'auto' }}>
-                <iframe key={nonce} title="preview" src={previewSrc} style={{ width: 390, height: 760, border: '1px solid var(--line-2)', borderRadius: 14, background: '#000' }} />
+                <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} style={{ width: 390, height: 760, border: '1px solid var(--line-2)', borderRadius: 14, background: '#000' }} />
               </div>
-            : <iframe key={nonce} title="preview" src={previewSrc} />
+            : <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} />
         )}
       </div>
     </>
@@ -596,7 +619,8 @@ function AdminApp() {
         </div>
         <div className="canvas">{renderRoute()}</div>
       </div>
-      <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode} />
+      <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
+        content={content} publishedContent={window.ADMIN_STORE.Store.loadPublished()} />
     </div>
   );
 }

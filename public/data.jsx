@@ -667,7 +667,22 @@ window.mergeContent = (over) => over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JS
 window.subscribeContent = function (cb) {
   try {
     const inPreview = new URLSearchParams(location.search).has('adminpreview');
-    if (inPreview || !window.fb || !window.fb.db) return null;
+    if (inPreview) {
+      // Live preview: the admin console (often a *different origin*, where
+      // localStorage isn't shared) streams the current draft/published snapshot
+      // to this iframe via postMessage. Apply each one so theme, accent, fonts
+      // and content update in real time before publishing — no reload, and no
+      // reverting to the last published copy.
+      const handler = (ev) => {
+        const d = ev && ev.data;
+        if (d && d.type === 'amritos:preview' && d.content) cb(window.mergeContent(d.content));
+      };
+      window.addEventListener('message', handler);
+      // Tell the parent we're ready so it pushes the first snapshot immediately.
+      try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'amritos:preview-ready' }, '*'); } catch (e) {}
+      return () => window.removeEventListener('message', handler);
+    }
+    if (!window.fb || !window.fb.db) return null;
     return window.fb.db.doc('content/published').onSnapshot((snap) => {
       if (!snap.exists) return;
       const data = snap.data() || {};
