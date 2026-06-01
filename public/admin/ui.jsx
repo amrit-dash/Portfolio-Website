@@ -184,8 +184,21 @@ function SecretInput({ value, onChange, placeholder, name }) {
   );
 }
 
-function TextArea({ value, onChange, placeholder, rows = 3, mono, ...rest }) {
-  return <textarea className={'ta' + (mono ? ' mono' : '')} rows={rows} value={value || ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} {...rest} />;
+function TextArea({ value, onChange, placeholder, rows = 3, mono, fieldPath, registerFieldFocus, unregisterFieldFocus, ...rest }) {
+  const onFocus = () => { if (fieldPath && registerFieldFocus) registerFieldFocus(fieldPath); };
+  const onBlur = () => { if (unregisterFieldFocus) unregisterFieldFocus(); };
+  return (
+    <textarea
+      className={'ta' + (mono ? ' mono' : '')}
+      rows={rows}
+      value={value || ''}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      {...rest}
+    />
+  );
 }
 
 function Select({ value, onChange, options }) {

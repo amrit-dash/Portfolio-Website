@@ -94,8 +94,10 @@ function RangeRow({ label, value, min, max, step = 1, unit = '', onChange }) {
 }
 
 /* ============ HERO ============ */
-function HeroEditor({ content, setAt }) {
+function HeroEditor({ content, setAt, registerFieldFocus, unregisterFieldFocus }) {
   const { PageHead, Panel, Field, Input, TextArea, Btn, AdminIcon } = window.ADMIN_UI;
+  const { RefinableTextArea } = window.ADMIN_REFINER;
+  const focus = { registerFieldFocus, unregisterFieldFocus };
   const h = content.hero;
   const setCta = (i, key, val) => { const n = h.ctas.map((c, j) => j === i ? { ...c, [key]: val } : c); setAt('hero.ctas', n); };
   return (
@@ -108,7 +110,9 @@ function HeroEditor({ content, setAt }) {
           <Field label="Emphasised (italic) name"><Input value={h.nameEm} onChange={(v) => setAt('hero.nameEm', v)} /></Field>
         </div>
         <Field label="Subtitle"><Input value={h.subtitle} onChange={(v) => setAt('hero.subtitle', v)} /></Field>
-        <Field label="Pitch paragraph" hint="<b> for bold"><TextArea rows={4} value={h.role} onChange={(v) => setAt('hero.role', v)} /></Field>
+        <Field label="Pitch paragraph" hint="<b> for bold · ✨ to refine">
+          <RefinableTextArea rows={4} value={h.role} onChange={(v) => setAt('hero.role', v)} label="Hero pitch paragraph" context="Portfolio hero intro — concise, confident, first-person optional" fieldPath="hero.role" {...focus} />
+        </Field>
       </Panel>
       <Panel title="Call-to-action buttons">
         {h.ctas.map((c, i) => (
@@ -131,8 +135,10 @@ function HeroEditor({ content, setAt }) {
 }
 
 /* ============ ABOUT ============ */
-function AboutEditor({ content, setAt }) {
+function AboutEditor({ content, setAt, registerFieldFocus, unregisterFieldFocus }) {
   const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon } = window.ADMIN_UI;
+  const { RefinableTextArea } = window.ADMIN_REFINER;
+  const focus = { registerFieldFocus, unregisterFieldFocus };
   const { ImageSlot } = window.ADMIN_CROP;
   const a = content.about;
   const setMeta = (i, key, val) => setAt('about.meta', a.meta.map((m, j) => j === i ? { ...m, [key]: val } : m));
@@ -159,7 +165,9 @@ function AboutEditor({ content, setAt }) {
       </div>
       <Panel title="Bio copy">
         <Field label="Heading" hint="<em> for italic accent"><TextArea rows={2} value={a.heading} onChange={(v) => setAt('about.heading', v)} /></Field>
-        <Field label="Intro paragraph"><TextArea rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} /></Field>
+        <Field label="Intro paragraph">
+          <RefinableTextArea rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} label="About intro" context="About section intro — readme-style bio tone" fieldPath="about.intro" {...focus} />
+        </Field>
       </Panel>
       <Panel title="Impact timeline" sub={`${a.impact.length} entries`}>
         {a.impact.map((m, i) => (
@@ -169,7 +177,9 @@ function AboutEditor({ content, setAt }) {
                 <Field label="Label"><Input value={m.label} onChange={(v) => setImpact(i, 'label', v)} /></Field>
                 <DelBtn onClick={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))} />
               </div>
-              <Field label="Description" hint="<em> for accent"><TextArea rows={2} value={m.html} onChange={(v) => setImpact(i, 'html', v)} /></Field>
+              <Field label="Description" hint="<em> for accent · ✨ to refine">
+                <RefinableTextArea rows={2} value={m.html} onChange={(v) => setImpact(i, 'html', v)} label={'About timeline · ' + (m.label || 'entry')} context="Impact timeline entry — past/present/future framing" fieldPath={'about.impact.' + i + '.html'} {...focus} />
+              </Field>
             </div>
           </div>
         ))}
@@ -213,8 +223,10 @@ function ExpertiseEditor({ content, setAt }) {
 }
 
 /* ============ ACHIEVEMENTS / EDUCATION / CERTS (cards) ============ */
-function CardsEditor({ content, setAt }) {
+function CardsEditor({ content, setAt, registerFieldFocus, unregisterFieldFocus }) {
   const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, BulletEditor, AdminIcon } = window.ADMIN_UI;
+  const { RefinableTextArea } = window.ADMIN_REFINER;
+  const focus = { registerFieldFocus, unregisterFieldFocus };
   const cards = content.cards;
   const update = (i, key, val) => setAt('cards', cards.map((c, j) => j === i ? { ...c, [key]: val } : c));
   return (
@@ -231,7 +243,9 @@ function CardsEditor({ content, setAt }) {
             <Field label="Subtitle"><Input value={c.sub} onChange={(v) => update(i, 'sub', v)} /></Field>
           </div>
           {c.body !== undefined && (c.items.length === 0 || c.id === 'offduty' || c.id === 'education') && (
-            <Field label="Body paragraph"><TextArea rows={3} value={c.body} onChange={(v) => update(i, 'body', v)} /></Field>
+            <Field label="Body paragraph">
+              <RefinableTextArea rows={3} value={c.body} onChange={(v) => update(i, 'body', v)} label={'Education & awards · ' + (c.title || c.id)} context="Card body copy — concise portfolio tone" fieldPath={'cards.' + i + '.body'} {...focus} />
+            </Field>
           )}
           {(c.items.length > 0 || (c.id !== 'offduty' && c.id !== 'education')) && (
             <Field label="List items"><BulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder="List item" /></Field>

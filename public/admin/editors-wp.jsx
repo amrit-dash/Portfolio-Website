@@ -102,8 +102,10 @@ function WorkEditor({ content, setAt }) {
 }
 
 /* ============ PROJECTS ============ */
-function ProjectBody({ p, expertise, onChange }) {
+function ProjectBody({ p, expertise, onChange, registerFieldFocus, unregisterFieldFocus, fieldPathPrefix }) {
   const { Field, Input, TextArea, TagInput, AdminIcon } = window.ADMIN_UI;
+  const { RefinableTextArea } = window.ADMIN_REFINER;
+  const focus = { registerFieldFocus, unregisterFieldFocus };
   const { ImageSlot } = window.ADMIN_CROP;
   const { TARGETS } = window.ADMIN_EDITORS;
   const set = (key, val) => onChange({ ...p, [key]: val });
@@ -118,7 +120,9 @@ function ProjectBody({ p, expertise, onChange }) {
         <Field label="Category"><Input value={p.cat} onChange={(v) => set('cat', v)} /></Field>
         <Field label="Type" hint=".ext badge"><Input value={p.type} onChange={(v) => set('type', v)} /></Field>
       </div>
-      <Field label="Description"><TextArea rows={3} value={p.desc} onChange={(v) => set('desc', v)} /></Field>
+      <Field label="Description">
+        <RefinableTextArea rows={3} value={p.desc} onChange={(v) => set('desc', v)} label={'Project · ' + (p.title || p.id)} context="Project card description — outcome-focused, portfolio tone" fieldPath={(fieldPathPrefix || 'projects') + '.desc'} {...focus} />
+      </Field>
       <div className="grid2">
         <ImageSlot label="Folder / thumbnail image" value={p.image} target={TARGETS.projThumb} outputType="image/png" storageKey={'projects/' + (p.id || 'p') + '-thumb'}
           hint="Shown on the project desktop" onChange={(url) => set('image', url)} />
@@ -151,8 +155,9 @@ function ProjectBody({ p, expertise, onChange }) {
   );
 }
 
-function ProjectsEditor({ content, setAt }) {
+function ProjectsEditor({ content, setAt, registerFieldFocus, unregisterFieldFocus }) {
   const { PageHead, Panel, Btn, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const focus = { registerFieldFocus, unregisterFieldFocus };
   const list = content.projects;
   const [open, setOpen] = useStateWP(null);
   const update = (i, next) => setAt('projects', list.map((p, j) => j === i ? next : p));
@@ -170,7 +175,7 @@ function ProjectsEditor({ content, setAt }) {
               title={p.title} sub={`${p.cat || '—'}  ${p.type || ''}`}
               open={open === i} onToggle={() => setOpen(open === i ? null : i)}
               onDelete={() => { setAt('projects', list.filter((_, j) => j !== i)); setOpen(null); }}>
-              <ProjectBody p={p} expertise={content.expertise} onChange={(next) => update(i, next)} />
+              <ProjectBody p={p} expertise={content.expertise} onChange={(next) => update(i, next)} fieldPathPrefix={'projects.' + i} {...focus} />
             </ListItem>
           )} />
       </Panel>
