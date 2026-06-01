@@ -26,6 +26,7 @@
   --scanline-opacity: 0.05;
   --glow: 1; /* accent bloom multiplier — driven by cosmetics.glow (admin Appearance) */
   --titlebar: linear-gradient(180deg, #2a2d22 0%, #1c1f15 100%);
+  --titlebar-solid: #21241a; /* opaque fallback for fixed bars iOS won't paint a gradient on */
   --titlebar-text: #ecead6;
 }
 
@@ -47,6 +48,7 @@
   --grid:      color-mix(in oklab, var(--accent) 32%, transparent);
   --wallpaper-tone: #e7e3d2;
   --titlebar: linear-gradient(180deg, #f6f3e8 0%, #e7e3d2 100%);
+  --titlebar-solid: #eee9da; /* opaque fallback for fixed bars iOS won't paint a gradient on */
   --titlebar-text: #1a1c14;
 }
 
@@ -174,7 +176,12 @@ ul { margin: 0; padding: 0; list-style: none; }
   display: flex;
   align-items: center;
   padding: 0 18px;
-  background: var(--titlebar);
+  /* Solid color FIRST so the bar always paints, then the gradient on top.
+     iOS WebKit can skip painting a gradient background-image on a composited
+     position:fixed layer — the solid background-color is the reliable fallback
+     that keeps the header from going invisible-but-tappable. */
+  background-color: var(--titlebar-solid);
+  background-image: var(--titlebar);
   border-bottom: 1px solid var(--line);
   color: var(--titlebar-text);
   font-family: var(--font-mono);
@@ -1595,8 +1602,8 @@ ul { margin: 0; padding: 0; list-style: none; }
    (see the coarse-pointer block below). Hidden on desktop, where the red dot closes. */
 .modal-close {
   display: none;
-  margin-left: 10px;
-  width: 28px; height: 28px;
+  margin-right: 10px;
+  width: 26px; height: 26px;
   align-items: center; justify-content: center;
   background: transparent;
   border: 1px solid var(--line-2);
@@ -1870,15 +1877,14 @@ ul { margin: 0; padding: 0; list-style: none; }
   *, *::before, *::after { cursor: auto !important; }
   .cursor-dot, .cursor-ring, .cursor-pixel, .cursor-bigdot, .cursor-cross { display: none !important; }
 
-  /* iOS Safari / in-app browsers don't paint a position:fixed element's own
-     background when backdrop-filter is set and an ancestor has overflow:hidden
-     — the bar goes invisible while its buttons stay tappable. Drop the blur on
-     touch devices; the --titlebar gradient is already opaque, so the bar paints. */
+  /* iOS Safari / in-app browsers can leave a position:fixed element's background
+     unpainted when backdrop-filter is set — the bar goes invisible while its
+     buttons stay tappable. Drop the blur on touch; the solid background-color on
+     .menubar (see base rule) then paints reliably. No transform hack here — a 3D
+     transform on a fixed bar can re-trigger the same paint glitch. */
   .menubar {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
   }
 
   /* The macOS traffic-light dots are decorative + tiny on touch. Hide them on
@@ -1886,6 +1892,12 @@ ul { margin: 0; padding: 0; list-style: none; }
   .window__lights { display: none; }
   /* ...but the projects modal still needs a real close target — swap in the cross. */
   .project-modal .modal-close { display: inline-flex; }
+
+  /* Titlebar meta is cramped against the (long, wrapping) path on narrow screens.
+     Drop the "· click to filter" hint — there's no hover on touch and tapping a
+     module already filters — so the meta shrinks to just "09 modules". */
+  .meta-hint { display: none; }
+  .window__meta { flex: 0 0 auto; padding-left: 8px; }
 
   /* same fixed-element backdrop-filter risk as the menubar — keep the rgba dim,
      drop the blur so the overlay reliably paints on iOS. */

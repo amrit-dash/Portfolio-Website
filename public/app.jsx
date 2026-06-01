@@ -867,7 +867,7 @@ function ExpertiseWindow() {
         <div className="window__titlebar">
           <div className="window__lights"><span /><span /><span /></div>
           <div className="window__title">system/expertise — installed_modules.list</div>
-          <div className="window__meta">{EXPERTISE.length.toString().padStart(2, '0')} modules · click to filter</div>
+          <div className="window__meta">{EXPERTISE.length.toString().padStart(2, '0')} modules<span className="meta-hint"> · click to filter</span></div>
         </div>
         <div className="window__body" data-comment-anchor="fe2f9673c1-div-233-9">
           <div className="expertise-grid">
@@ -1052,15 +1052,15 @@ function ProjectModal({ project, onClose }) {
     <div className="project-modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="project-modal window">
         <div className="window__titlebar">
+          <button className="modal-close" onClick={onClose} aria-label="Close" title="Close">
+            <Icon name="close" size={16} />
+          </button>
           <div className="window__lights">
             <span style={{ cursor: 'pointer' }} onClick={onClose} title="close" />
             <span /><span />
           </div>
           <div className="window__title">~/projects/{project.id}.{project.type.replace('.', '')}</div>
           <div className="window__meta">open</div>
-          <button className="modal-close" onClick={onClose} aria-label="Close" title="Close">
-            <Icon name="close" size={16} />
-          </button>
         </div>
         <div className="project-modal__body">
           <div className="project-modal__art" data-comment-anchor="3dd5f705f5-div-805-11">
