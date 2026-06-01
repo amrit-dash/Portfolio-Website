@@ -141,7 +141,7 @@ body::before {
 
 /* ---- Sidebar ---- */
 .side { background: var(--bg-elev); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-.side__brand { display: flex; align-items: center; gap: 10px; height: var(--topbar-h); padding: 0 16px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.side__brand { position: relative; display: flex; align-items: center; gap: 10px; height: var(--topbar-h); padding: 0 16px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 /* Brand mark — no box, just the glowing window glyph. */
 .side__mark { display: grid; place-items: center; color: var(--accent); flex-shrink: 0; filter: drop-shadow(0 0 6px color-mix(in oklab, var(--accent) 65%, transparent)); }
 .side__name { font-family: var(--font-mono); font-weight: 600; font-size: 13px; letter-spacing: .02em; }
@@ -173,11 +173,14 @@ body::before {
 .dirty .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 7px var(--warn); }
 .dirty.saved { color: var(--fg-mute); } .dirty.saved .dot { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
 
-/* header console-theme control — a small filled glowing accent square + popover */
-.cthm { position: relative; flex-shrink: 0; }
+/* console-theme control — a small filled glowing accent square + popover,
+   pinned to the right of the sidebar header (groups with the console brand).
+   The popover anchors to the header (not the tiny chip) so it drops down under
+   the brand instead of clipping off the narrow sidebar's edge. */
+.cthm { flex-shrink: 0; margin-left: auto; }
 .cthm__btn { width: 18px; height: 18px; border: 1px solid color-mix(in oklab, var(--accent) 70%, #000); border-radius: 5px; background: var(--accent); cursor: pointer; transition: all .14s; box-shadow: 0 0 9px -3px var(--accent); padding: 0; }
 .cthm__btn:hover, .cthm__btn[data-on="true"] { box-shadow: 0 0 13px -1px var(--accent); transform: translateY(-1px); }
-.cthm__pop { position: absolute; top: calc(100% + 9px); left: 0; z-index: 60; width: 256px; padding: 13px; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 11px; box-shadow: var(--shadow); }
+.cthm__pop { position: absolute; top: calc(100% + 8px); left: 12px; z-index: 60; width: 256px; padding: 13px; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 11px; box-shadow: var(--shadow); }
 /* compact, single-row accent swatches inside the console popover */
 .cthm__pop .swatches { flex-wrap: nowrap; gap: 6px; }
 .cthm__pop .swatch, .cthm__pop .swatch--custom { width: 27px; height: 27px; border-radius: 7px; }

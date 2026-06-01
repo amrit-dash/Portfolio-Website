@@ -433,13 +433,14 @@ const NAV = [
 
 const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
 
-function Sidebar({ route, go, content, onLogout, open, onClose }) {
+function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
   return (
     <aside className={'side' + (open ? ' side--open' : '')}>
       <div className="side__brand">
         <span className="side__mark"><AdminIcon name="os-window" size={30} /></span>
         <span className="side__name">amrit.os<small>ADMIN CONSOLE</small></span>
+        <ConsoleThemeMenu theme={adminTheme} setTheme={setAdminTheme} accent={adminAccent} setAccent={setAdminAccent} />
         <button className="side__close" onClick={onClose} aria-label="Close menu"><AdminIcon name="x" size={16} /></button>
       </div>
       <nav className="side__nav">
@@ -635,11 +636,11 @@ function AdminApp() {
   return (
     <div className="shell">
       <div className="nav-scrim" data-open={navOpen} onClick={() => setNavOpen(false)} />
-      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)} />
+      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
+        adminTheme={adminTheme} setAdminTheme={setAdminTheme} adminAccent={adminAccent} setAdminAccent={setAdminAccent} />
       <div className="main">
         <div className="topbar">
           <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu"><AdminIcon name="menu" size={18} /></button>
-          <ConsoleThemeMenu theme={adminTheme} setTheme={setAdminTheme} accent={adminAccent} setAccent={setAdminAccent} />
           <span className="topbar__crumb">amrit.os / <b>{TITLES[route] || route}</b></span>
           <span className="topbar__spacer" />
           {flash
