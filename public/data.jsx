@@ -579,11 +579,18 @@ const PORTFOLIO_DEFAULTS = {
    the published snapshot, else the built-in defaults above. On Firebase
    migration this single read becomes a Firestore content/published listener. */
 const _isPlain = (v) => v && typeof v === 'object' && !Array.isArray(v);
+/* Keys that would walk the prototype chain instead of own data. `over` is
+   untrusted (parsed from localStorage), so skip them to avoid prototype
+   pollution and keep the merge to plain own-properties only. */
+const _UNSAFE_KEY = (k) => k === '__proto__' || k === 'constructor' || k === 'prototype';
 function _deepMerge(base, over) {
   if (!_isPlain(over)) return over === undefined ? base : over;
   if (!_isPlain(base)) return JSON.parse(JSON.stringify(over));
   const out = { ...base };
-  for (const k of Object.keys(over)) out[k] = _deepMerge(base[k], over[k]);
+  for (const k of Object.keys(over)) {
+    if (_UNSAFE_KEY(k)) continue;
+    out[k] = _deepMerge(base[k], over[k]);
+  }
   return out;
 }
 
