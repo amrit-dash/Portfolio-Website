@@ -606,28 +606,45 @@ window.PORTFOLIO_DEFAULTS = PORTFOLIO_DEFAULTS;
 window.PORTFOLIO_CONTENT  = PORTFOLIO_CONTENT;
 window.LLM_PROVIDERS      = LLM_PROVIDERS;
 
-/* Color-changing favicon — an "Amrit OS" window glyph whose title bar tints to
-   the live accent. Shared by the synchronous first paint below and the React
-   accent effect in app.jsx, so the tab icon always matches the active accent. */
+/* Color-changing favicons. Two distinct dynamic marks, both tint to a live
+   accent:
+   - buildFavicon (PORTFOLIO): an "orbit" glyph — an accent app-tile with a dark
+     planet + tilted orbit ring & moon, echoing the hero's orbit motif.
+   - buildOsWindowFavicon (ADMIN): the retro terminal window — dark tile, accent
+     window with traffic-light "close" dots and a >_ prompt.
+   The portfolio and admin consoles each apply their own. */
 window.buildFavicon = function (accent) {
   const a = encodeURIComponent(accent || '#c8e856');
   return "data:image/svg+xml,"
     + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
-    + "%3Crect width='32' height='32' rx='7' fill='%230c0d0a'/%3E"          // app tile
-    + "%3Crect x='6' y='7' width='20' height='18' rx='3' fill='" + a + "'/%3E" // accent window frame
-    + "%3Crect x='7.6' y='12.4' width='16.8' height='11' rx='1.6' fill='%230c0d0a'/%3E" // dark body
-    + "%3Ccircle cx='9.5' cy='9.7' r='1.05' fill='%230c0d0a'/%3E"           // traffic-light dots
+    + "%3Crect width='32' height='32' rx='7' fill='" + a + "'/%3E"            // accent app tile
+    + "%3Cg transform='rotate(-22 16 16)'%3E"
+    + "%3Cellipse cx='16' cy='16' rx='10.5' ry='5' fill='none' stroke='%230c0d0a' stroke-width='1.8'/%3E" // orbit ring
+    + "%3Ccircle cx='26.5' cy='16' r='1.8' fill='%230c0d0a'/%3E"             // moon on the ring
+    + "%3C/g%3E"
+    + "%3Ccircle cx='16' cy='16' r='4.3' fill='%230c0d0a'/%3E"               // planet / core
+    + "%3C/svg%3E";
+};
+window.buildOsWindowFavicon = function (accent) {
+  const a = encodeURIComponent(accent || '#c8e856');
+  return "data:image/svg+xml,"
+    + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
+    + "%3Crect width='32' height='32' rx='7' fill='%230c0d0a'/%3E"           // dark tile
+    + "%3Crect x='6' y='7' width='20' height='18' rx='3' fill='" + a + "'/%3E" // accent window
+    + "%3Crect x='7.6' y='12.4' width='16.8' height='11' rx='1.6' fill='%230c0d0a'/%3E" // body
+    + "%3Ccircle cx='9.5' cy='9.7' r='1.05' fill='%230c0d0a'/%3E"            // close dots
     + "%3Ccircle cx='12.7' cy='9.7' r='1.05' fill='%230c0d0a'/%3E"
     + "%3Ccircle cx='15.9' cy='9.7' r='1.05' fill='%230c0d0a'/%3E"
-    + "%3Cpath d='M10.3 16.4l2.2 1.9-2.2 1.9' fill='none' stroke='" + a + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E" // prompt caret
+    + "%3Cpath d='M10.3 16.4l2.2 1.9-2.2 1.9' fill='none' stroke='" + a + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E" // prompt
     + "%3Crect x='14' y='19.4' width='4.6' height='1.5' rx='.75' fill='" + a + "'/%3E"
     + "%3C/svg%3E";
 };
-window.applyFavicon = function (accent) {
+window.applyFavicon = function (accent, kind) {
   try {
+    const build = kind === 'os-window' ? window.buildOsWindowFavicon : window.buildFavicon;
     let link = document.querySelector("link[rel='icon']");
     if (!link) { link = document.createElement('link'); link.setAttribute('rel', 'icon'); document.head.appendChild(link); }
-    link.setAttribute('href', window.buildFavicon(accent));
+    link.setAttribute('href', build(accent));
   } catch (e) { /* non-fatal */ }
 };
 

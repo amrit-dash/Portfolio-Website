@@ -65,6 +65,7 @@ function AdminIcon({ name, size = 16 }) {
     case 'mobile': return (<svg {...p}><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>);
     case 'sun': return (<svg {...p}><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>);
     case 'terminal': return (<svg {...p}><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 9.5l3 2.5-3 2.5"/><path d="M12.5 15h4.5"/></svg>);
+    case 'os-window': return (<svg {...p}><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M2.5 8.6h19"/><circle cx="5.4" cy="6.6" r=".8" fill="currentColor" stroke="none"/><circle cx="7.7" cy="6.6" r=".8" fill="currentColor" stroke="none"/><circle cx="10" cy="6.6" r=".8" fill="currentColor" stroke="none"/><path d="M6 12l2.4 1.9L6 15.8"/><path d="M11 16h5"/></svg>);
     default: return <svg {...p} />;
   }
 }
