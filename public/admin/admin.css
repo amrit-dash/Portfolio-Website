@@ -175,8 +175,8 @@ body::before {
 
 /* header console-theme control — a small filled glowing accent square + popover */
 .cthm { position: relative; flex-shrink: 0; }
-.cthm__btn { width: 26px; height: 26px; border: 1px solid color-mix(in oklab, var(--accent) 70%, #000); border-radius: 7px; background: var(--accent); cursor: pointer; transition: all .14s; box-shadow: 0 0 12px -3px var(--accent); padding: 0; }
-.cthm__btn:hover, .cthm__btn[data-on="true"] { box-shadow: 0 0 16px -1px var(--accent); transform: translateY(-1px); }
+.cthm__btn { width: 18px; height: 18px; border: 1px solid color-mix(in oklab, var(--accent) 70%, #000); border-radius: 5px; background: var(--accent); cursor: pointer; transition: all .14s; box-shadow: 0 0 9px -3px var(--accent); padding: 0; }
+.cthm__btn:hover, .cthm__btn[data-on="true"] { box-shadow: 0 0 13px -1px var(--accent); transform: translateY(-1px); }
 .cthm__pop { position: absolute; top: calc(100% + 9px); left: 0; z-index: 60; width: 256px; padding: 13px; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 11px; box-shadow: var(--shadow); }
 /* compact, single-row accent swatches inside the console popover */
 .cthm__pop .swatches { flex-wrap: nowrap; gap: 6px; }
