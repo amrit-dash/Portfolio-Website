@@ -427,12 +427,12 @@ const NAV = [
 
 const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
 
-function Sidebar({ route, go, content, onLogout, open, onClose }) {
+function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
   return (
     <aside className={'side' + (open ? ' side--open' : '')}>
       <div className="side__brand">
-        <span className="side__mark"><AdminIcon name="terminal" size={15} /></span>
+        <span className="side__mark"><AdminIcon name="os-window" size={22} /></span>
         <span className="side__name">amrit.os<small>ADMIN CONSOLE</small></span>
         <button className="side__close" onClick={onClose} aria-label="Close menu"><AdminIcon name="x" size={16} /></button>
       </div>
@@ -457,6 +457,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose }) {
           </div>
         ))}
       </nav>
+      <SidebarAppearance theme={adminTheme} setTheme={setAdminTheme} accent={adminAccent} setAccent={setAdminAccent} />
       <div className="side__foot">
         <div className="side__user">
           <span className="side__avatar">AD</span>
@@ -468,14 +469,13 @@ function Sidebar({ route, go, content, onLogout, open, onClose }) {
   );
 }
 
-/* ---------- Topbar quick-appearance ----------
-   Surfaces front-end customization in the console header: a terminal-mark
-   button that drops a panel of accent swatches + one-click vibes, writing
-   straight to the draft cosmetics (same store path as the Appearance editor). */
-function TopbarAppearance({ content, setAt, go }) {
-  const { AdminIcon } = window.ADMIN_UI;
-  const VIBES = (window.ADMIN_EDITORS && window.ADMIN_EDITORS.VIBES) || [];
-  const ACCENTS = (window.ADMIN_EDITORS && window.ADMIN_EDITORS.ACCENT_OPTIONS) || [];
+/* ---------- Sidebar console-theme control ----------
+   Pinned at the bottom of the sidebar. Adjusts the ADMIN CONSOLE's own theme +
+   accent only (persisted to amritos.admin.*) — it never touches the portfolio's
+   cosmetics, which are owned by the Appearance editor. */
+function SidebarAppearance({ theme, setTheme, accent, setAccent }) {
+  const { AdminIcon, Segmented } = window.ADMIN_UI;
+  const ACCENTS = (window.ADMIN_EDITORS && window.ADMIN_EDITORS.ACCENT_OPTIONS) || ['#c8e856', '#33ff66', '#ff7a3d', '#7a9eff', '#ffd25a', '#e85c89', '#9d7cff'];
   const [open, setOpen] = useAState(false);
   const ref = useARef(null);
   useAEffect(() => {
@@ -484,32 +484,24 @@ function TopbarAppearance({ content, setAt, go }) {
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
-  const c = (content && content.cosmetics) || {};
-  const applyVibe = (v) => { Object.entries(v.cos).forEach(([k, val]) => setAt('cosmetics.' + k, val)); setAt('cosmetics.vibe', v.id); };
   return (
-    <div className="qa" ref={ref}>
-      <button className="qa__btn" onClick={() => setOpen((o) => !o)} title="Quick appearance" aria-expanded={open}>
-        <AdminIcon name="terminal" size={15} />
-        <span className="qa__dot" style={{ background: c.accent || 'var(--accent)' }} />
-        <AdminIcon name="chevron-down" size={13} />
+    <div className="side__theme" ref={ref}>
+      <button className="navitem side__themebtn" data-active={open} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <AdminIcon name="palette" size={16} />
+        <span>Console theme</span>
+        <span className="side__themedot" style={{ background: accent }} />
       </button>
       {open && (
-        <div className="qa__pop">
-          <div className="qa__lbl">Accent</div>
+        <div className="side__themepop">
+          <div className="qa__lbl">Console mode</div>
+          <Segmented value={theme} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} onChange={setTheme} />
+          <div className="qa__lbl" style={{ marginTop: 12 }}>Console accent</div>
           <div className="qa__swatches">
             {ACCENTS.map((col) => (
-              <button key={col} className="qa__swatch" data-on={(c.accent || '').toLowerCase() === col.toLowerCase()} style={{ background: col }} title={col} onClick={() => setAt('cosmetics.accent', col)} />
+              <button key={col} className="qa__swatch" data-on={(accent || '').toLowerCase() === col.toLowerCase()} style={{ background: col }} title={col} onClick={() => setAccent(col)} />
             ))}
           </div>
-          <div className="qa__lbl">Vibe</div>
-          <div className="qa__vibes">
-            {VIBES.map((v) => (
-              <button key={v.id} className="qa__vibe" data-on={c.vibe === v.id} onClick={() => applyVibe(v)} title={v.desc}>
-                <span className="qa__vibe-sw" style={{ background: v.cos.accent }} />{v.label}
-              </button>
-            ))}
-          </div>
-          <button className="qa__more" onClick={() => { setOpen(false); go('appearance'); }}>All appearance settings →</button>
+          <p className="helptext" style={{ marginTop: 10, marginBottom: 0, fontSize: 11 }}>Styles this console only — the portfolio's look lives in <b style={{ color: 'var(--fg)' }}>Appearance</b>.</p>
         </div>
       )}
     </div>
@@ -525,6 +517,19 @@ function AdminApp() {
   const [authError, setAuthError] = useAState(null);
   const [authBusy, setAuthBusy] = useAState(false);
   const [navOpen, setNavOpen] = useAState(false); // mobile sidebar drawer
+
+  // Console-only theme + accent (separate from the portfolio's cosmetics). The
+  // portfolio is styled via the Appearance editor; this only restyles the
+  // admin shell and its terminal-window favicon.
+  const [adminTheme, setAdminTheme] = useAState(() => { try { return localStorage.getItem('amritos.admin.theme') || 'dark'; } catch (e) { return 'dark'; } });
+  const [adminAccent, setAdminAccent] = useAState(() => { try { return localStorage.getItem('amritos.admin.accent') || '#c8e856'; } catch (e) { return '#c8e856'; } });
+  useAEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = adminTheme === 'light' ? 'light' : 'dark';
+    root.style.setProperty('--accent-raw', adminAccent);
+    try { localStorage.setItem('amritos.admin.theme', adminTheme); localStorage.setItem('amritos.admin.accent', adminAccent); } catch (e) {}
+    if (window.applyFavicon) window.applyFavicon(adminAccent, 'os-window'); // admin keeps the terminal-window mark
+  }, [adminTheme, adminAccent]);
 
   useAEffect(() => {
     if (!window.fb || !window.fb.auth) { setAuthError('Firebase failed to load.'); setAuthReady(true); return; }
@@ -604,13 +609,13 @@ function AdminApp() {
   return (
     <div className="shell">
       <div className="nav-scrim" data-open={navOpen} onClick={() => setNavOpen(false)} />
-      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)} />
+      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
+        adminTheme={adminTheme} setAdminTheme={setAdminTheme} adminAccent={adminAccent} setAdminAccent={setAdminAccent} />
       <div className="main">
         <div className="topbar">
           <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu"><AdminIcon name="menu" size={18} /></button>
           <span className="topbar__crumb">amrit.os / <b>{TITLES[route] || route}</b></span>
           <span className="topbar__spacer" />
-          <span className="topbar__hide-sm"><TopbarAppearance content={content} setAt={setAt} go={go} /></span>
           {flash
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + (dirty ? '' : ' saved')}><span className="dot" />{dirty ? 'Draft · unpublished changes' : 'All changes published'}</span>}
