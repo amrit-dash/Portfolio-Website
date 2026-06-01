@@ -440,11 +440,14 @@ const NAV = [
     { id: 'media', label: 'CV & media', icon: 'media' },
     { id: 'appearance', label: 'Appearance', icon: 'palette' },
   ] },
-  { group: 'ASSISTANT', items: [{ id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' }] },
+  { group: 'ASSISTANT', items: [
+    { id: 'agent', label: 'Agent', icon: 'sparkle' },
+    { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
+  ] },
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
 ];
 
-const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
+const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', sync: 'Sync & deploy' };
 
 function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
@@ -594,7 +597,7 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, saveLLMConfig } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, saveLLMConfig, setAgentTurnPending, registerFieldFocus, unregisterFieldFocus } = window.ADMIN_STORE.useContent();
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
@@ -626,27 +629,30 @@ function AdminApp() {
   if (!authReady) return <div className="login"><div className="login__crt"><div className="login__body" style={{ textAlign: 'center', color: 'var(--fg-mute)' }}>Checking session…</div></div></div>;
   if (!user) return <Login onGoogle={signInGoogle} error={authError} busy={authBusy} />;
 
-  const E = window.ADMIN_EDITORS, WP = window.ADMIN_EDITORS_WP, BOT = window.ADMIN_BOT;
+  const E = window.ADMIN_EDITORS, WP = window.ADMIN_EDITORS_WP, BOT = window.ADMIN_BOT, AGENT = window.ADMIN_AGENT;
+  const fieldProps = { registerFieldFocus, unregisterFieldFocus };
   const renderRoute = () => {
     switch (route) {
       case 'overview': return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
       case 'analytics': return <AnalyticsPage analytics={analytics} onReset={resetAnalytics} />;
-      case 'hero': return <E.HeroEditor content={content} setAt={setAt} />;
-      case 'about': return <E.AboutEditor content={content} setAt={setAt} />;
-      case 'expertise': return <E.ExpertiseEditor content={content} setAt={setAt} />;
-      case 'work': return <WP.WorkEditor content={content} setAt={setAt} />;
-      case 'projects': return <WP.ProjectsEditor content={content} setAt={setAt} />;
-      case 'cards': return <E.CardsEditor content={content} setAt={setAt} />;
-      case 'contact': return <E.ContactEditor content={content} setAt={setAt} />;
-      case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} />;
-      case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
-      case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
+      case 'hero': return <E.HeroEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'about': return <E.AboutEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'expertise': return <E.ExpertiseEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'work': return <WP.WorkEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'projects': return <WP.ProjectsEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'cards': return <E.CardsEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'contact': return <E.ContactEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} {...fieldProps} />;
+      case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} {...fieldProps} />;
+      case 'agent': return <AGENT.AgentPage />;
+      case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} {...fieldProps} />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={reset} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
     }
   };
 
   return (
+    <AGENT.AgentProvider currentRoute={route} setAgentTurnPending={setAgentTurnPending} go={go} onPreview={() => openPreview('draft')}>
     <div className="shell">
       <div className="nav-scrim" data-open={navOpen} onClick={() => setNavOpen(false)} />
       <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
@@ -666,7 +672,9 @@ function AdminApp() {
       </div>
       <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
         content={content} publishedContent={window.ADMIN_STORE.Store.loadPublished()} dirty={dirty} onDiscard={doDiscard} />
+      <AGENT.AgentDock />
     </div>
+    </AGENT.AgentProvider>
   );
 }
 
