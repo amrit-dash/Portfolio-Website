@@ -622,14 +622,13 @@ window.LLM_PROVIDERS      = LLM_PROVIDERS;
    The portfolio and admin consoles each apply their own. */
 window.buildFavicon = function (accent) {
   const a = encodeURIComponent(accent || '#c8e856');
+  // "Spark" — a four-point star cut out of a solid accent app-tile. Keeps the
+  // tile-tints-to-accent dynamic style; reads as an AI/automation spark.
   return "data:image/svg+xml,"
     + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
     + "%3Crect width='32' height='32' rx='7' fill='" + a + "'/%3E"            // accent app tile
-    + "%3Cg transform='rotate(-22 16 16)'%3E"
-    + "%3Cellipse cx='16' cy='16' rx='10.5' ry='5' fill='none' stroke='%230c0d0a' stroke-width='1.8'/%3E" // orbit ring
-    + "%3Ccircle cx='26.5' cy='16' r='1.8' fill='%230c0d0a'/%3E"             // moon on the ring
-    + "%3C/g%3E"
-    + "%3Ccircle cx='16' cy='16' r='4.3' fill='%230c0d0a'/%3E"               // planet / core
+    + "%3Cpath d='M16 4.2C17 12 20 15 27.8 16 20 17 17 20 16 27.8 15 20 12 17 4.2 16 12 15 15 12 16 4.2Z' fill='%230c0d0a'/%3E" // big spark
+    + "%3Cpath d='M25.2 5.2C25.5 7.7 26.3 8.5 28.8 8.8 26.3 9.1 25.5 9.9 25.2 12.4 24.9 9.9 24.1 9.1 21.6 8.8 24.1 8.5 24.9 7.7 25.2 5.2Z' fill='%230c0d0a'/%3E" // small accent spark
     + "%3C/svg%3E";
 };
 window.buildOsWindowFavicon = function (accent) {
