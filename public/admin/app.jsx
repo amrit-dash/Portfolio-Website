@@ -440,11 +440,15 @@ const NAV = [
     { id: 'media', label: 'CV & media', icon: 'media' },
     { id: 'appearance', label: 'Appearance', icon: 'palette' },
   ] },
-  { group: 'ASSISTANT', items: [{ id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' }] },
+  { group: 'ASSISTANT', items: [
+    { id: 'agent', label: 'Agent', icon: 'sparkle' },
+    { id: 'agent-settings', label: 'Agent settings', icon: 'settings' },
+    { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
+  ] },
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
 ];
 
-const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', bot: 'AmritBot', sync: 'Sync & deploy' };
+const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', 'agent-settings': 'Agent settings', bot: 'AmritBot', sync: 'Sync & deploy' };
 
 function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
@@ -594,7 +598,7 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, saveLLMConfig } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, saveLLMConfig, setAgentBusy } = window.ADMIN_STORE.useContent();
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
@@ -641,6 +645,8 @@ function AdminApp() {
       case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} />;
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
+      case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
+      case 'agent-settings': return <window.ADMIN_AGENT_SETTINGS.AgentSettingsPage />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={reset} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
     }
@@ -666,6 +672,7 @@ function AdminApp() {
       </div>
       <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
         content={content} publishedContent={window.ADMIN_STORE.Store.loadPublished()} dirty={dirty} onDiscard={doDiscard} />
+      <window.ADMIN_AGENT.AgentDock route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
     </div>
   );
 }

@@ -332,6 +332,116 @@ const Store = {
       await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() });
     } catch (e) { console.warn('[store] fsPublish failed', e && e.message); }
   },
+
+  /* ---------- Admin AGENT config (config/agent — the agent's OWN keys) ----------
+     SEPARATE from the bot's config/llm. The owner pastes billable keys here for
+     better models; the public bot never reads them, and they are owner-only in
+     firestore.rules (config/{doc}). Shape mirrors config/llm:
+       { active, byProvider:{ [id]:{ apiKey, model } }, refinerModel } */
+  async fsLoadAgentConfig() {
+    const defaults = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.AGENT_CONFIG_DEFAULTS) || { active: 'gemini', byProvider: {} };
+    if (!this.fsReady()) return JSON.parse(JSON.stringify(defaults));
+    try {
+      const s = await window.fb.db.doc('config/agent').get();
+      const data = s.exists ? s.data() : {};
+      return {
+        active: data.active || defaults.active,
+        byProvider: (data.byProvider && typeof data.byProvider === 'object') ? data.byProvider : (defaults.byProvider || {}),
+        refinerModel: data.refinerModel || '',
+      };
+    } catch (e) { console.warn('[store] fsLoadAgentConfig failed', e && e.message); return JSON.parse(JSON.stringify(defaults)); }
+  },
+  async fsSaveAgentConfig(config) {
+    if (!this.fsReady()) return false;
+    try {
+      await window.fb.db.doc('config/agent').set({
+        active: config.active || 'gemini',
+        byProvider: config.byProvider || {},
+        refinerModel: config.refinerModel || '',
+        updatedAt: window.fb.serverTimestamp(),
+      }, { merge: true });
+      return true;
+    } catch (e) { console.warn('[store] fsSaveAgentConfig failed', e && e.message); return false; }
+  },
+
+  /* ---------- Agent endpoint calls (owner idToken; key stays server-side) ---------- */
+  async _ownerToken() {
+    if (!this.fsReady() || !window.fb.auth.currentUser) return null;
+    return window.fb.auth.currentUser.getIdToken();
+  },
+  async agentTurn({ message, currentRoute, inboxMode, chatId }) {
+    const tok = await this._ownerToken();
+    if (!tok) return { error: 'not-signed-in' };
+    try {
+      const r = await fetch(window.FUNCTIONS_BASE + '/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+        body: JSON.stringify({ message, currentRoute, inboxMode: !!inboxMode, chatId: chatId || 'default' }),
+      });
+      return await r.json();
+    } catch (e) { return { error: 'network', message: e && e.message }; }
+  },
+  async agentUndo(chatId) {
+    const tok = await this._ownerToken();
+    if (!tok) return { error: 'not-signed-in' };
+    try {
+      const r = await fetch(window.FUNCTIONS_BASE + '/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+        body: JSON.stringify({ action: 'undo', chatId: chatId || 'default' }),
+      });
+      return await r.json();
+    } catch (e) { return { error: 'network', message: e && e.message }; }
+  },
+  async agentRevertPath(path, before) {
+    const tok = await this._ownerToken();
+    if (!tok) return { error: 'not-signed-in' };
+    try {
+      const r = await fetch(window.FUNCTIONS_BASE + '/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+        body: JSON.stringify({ action: 'revert-path', path, before }),
+      });
+      return await r.json();
+    } catch (e) { return { error: 'network', message: e && e.message }; }
+  },
+  // Chat history + clear (owner-only Firestore reads).
+  async fsLoadAgentMessages(chatId, n) {
+    if (!this.fsReady()) return [];
+    try {
+      const s = await window.fb.db.collection(`agent_chats/${chatId || 'default'}/messages`).orderBy('ts', 'asc').limit(n || 200).get();
+      return s.docs.map((d) => d.data());
+    } catch (e) { return []; }
+  },
+  async fsClearAgentChat(chatId) {
+    if (!this.fsReady()) return false;
+    try {
+      const col = window.fb.db.collection(`agent_chats/${chatId || 'default'}/messages`);
+      const snap = await col.limit(400).get();
+      const batch = window.fb.db.batch();
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      return true;
+    } catch (e) { console.warn('[store] fsClearAgentChat failed', e && e.message); return false; }
+  },
+
+  /* ---------- Live draft listener (U14) ----------
+     Subscribe to content/draft so the agent's server-side writes appear in the
+     open admin tab. Returns an unsubscribe fn. The callback gets
+     { content, updatedAtMs } on every remote change (including our own echoes —
+     the hook de-dupes those by comparing JSON). */
+  fsDraftListen(cb) {
+    if (!this.fsReady()) return () => {};
+    return window.fb.db.doc('content/draft').onSnapshot(
+      (s) => {
+        if (!s.exists) return;
+        const d = s.data() || {};
+        const ts = d.updatedAt && d.updatedAt.toMillis ? d.updatedAt.toMillis() : 0;
+        cb({ content: d.content || null, updatedAtMs: ts });
+      },
+      (e) => console.warn('[store] draft listen', e && e.message)
+    );
+  },
 };
 
 function fmtRelative(ms) {
@@ -355,7 +465,25 @@ function useContent() {
   const [dirty, setDirty] = React.useState(false);
   const [publishedAt, setPublishedAt] = React.useState(() => Store.read('amritos.publishedAt'));
   const [synced, setSynced] = React.useState(false); // true once Firestore draft adopted/seeded
+  const [agentBusy, setAgentBusyState] = React.useState(false);
   const draftTimer = React.useRef(null);
+  // U14 concurrency state:
+  //  agentBusyRef — while a client-initiated agent turn is in flight, autosave is
+  //    paused so the client's stale whole-doc .set() can't clobber the agent write.
+  //  lastJsonRef  — JSON of the content we last held/saved, so the live listener
+  //    can tell our own echo from a genuine remote (agent) change.
+  //  pendingRemoteRef — a remote change that arrived while a field was focused; it
+  //    is adopted once focus leaves (so we never stomp the value under the cursor).
+  const agentBusyRef = React.useRef(false);
+  const lastJsonRef = React.useRef('');
+  const pendingRemoteRef = React.useRef(null);
+  const setAgentBusy = React.useCallback((b) => { agentBusyRef.current = !!b; setAgentBusyState(!!b); }, []);
+  const isEditingField = () => {
+    const el = typeof document !== 'undefined' ? document.activeElement : null;
+    if (!el) return false;
+    const tag = (el.tagName || '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  };
 
   // When the owner signs in, adopt the Firestore draft (or seed it from the
   // current local content if none exists). After this, Firestore is the source
@@ -369,9 +497,10 @@ function useContent() {
         const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
         Store.saveDraft(merged);
         setContent(merged);
+        lastJsonRef.current = JSON.stringify(merged);
       } else {
         // No remote draft yet — seed it from whatever we have locally.
-        setContent((cur) => { Store.fsSaveDraft(cur); return cur; });
+        setContent((cur) => { Store.fsSaveDraft(cur); lastJsonRef.current = JSON.stringify(cur); return cur; });
       }
       setSynced(true);
     });
@@ -382,9 +511,53 @@ function useContent() {
   // per keystroke while still keeping the cross-device draft current.
   const scheduleDraftSync = React.useCallback((next) => {
     if (!Store.fsReady()) return;
+    // Pause autosave while an agent turn is in flight: a debounced stale whole-doc
+    // .set() here would clobber the agent's server write (U14 / KD2).
+    if (agentBusyRef.current) return;
     if (draftTimer.current) clearTimeout(draftTimer.current);
+    // Record our own latest content so the live listener treats the resulting
+    // snapshot as an echo, not a remote change.
+    lastJsonRef.current = JSON.stringify(next);
     draftTimer.current = setTimeout(() => { Store.fsSaveDraft(next); }, 1000);
   }, []);
+
+  // U14 — adopt the agent's server-side draft writes into the open editor, and
+  // keep the dedicated Agent page + floating dock in sync, WITHOUT stomping the
+  // field the owner is actively editing.
+  const adoptRemoteDraft = React.useCallback((remote) => {
+    if (!remote) return;
+    const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
+    const json = JSON.stringify(merged);
+    if (json === lastJsonRef.current) return; // our own echo
+    lastJsonRef.current = json;
+    Store.saveDraft(merged);
+    setContent(merged);
+  }, []);
+
+  React.useEffect(() => {
+    if (!window.fb || !window.fb.auth) return;
+    let unsub = null;
+    const unsubAuth = window.fb.auth.onAuthStateChanged((u) => {
+      if (unsub) { unsub(); unsub = null; }
+      if (!u) return;
+      unsub = Store.fsDraftListen(({ content: remote }) => {
+        if (!remote) return;
+        const json = JSON.stringify(normalizeContent(deepMerge(buildDefaultContent(), remote)));
+        if (json === lastJsonRef.current) return; // echo of our own write
+        // Defer adoption while a field is focused so we never replace the value
+        // under the cursor; the flush interval below picks it up on blur/idle.
+        if (isEditingField()) { pendingRemoteRef.current = remote; return; }
+        adoptRemoteDraft(remote);
+      });
+    });
+    // Flush a deferred remote change once the owner stops editing.
+    const flush = setInterval(() => {
+      if (pendingRemoteRef.current && !isEditingField()) {
+        const r = pendingRemoteRef.current; pendingRemoteRef.current = null; adoptRemoteDraft(r);
+      }
+    }, 1200);
+    return () => { if (unsub) unsub(); unsubAuth(); clearInterval(flush); };
+  }, [adoptRemoteDraft]);
 
   const setAt = React.useCallback((path, value) => {
     let computed;
@@ -459,7 +632,7 @@ function useContent() {
     });
   }, []);
 
-  return { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig };
+  return { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig, agentBusy, setAgentBusy, adoptRemoteDraft };
 }
 
 /* ---------- Analytics hook (real-time, Firestore-backed) ----------

@@ -534,3 +534,58 @@ body::before {
   .canvas { padding: 18px 16px 96px; }
   .grid2 { grid-template-columns: 1fr; }
 }
+
+/* =====================================================
+   Agent surface — chat page, message bubbles, dock
+   ===================================================== */
+.linkbtn { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: 0 4px; text-decoration: underline; }
+.linkbtn:hover { opacity: .8; }
+
+.agentpage { display: flex; flex-direction: column; gap: 12px; }
+.agentpage__bar { display: flex; align-items: center; gap: 10px; }
+
+.agentchat { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-card); overflow: hidden; }
+.agentchat__scroll { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 320px; max-height: 56vh; }
+.agentchat--compact .agentchat__scroll { min-height: 200px; max-height: 46vh; }
+.agentchat__empty { color: var(--fg-mute); font-size: 13px; line-height: 1.6; }
+.agentchat__compose { border-top: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-elev); }
+.agentchat__input { width: 100%; resize: vertical; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+.agentchat__composebar { display: flex; align-items: center; gap: 10px; }
+.agentchat__inbox { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-dim); }
+
+.agentmsg { max-width: 92%; }
+.agentmsg--user { align-self: flex-end; }
+.agentmsg--user .agentmsg__body { background: var(--accent); color: var(--accent-fg); border-radius: 12px 12px 2px 12px; padding: 8px 12px; }
+.agentmsg--bot { align-self: flex-start; width: 100%; }
+.agentmsg--bot .agentmsg__body { background: var(--surface); border: 1px solid var(--line); border-radius: 12px 12px 12px 2px; padding: 8px 12px; color: var(--fg); white-space: pre-wrap; }
+.agentmsg__typing { color: var(--fg-mute); font-style: italic; }
+.agentmeta { font-size: 10px; color: var(--fg-mute); margin-top: 4px; font-family: var(--font-mono); }
+
+.agenttools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.toolchip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; background: var(--bg-elev); border: 1px solid var(--line-2); border-radius: 6px; padding: 2px 7px; color: var(--fg-dim); }
+.toolchip--err { border-color: var(--danger); color: var(--danger); }
+
+.agentchanges { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-elev); padding: 10px; }
+.agentchanges__hd { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-dim); margin-bottom: 6px; }
+.agentchanges__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.agentchanges__list li { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.agentchanges__list code { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.agentreview { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* Floating dock */
+.agentdock { position: fixed; right: 20px; bottom: 20px; z-index: 60; }
+.agentdock__bubble { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; cursor: pointer; box-shadow: var(--shadow); }
+.agentdock__bubble:hover { filter: brightness(1.05); }
+.agentdock__pulse { position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--accent); animation: agentpulse 1.2s ease-out infinite; }
+@keyframes agentpulse { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.4); opacity: 0; } }
+.agentdock__panel { width: min(420px, calc(100vw - 32px)); height: min(620px, calc(100vh - 120px)); display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--line-2); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.agentdock__panel .agentchat { flex: 1; border: 0; border-radius: 0; }
+.agentdock__hd { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--bg-elev); }
+.agentdock__title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
+.agentdock__btn { background: none; border: 0; color: var(--fg-dim); cursor: pointer; padding: 4px; border-radius: 6px; }
+.agentdock__btn:hover { background: var(--surface); color: var(--fg); }
+
+@media (max-width: 640px) {
+  .agentdock { right: 12px; bottom: 76px; }
+  .agentdock__panel { width: calc(100vw - 24px); height: min(70vh, calc(100vh - 140px)); }
+}

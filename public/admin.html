@@ -35,13 +35,18 @@
   <!-- Site data (seeds the dashboard with current content) -->
   <script type="text/babel" data-presets="env,react" src="data.jsx"></script>
 
-  <!-- Admin app (order matters: store → ui → crop → editors → bot → app) -->
+  <!-- Shared enums + agent config schema (plain JS global; loaded by agent UI) -->
+  <script src="shared-schema.js"></script>
+
+  <!-- Admin app (order matters: store → ui → crop → editors → bot → agent → app) -->
   <script type="text/babel" data-presets="env,react" src="admin/store.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/ui.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/crop.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/editors.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/editors-wp.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/bot.jsx"></script>
+  <script type="text/babel" data-presets="env,react" src="admin/agent.jsx"></script>
+  <script type="text/babel" data-presets="env,react" src="admin/agent-settings.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="admin/app.jsx"></script>
 </body>
 </html>
