@@ -1319,12 +1319,25 @@ function App() {
     return () => { if (typeof unsub === 'function') unsub(); };
   }, []);
 
+  // Preview iframe always reflects the published "Default mode"; real visitors
+  // keep a choice only once they've explicitly toggled (amritos.theme.explicit),
+  // otherwise they land on the published default. This is what makes the admin's
+  // Default-mode switch actually move the live site + preview.
+  const isPreview = (() => { try { return new URLSearchParams(location.search).has('adminpreview'); } catch (e) { return false; } })();
   const [theme, setTheme] = useState(() => {
+    const cosm = ((CONTENT && CONTENT.cosmetics && CONTENT.cosmetics.theme) === 'light') ? 'light' : 'dark';
+    if (isPreview) return cosm;
+    const explicit = localStorage.getItem('amritos.theme.explicit') === '1';
     const stored = localStorage.getItem('amritos.theme');
-    if (stored) return stored;
-    const cosm = (CONTENT && CONTENT.cosmetics && CONTENT.cosmetics.theme) || 'dark';
-    return cosm === 'light' ? 'light' : 'dark';
+    if (explicit && stored) return stored === 'light' ? 'light' : 'dark';
+    return cosm;
   });
+  // Visitor-initiated toggle: records an explicit preference so it sticks across
+  // future default changes (preview ignores the flag so the admin always sees the default).
+  const chooseTheme = useCallback((next) => {
+    try { localStorage.setItem('amritos.theme.explicit', '1'); } catch (e) {}
+    setTheme(next);
+  }, []);
   const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
   const active = useActiveSection(['intro', 'about', 'expertise', 'work', 'projects', 'contact']);
   useReveal();
@@ -1337,10 +1350,17 @@ function App() {
   useEffect(() => {
     if (!liveCos) return;
     const next = {};
-    ['accent', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale'].forEach((k) => {
+    ['accent', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale',
+     'headingFont', 'tracking', 'bgPattern', 'glow', 'radius'].forEach((k) => {
       if (liveCos[k] !== undefined) next[k] = liveCos[k];
     });
     setTweak(next);
+    // Default mode follows the published cosmetics: always in preview, and for
+    // real visitors who haven't explicitly toggled their own theme.
+    if (liveCos.theme) {
+      const explicit = localStorage.getItem('amritos.theme.explicit') === '1';
+      if (isPreview || !explicit) setTheme(liveCos.theme === 'light' ? 'light' : 'dark');
+    }
   }, [liveCos]);
 
   // Log a page view on every load (skip the admin's live-preview iframe so
@@ -1424,7 +1444,7 @@ function App() {
         <MenuBar
           theme={theme}
           active={navActive}
-          onToggleTheme={() => setTheme((t) => t === 'dark' ? 'light' : 'dark')} />
+          onToggleTheme={() => chooseTheme(theme === 'dark' ? 'light' : 'dark')} />
         
         <Hero botIcon={t.botIcon} botIconColor={t.botIconColor} />
         <AboutWindow cvUrl={cvUrl} cvVariant={cvVariant} />
