@@ -53,7 +53,20 @@ async function postAgentTurn({ chatId, message, currentRoute, attachments }) {
     body: JSON.stringify({ chatId, message, currentRoute, attachments: attachments || [] }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || ('Agent request failed (' + res.status + ')'));
+  if (!res.ok) throw new Error(data.error || data.message || ('Agent request failed (' + res.status + ')'));
+  return data;
+}
+
+async function postAgentAction({ action, chatId, path, before }) {
+  const base = window.FUNCTIONS_BASE;
+  if (!base) throw new Error('Functions base URL not configured.');
+  const res = await fetch(base + '/agent', {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({ action, chatId, path, before }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.message || ('Agent action failed (' + res.status + ')'));
   return data;
 }
 
@@ -97,6 +110,36 @@ function AgentProvider({ children, currentRoute, setAgentTurnPending, go, onPrev
 
   const value = {
     messages, busy, send, clearChat, lastTurn, go, onPreview, currentRoute,
+    chatId: chatIdRef.current,
+    undoLast: useAgCallback(async () => {
+      if (busy) return;
+      setBusy(true);
+      if (setAgentTurnPending) setAgentTurnPending(true);
+      try {
+        await postAgentAction({ action: 'undo', chatId: chatIdRef.current });
+        setMessages((m) => [...m, { role: 'sys', text: '↩ Turn undone — draft restored from snapshot.' }]);
+        setLastTurn(null);
+      } catch (e) {
+        setMessages((m) => [...m, { role: 'sys', text: '⚠ Undo failed: ' + ((e && e.message) || 'unavailable') }]);
+      } finally {
+        setBusy(false);
+        if (setAgentTurnPending) setAgentTurnPending(false);
+      }
+    }, [busy, setAgentTurnPending]),
+    revertPath: useAgCallback(async (path, before) => {
+      if (busy) return;
+      setBusy(true);
+      if (setAgentTurnPending) setAgentTurnPending(true);
+      try {
+        await postAgentAction({ action: 'revert-path', chatId: chatIdRef.current, path, before });
+        setMessages((m) => [...m, { role: 'sys', text: '↩ Reverted · ' + path }]);
+      } catch (e) {
+        setMessages((m) => [...m, { role: 'sys', text: '⚠ Revert failed: ' + ((e && e.message) || 'unavailable') }]);
+      } finally {
+        setBusy(false);
+        if (setAgentTurnPending) setAgentTurnPending(false);
+      }
+    }, [busy, setAgentTurnPending]),
   };
   return <AgentCtx.Provider value={value}>{children}</AgentCtx.Provider>;
 }
@@ -135,10 +178,33 @@ function ReviewLinks({ changedPaths, go, onPreview }) {
   );
 }
 
+function UndoBar({ lastTurn, undoLast, revertPath, busy }) {
+  const { Btn } = window.ADMIN_UI;
+  if (!lastTurn || !lastTurn.changedPaths || !lastTurn.changedPaths.length) return null;
+  const perPath = lastTurn.perPathUndo || [];
+  return (
+    <div className="agent-undo">
+      <Btn sm kind="ghost" icon="reset" onClick={undoLast} disabled={busy}>Undo last turn</Btn>
+      {perPath.slice(0, 6).map((p) => (
+        <Btn
+          key={p.path}
+          sm
+          kind="ghost"
+          onClick={() => revertPath(p.path, p.before)}
+          disabled={busy}
+          title={'Revert ' + p.path}
+        >
+          ↩ {p.path.split('.').slice(-1)[0]}
+        </Btn>
+      ))}
+    </div>
+  );
+}
+
 /* ---------- Chat panel (shared by page + dock) ---------- */
 function AgentChat({ compact }) {
   const { AdminIcon, Btn } = window.ADMIN_UI;
-  const { messages, busy, send, clearChat, lastTurn, go, onPreview } = useAgent();
+  const { messages, busy, send, clearChat, lastTurn, go, onPreview, undoLast, revertPath } = useAgent();
   const [input, setInput] = useAgState('');
   const bodyRef = useAgRef(null);
 
@@ -175,6 +241,7 @@ function AgentChat({ compact }) {
             Last turn · {lastTurn.changedPaths.length} path{lastTurn.changedPaths.length === 1 ? '' : 's'} changed
           </span>
           <ReviewLinks changedPaths={lastTurn.changedPaths} go={go} onPreview={onPreview} />
+          <UndoBar lastTurn={lastTurn} undoLast={undoLast} revertPath={revertPath} busy={busy} />
         </div>
       )}
       <form className="chat__in" onSubmit={submit}>
@@ -203,7 +270,7 @@ function AgentPage() {
         </Panel>
         <Panel title="How it works" tight>
           <div className="bars">
-            {[['Draft-only', 'Never auto-publishes — you ship when ready'], ['Undo', 'Turn-level undo restores the pre-turn snapshot (when backend is live)'], ['Review', 'Each changed section gets a review link + live preview'], ['Safe', 'Provider keys and bot behaviors are blocklisted']].map(([a, b]) => (
+            {[['Draft-only', 'Never auto-publishes — you ship when ready'], ['Undo', 'Turn-level undo + per-path revert from audit trail'], ['Review', 'Each changed section gets a review link + live preview'], ['Safe', 'Provider keys and bot behaviors are blocklisted']].map(([a, b]) => (
               <div className="barrow" key={a} style={{ gridTemplateColumns: '110px 1fr' }}>
                 <span className="mono" style={{ color: 'var(--accent)', fontSize: 11 }}>{a}</span>
                 <span className="helptext">{b}</span>
@@ -259,4 +326,4 @@ function AgentDock() {
   );
 }
 
-window.ADMIN_AGENT = { AgentProvider, AgentPage, AgentDock, useAgent, routeForPath, postAgentTurn };
+window.ADMIN_AGENT = { AgentProvider, AgentPage, AgentDock, useAgent, routeForPath, postAgentTurn, postAgentAction };

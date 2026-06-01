@@ -452,6 +452,7 @@ body::before {
 .agent-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; }
 .agent-tools__chip { font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; padding: 3px 8px; border-radius: 6px; background: color-mix(in oklab, var(--accent) 12%, var(--bg-card)); border: 1px solid var(--line-2); color: var(--fg-dim); }
 .agent-review { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.agent-undo { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: 4px; }
 .agent-dock { position: fixed; right: 18px; bottom: 18px; z-index: 70; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
 .agent-dock--open { pointer-events: auto; }
 .agent-dock__bubble { pointer-events: auto; width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--accent); color: var(--accent-fg); box-shadow: 0 8px 28px rgba(0,0,0,.35); cursor: pointer; display: grid; place-items: center; transition: transform .18s; }

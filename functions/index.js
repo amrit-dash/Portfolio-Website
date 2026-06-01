@@ -436,6 +436,7 @@ async function getAgentProviderKey(provider) {
 /*  /agent — owner-only agentic tool loop                */
 /* ===================================================== */
 const { runAgentTurn } = require('./agent/loop');
+const { undoLastChange, revertPath } = require('./agent/content-ops');
 
 exports.agent = onRequest(async (req, res) => {
   cors(req, res);
@@ -445,7 +446,33 @@ exports.agent = onRequest(async (req, res) => {
   const owner = await verifyOwner(req);
   if (!owner) return res.status(403).json({ error: 'forbidden' });
 
-  const { chatId, message, currentRoute, inboxMode } = req.body || {};
+  const body = req.body || {};
+  const { action, chatId, path: revertPathStr, before } = body;
+
+  if (action === 'undo') {
+    try {
+      const result = await undoLastChange({ db, FieldValue, chatId: chatId || 'default' });
+      return res.status(result.ok ? 200 : 404).json(result);
+    } catch (e) {
+      console.error('[agent/undo]', e && e.message);
+      return res.status(500).json({ error: 'internal', message: e && e.message });
+    }
+  }
+
+  if (action === 'revert-path') {
+    if (!revertPathStr || typeof revertPathStr !== 'string') {
+      return res.status(400).json({ error: 'no-path' });
+    }
+    try {
+      const result = await revertPath({ db, FieldValue, path: revertPathStr, beforeValue: before });
+      return res.status(result.ok ? 200 : 400).json(result);
+    } catch (e) {
+      console.error('[agent/revert]', e && e.message);
+      return res.status(500).json({ error: 'internal', message: e && e.message });
+    }
+  }
+
+  const { message, currentRoute, inboxMode } = body;
   if (!message || typeof message !== 'string') return res.status(400).json({ error: 'no-message' });
 
   const agentConfig = await getAgentConfig();
