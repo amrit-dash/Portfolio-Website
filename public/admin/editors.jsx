@@ -54,20 +54,27 @@ const TRACKING_OPTIONS = [
   { value: 'wide', label: 'Wide' },
 ];
 
-/* One-click "vibes" — bundles that set accent + fonts + cursor + effects +
-   background + glow + radius together. Each writes the full cosmetic set so a
-   switch is fully deterministic (no leftover state from the previous vibe). */
+/* One-click "vibes" — bundles that set theme + accent + fonts + cursor +
+   effects + background + glow + radius together. Each writes the full cosmetic
+   set (including dark/light mode) so a switch is fully deterministic — no
+   leftover state from the previous vibe. */
 const VIBES = [
-  { id: 'classic', label: 'Classic', desc: 'Lime CRT · Newsreader',
-    cos: { accent: '#c8e856', type: 'default', headingFont: 'match', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#c8e856', scanlines: true, bgPattern: 'grid', glow: 100, radius: 'soft' } },
-  { id: 'matrix', label: 'Matrix', desc: 'Green · pixel · scan',
-    cos: { accent: '#33ff66', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#33ff66', scanlines: true, bgPattern: 'scan', glow: 140, radius: 'sharp' } },
-  { id: 'sunset', label: 'Sunset', desc: 'Amber · soft · dots',
-    cos: { accent: '#ff7a3d', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ffd25a', scanlines: false, bgPattern: 'dots', glow: 110, radius: 'round' } },
-  { id: 'royal', label: 'Royal', desc: 'Violet · editorial · stars',
-    cos: { accent: '#9d7cff', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'starfield', glow: 120, radius: 'soft' } },
-  { id: 'mono', label: 'Mono', desc: 'Slate · mono · flat',
-    cos: { accent: '#7a9eff', type: 'default', headingFont: 'mono', tracking: 'normal', cursorStyle: 'cross', cursorColor: '#7a9eff', scanlines: false, bgPattern: 'none', glow: 60, radius: 'sharp' } },
+  { id: 'classic', label: 'Classic', desc: 'Dark · lime CRT',
+    cos: { theme: 'dark', accent: '#c8e856', type: 'default', headingFont: 'match', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#c8e856', scanlines: true, bgPattern: 'grid', glow: 100, radius: 'soft' } },
+  { id: 'matrix', label: 'Matrix', desc: 'Dark · green pixel',
+    cos: { theme: 'dark', accent: '#33ff66', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#33ff66', scanlines: true, bgPattern: 'scan', glow: 140, radius: 'sharp' } },
+  { id: 'royal', label: 'Royal', desc: 'Dark · violet editorial',
+    cos: { theme: 'dark', accent: '#9d7cff', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'starfield', glow: 120, radius: 'soft' } },
+  { id: 'crimson', label: 'Crimson', desc: 'Dark · rose editorial',
+    cos: { theme: 'dark', accent: '#e85c89', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#e85c89', scanlines: false, bgPattern: 'starfield', glow: 120, radius: 'soft' } },
+  { id: 'terminal', label: 'Terminal', desc: 'Dark · heavy CRT',
+    cos: { theme: 'dark', accent: '#c8e856', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#c8e856', scanlines: true, bgPattern: 'scan', glow: 150, radius: 'sharp' } },
+  { id: 'sunset', label: 'Sunset', desc: 'Light · amber soft',
+    cos: { theme: 'light', accent: '#ff7a3d', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ff7a3d', scanlines: false, bgPattern: 'dots', glow: 110, radius: 'round' } },
+  { id: 'solar', label: 'Solar', desc: 'Light · gold',
+    cos: { theme: 'light', accent: '#ffd25a', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ffd25a', scanlines: false, bgPattern: 'grid', glow: 90, radius: 'soft' } },
+  { id: 'mono', label: 'Mono', desc: 'Light · slate flat',
+    cos: { theme: 'light', accent: '#7a9eff', type: 'default', headingFont: 'mono', tracking: 'normal', cursorStyle: 'cross', cursorColor: '#7a9eff', scanlines: false, bgPattern: 'none', glow: 60, radius: 'sharp' } },
 ];
 
 const TARGETS = {
