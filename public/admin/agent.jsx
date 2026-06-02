@@ -7,6 +7,7 @@
    agent posts to /agent (owner token; key stays server-side), writes only to
    content/draft, and the editor adopts those writes live via U14. Each turn
    shows tool-call chips, per-path revert + turn-level undo, and review links.
+   Settings live in a MODAL opened from the composer (no separate page).
    ===================================================== */
 const { useState, useEffect, useRef } = React;
 
@@ -86,6 +87,24 @@ async function sendAgentMessage({ text, route, inboxMode, setAgentBusy }) {
   }
 }
 
+/* ---------- settings modal (replaces the separate settings page) ---------- */
+function AgentSettingsModal({ open, onClose }) {
+  if (!open) return null;
+  const { AdminIcon } = window.ADMIN_UI;
+  const Page = window.ADMIN_AGENT_SETTINGS && window.ADMIN_AGENT_SETTINGS.AgentSettingsPage;
+  return (
+    <div className="agentmodal" onMouseDown={onClose}>
+      <div className="agentmodal__panel" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="agentmodal__hd">
+          <span className="agentmodal__title"><AdminIcon name="settings" size={15} /> Agent settings</span>
+          <button className="agentmodal__close" onClick={onClose} aria-label="Close"><AdminIcon name="x" size={16} /></button>
+        </div>
+        <div className="agentmodal__body">{Page ? <Page modal /> : <p className="helptext">Settings unavailable.</p>}</div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- one turn's message bubble ---------- */
 function MessageBubble({ msg, go, openPreview }) {
   const { AdminIcon, Btn } = window.ADMIN_UI;
@@ -159,10 +178,11 @@ function MessageBubble({ msg, go, openPreview }) {
 
 /* ---------- the shared chat surface (used by page + dock) ---------- */
 function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
-  const { Btn, Toggle } = window.ADMIN_UI;
+  const { AdminIcon } = window.ADMIN_UI;
   const chat = useAgentChat();
   const [input, setInput] = useState('');
   const [inbox, setInbox] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const scroller = useRef(null);
 
   useEffect(() => {
@@ -187,25 +207,38 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
         )}
         {chat.messages.map((m, i) => <MessageBubble key={i} msg={m} go={go} openPreview={openPreview} />)}
       </div>
-      <form className="agentchat__compose" onSubmit={submit}>
+
+      <form className="composer" onSubmit={submit}>
         <textarea
-          className="agentchat__input"
+          className="composer__input"
           rows={compact ? 2 : 3}
           value={input}
-          placeholder={inbox ? 'inbox mode — describe how to triage…' : 'message the agent…'}
+          placeholder={inbox ? 'inbox triage — describe how to handle visitor questions…' : 'message the agent…'}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(e); }}
         />
-        <div className="agentchat__composebar">
-          <label className="agentchat__inbox" title="Run with the restricted inbox tool-set + injection guard">
-            <Toggle value={inbox} onChange={(v) => setInbox(v)} /> inbox mode
-          </label>
+        <div className="composer__bar">
+          <button
+            type="button"
+            className="composer__tool"
+            data-on={inbox}
+            title="Inbox triage mode — runs the turn over visitor questions (bot_questions) with a restricted, injection-guarded tool set (no publish/undo)."
+            onClick={() => setInbox((v) => !v)}
+          >
+            <AdminIcon name="chat" size={14} /> Inbox{inbox ? ' on' : ''}
+          </button>
           <span className="spacer" style={{ flex: 1 }} />
-          <Btn sm kind="primary" type="submit" disabled={chat.sending || !input.trim()}>
-            {chat.sending ? 'Working…' : 'Send ⌘↵'}
-          </Btn>
+          <button type="button" className="composer__tool" title="Agent settings (keys & model)" onClick={() => setSettingsOpen(true)}>
+            <AdminIcon name="settings" size={15} />
+          </button>
+          <button className="composer__send" type="submit" disabled={chat.sending || !input.trim()} title="Send (⌘/Ctrl + Enter)">
+            <AdminIcon name="rocket" size={14} />
+            <span>{chat.sending ? 'Working…' : 'Send'}</span>
+          </button>
         </div>
       </form>
+
+      <AgentSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
@@ -221,12 +254,13 @@ function AgentPage({ route, go, openPreview, setAgentBusy }) {
       <PageHead eyebrow="/AGENT.AI" title="Agent">
         Drive every admin control by chatting. Changes apply to the draft and appear live in the editors; nothing publishes until you say so.
       </PageHead>
-      <div className="agentpage">
-        <div className="agentpage__bar">
-          <a className="linkbtn" href="#agent-settings">⚙ Agent settings</a>
-          <span className="spacer" style={{ flex: 1 }} />
-          {chat.messages.length > 0 && <Btn sm kind="ghost" icon="trash" onClick={clear}>Clear conversation</Btn>}
-        </div>
+      <div className="agentpage canvas--narrow">
+        {chat.messages.length > 0 && (
+          <div className="agentpage__bar">
+            <span className="spacer" style={{ flex: 1 }} />
+            <Btn sm kind="ghost" icon="trash" onClick={clear}>Clear conversation</Btn>
+          </div>
+        )}
         <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
       </div>
     </div>
@@ -247,7 +281,7 @@ function AgentDock({ route, go, openPreview, setAgentBusy }) {
       {open ? (
         <div className="agentdock__panel">
           <div className="agentdock__hd">
-            <span className="agentdock__title"><AdminIcon name="bot" size={14} /> Agent</span>
+            <span className="agentdock__title"><AdminIcon name="chip" size={15} /> Agent</span>
             <span className="spacer" style={{ flex: 1 }} />
             <button className="agentdock__btn" title="Open full page" onClick={() => { setOpen(false); go && go('agent'); }}><AdminIcon name="link" size={14} /></button>
             <button className="agentdock__btn" title="Collapse" onClick={() => setOpen(false)}><AdminIcon name="x" size={14} /></button>
@@ -256,7 +290,7 @@ function AgentDock({ route, go, openPreview, setAgentBusy }) {
         </div>
       ) : (
         <button className="agentdock__bubble" title="Ask the agent" onClick={() => setOpen(true)}>
-          <AdminIcon name="bot" size={20} />
+          <AdminIcon name="chip" size={22} />
           {chat.sending && <span className="agentdock__pulse" />}
         </button>
       )}

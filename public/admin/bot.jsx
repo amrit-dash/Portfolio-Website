@@ -199,8 +199,10 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   return (
     <div>
       <PageHead eyebrow="/AMRIT-BOT.AGENT" title="AmritBot configuration">Everything the hero-section assistant knows and how it answers — context, scripted Q&A, slash-commands, tuning and which LLM powers it.</PageHead>
-      <div className="seg" style={{ marginBottom: 18, flexWrap: 'wrap' }}>
-        {BOT_TABS.map((t) => <button key={t.id} data-on={tab === t.id} onClick={() => setTab(t.id)}>{t.label}</button>)}
+      <div className="canvas--narrow">
+        <div className="seg" style={{ marginBottom: 18, flexWrap: 'wrap' }}>
+          {BOT_TABS.map((t) => <button key={t.id} data-on={tab === t.id} onClick={() => setTab(t.id)}>{t.label}</button>)}
+        </div>
       </div>
 
       {tab === 'context' && (

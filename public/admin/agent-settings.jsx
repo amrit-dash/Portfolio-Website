@@ -38,7 +38,7 @@ function curatedFree(providerId, id) {
   return (Reflect.get(TOOL_MODELS, providerId) || []).some((m) => m.id === id && m.free);
 }
 
-function AgentSettingsPage() {
+function AgentSettingsPage({ modal }) {
   const { PageHead, Panel, Field, Select, Btn, AdminIcon, SecretInput } = window.ADMIN_UI;
   const { Store } = window.ADMIN_STORE;
   const PROVS = agentProviders();
@@ -97,19 +97,21 @@ function AgentSettingsPage() {
   };
 
   if (loading) {
-    return (<div><PageHead eyebrow="/AGENT.AI" title="Agent settings" /><p className="helptext">Loading…</p></div>);
+    return (<div>{!modal && <PageHead eyebrow="/AGENT.AI" title="Agent settings" />}<p className="helptext">Loading…</p></div>);
   }
 
   const activeProv = PROVS.find((p) => p.id === cfg.active);
 
   return (
     <div>
-      <PageHead eyebrow="/AGENT.AI" title="Agent settings">
-        The portfolio agent runs on its <b>own</b> keys — separate from the AmritBot. Paste a billable key per
-        provider for better models, pick a tool-capable model, and set the default. Keys are private to the server and never reach visitors.
-      </PageHead>
+      {!modal && (
+        <PageHead eyebrow="/AGENT.AI" title="Agent settings">
+          The portfolio agent runs on its <b>own</b> keys — separate from the AmritBot. Paste a billable key per
+          provider for better models, pick a tool-capable model, and set the default. Keys are private to the server and never reach visitors.
+        </PageHead>
+      )}
 
-      <div className="canvas--narrow">
+      <div className={modal ? '' : 'canvas--narrow'}>
         <div className="callout">
           <AdminIcon name="key" size={16} />
           <div>

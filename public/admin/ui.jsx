@@ -66,6 +66,8 @@ function AdminIcon({ name, size = 16 }) {
     case 'sun': return (<svg {...p}><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>);
     case 'terminal': return (<svg {...p}><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 9.5l3 2.5-3 2.5"/><path d="M12.5 15h4.5"/></svg>);
     case 'os-window': return (<svg {...p}><rect x="2.5" y="3.5" width="19" height="17" rx="2.8"/><path d="M5.3 3.5H18.7a2.8 2.8 0 0 1 2.8 2.8V8H2.5V6.3a2.8 2.8 0 0 1 2.8-2.8Z" fill="currentColor" stroke="none"/><circle cx="5.4" cy="5.75" r=".82" fill="var(--bg-elev)" stroke="none"/><circle cx="7.8" cy="5.75" r=".82" fill="var(--bg-elev)" stroke="none"/><circle cx="10.2" cy="5.75" r=".82" fill="var(--bg-elev)" stroke="none"/><path d="M6 12.2l2.6 2-2.6 2"/><path d="M11.6 16.2H17"/></svg>);
+    // 'chip' — an intelligent AI chip: CPU body with pins + a lit core spark.
+    case 'chip': return (<svg {...p}><rect x="6.5" y="6.5" width="11" height="11" rx="2.6"/><path d="M9.2 6.5V3.6M14.8 6.5V3.6M9.2 20.4v-2.9M14.8 20.4v-2.9M6.5 9.2H3.6M6.5 14.8H3.6M20.4 9.2h-2.9M20.4 14.8h-2.9"/><path d="M12 9.3l.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9z" fill="currentColor" stroke="none"/></svg>);
     default: return <svg {...p} />;
   }
 }

@@ -441,14 +441,13 @@ const NAV = [
     { id: 'appearance', label: 'Appearance', icon: 'palette' },
   ] },
   { group: 'ASSISTANT', items: [
-    { id: 'agent', label: 'Agent', icon: 'sparkle' },
-    { id: 'agent-settings', label: 'Agent settings', icon: 'settings' },
+    { id: 'agent', label: 'Agent', icon: 'chip' },
     { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
   ] },
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
 ];
 
-const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', 'agent-settings': 'Agent settings', bot: 'AmritBot', sync: 'Sync & deploy' };
+const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', sync: 'Sync & deploy' };
 
 function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
@@ -646,7 +645,6 @@ function AdminApp() {
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
       case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
-      case 'agent-settings': return <window.ADMIN_AGENT_SETTINGS.AgentSettingsPage />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={reset} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
     }
