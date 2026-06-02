@@ -405,6 +405,19 @@ const Store = {
       return await r.json();
     } catch (e) { return { error: 'network', message: e && e.message }; }
   },
+  // Inline field refiner — single-shot rewrite via /refine (owner token).
+  async refineText({ text, label, context }) {
+    const tok = await this._ownerToken();
+    if (!tok) return { error: 'not-signed-in' };
+    try {
+      const r = await fetch(window.FUNCTIONS_BASE + '/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+        body: JSON.stringify({ text, label, context }),
+      });
+      return await r.json();
+    } catch (e) { return { error: 'network', message: e && e.message }; }
+  },
   // Chat history + clear (owner-only Firestore reads).
   async fsLoadAgentMessages(chatId, n) {
     if (!this.fsReady()) return [];

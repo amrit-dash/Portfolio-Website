@@ -11,6 +11,7 @@ const schema = require(path.join(__dirname, '../../public/shared-schema'));
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
+const multimodal = require('./multimodal');
 
 const GENERIC_TOOLS = [
   {
@@ -102,6 +103,21 @@ const STRUCTURED_TOOLS = [
       required: ['id', 'slot', 'source'],
     },
     mutates: true,
+  },
+  {
+    name: 'generateImage',
+    description: 'Generate an image from a text prompt (Gemini image model), upload it, and attach it as a project thumbnail or gallery image. Use ONLY when the owner explicitly asks to generate/create an image — it costs model spend.',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'What to generate' },
+        projectId: { type: 'string', description: 'Project id to attach the result to' },
+        slot: { type: 'string', enum: ['thumb', 'gallery'] },
+      },
+      required: ['prompt', 'projectId', 'slot'],
+    },
+    mutates: true,
+    sideEffect: true,
   },
   {
     name: 'setCv',
@@ -322,6 +338,21 @@ function execSetCv(a, session) {
   return session.setPath(`media.${slot}`, String(a.source || ''));
 }
 
+async function execGenerateImage(a, session, ctx) {
+  if (!a.prompt || typeof a.prompt !== 'string') return { ok: false, error: 'missing-prompt' };
+  if (!ctx.imageKey) return { ok: false, error: 'no-image-key', message: 'Set a Gemini key in Agent settings to generate images.' };
+  if (!ctx.admin) return { ok: false, error: 'no-storage' };
+  let buf;
+  try { buf = await multimodal.geminiGenerateImage({ key: ctx.imageKey, model: ctx.imageModel, prompt: a.prompt }); }
+  catch (e) { return { ok: false, error: 'gen-failed', message: e.message }; }
+  let up;
+  try { up = await multimodal.uploadImage({ admin: ctx.admin, buffer: buf }); }
+  catch (e) { return { ok: false, error: 'upload-failed', message: e.message }; }
+  const set = execSetProjectImage({ id: a.projectId, slot: a.slot, source: up.url }, session);
+  if (!set.ok) return { ok: true, url: up.url, path: up.path, warning: 'generated but not attached: ' + (set.error || '') };
+  return { ok: true, url: up.url, path: up.path, attached: `projects/${a.projectId}/${a.slot}` };
+}
+
 async function execSetLimits(a, ctx) {
   const { db, FieldValue } = ctx;
   const snap = await db.doc('config/settings').get();
@@ -423,6 +454,7 @@ async function executeTool(name, args, ctx) {
   if (name === 'reorder') return execReorder(a, session);
   if (name === 'applyVibePreset') return execApplyVibe(a, session);
   if (name === 'setProjectImage') return execSetProjectImage(a, session);
+  if (name === 'generateImage') return execGenerateImage(a, session, ctx);
   if (name === 'setCv') return execSetCv(a, session);
   if (name === 'setLimits') return execSetLimits(a, ctx);
   if (name === 'publish') return execPublish(ctx);

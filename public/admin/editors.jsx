@@ -108,7 +108,7 @@ function HeroEditor({ content, setAt }) {
           <Field label="Emphasised (italic) name"><Input value={h.nameEm} onChange={(v) => setAt('hero.nameEm', v)} /></Field>
         </div>
         <Field label="Subtitle"><Input value={h.subtitle} onChange={(v) => setAt('hero.subtitle', v)} /></Field>
-        <Field label="Pitch paragraph" hint="<b> for bold"><TextArea rows={4} value={h.role} onChange={(v) => setAt('hero.role', v)} /></Field>
+        <Field label="Pitch paragraph" hint="<b> for bold · ✨ to refine"><window.ADMIN_REFINER.RefineField label="Hero pitch paragraph" context="The short punchy intro pitch shown in the portfolio hero section." rows={4} value={h.role} onChange={(v) => setAt('hero.role', v)} /></Field>
       </Panel>
       <Panel title="Call-to-action buttons">
         {h.ctas.map((c, i) => (
@@ -159,7 +159,7 @@ function AboutEditor({ content, setAt }) {
       </div>
       <Panel title="Bio copy">
         <Field label="Heading" hint="<em> for italic accent"><TextArea rows={2} value={a.heading} onChange={(v) => setAt('about.heading', v)} /></Field>
-        <Field label="Intro paragraph"><TextArea rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} /></Field>
+        <Field label="Intro paragraph" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="About intro paragraph" context="The intro paragraph under the About heading." rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} /></Field>
       </Panel>
       <Panel title="Impact timeline" sub={`${a.impact.length} entries`}>
         {a.impact.map((m, i) => (
@@ -169,7 +169,7 @@ function AboutEditor({ content, setAt }) {
                 <Field label="Label"><Input value={m.label} onChange={(v) => setImpact(i, 'label', v)} /></Field>
                 <DelBtn onClick={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))} />
               </div>
-              <Field label="Description" hint="<em> for accent"><TextArea rows={2} value={m.html} onChange={(v) => setImpact(i, 'html', v)} /></Field>
+              <Field label="Description" hint="<em> for accent · ✨ to refine"><window.ADMIN_REFINER.RefineField label="Impact timeline entry" context="A short description line in the About impact timeline." rows={2} value={m.html} onChange={(v) => setImpact(i, 'html', v)} /></Field>
             </div>
           </div>
         ))}

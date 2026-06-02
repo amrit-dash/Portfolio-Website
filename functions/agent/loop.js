@@ -80,8 +80,11 @@ async function checkDailyCap(db, FieldValue, settings) {
 async function runAgentTurn({
   db,
   FieldValue,
+  admin,
   agentConfig,
   providerKey,
+  imageKey,
+  imageModel,
   providerCatalog,
   message,
   chatId,
@@ -117,7 +120,7 @@ async function runAgentTurn({
   const history = sanitizeHistoryForProvider(rawHistory, providerChanged);
 
   const tools = filterToolsForMode(ALL_TOOLS, { inboxMode });
-  const toolCtx = { session, db, FieldValue, chatId: cid };
+  const toolCtx = { session, db, FieldValue, chatId: cid, admin, imageKey, imageModel };
   const userText = inboxMode ? wrapVisitorText(message) : String(message || '');
 
   let systemPrompt = BASE_SYSTEM;

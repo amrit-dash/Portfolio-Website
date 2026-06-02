@@ -495,14 +495,19 @@ exports.agent = onRequest(async (req, res) => {
 
   const fullConfig = await getAgentConfig();
   const providerKey = resolveAgentKey(fullConfig, fullConfig.active || 'gemini');
+  const imageKey = resolveAgentKey(fullConfig, 'gemini'); // image generation is Gemini-specific
+  const imageModel = (fullConfig.byProvider && fullConfig.byProvider.gemini && fullConfig.byProvider.gemini.imageModel) || undefined;
   const settings = await getSettings();
 
   try {
     const result = await runAgentTurn({
       db,
       FieldValue,
+      admin,                                            // for Admin-SDK Storage upload (image gen)
       agentConfig: stripAgentConfigKeys(fullConfig),   // model/provider only — no secrets pass deeper
       providerKey,                                      // the one resolved key, used to call the provider
+      imageKey,                                         // Gemini key for image generation (if set)
+      imageModel,
       providerCatalog: PROVIDERS,
       message: String(message).slice(0, 8000),
       chatId: chatId || 'default',
@@ -514,6 +519,61 @@ exports.agent = onRequest(async (req, res) => {
   } catch (e) {
     console.error('[agent]', e && e.message);
     return res.status(500).json({ error: 'internal', message: e && e.message });
+  }
+});
+
+/* ===================================================== */
+/*  /refine — owner-only inline field rewriter            */
+/*  Single-shot, NO tools. Reuses the agent's own key      */
+/*  (config/agent) + refinerModel (or the active model).   */
+/* ===================================================== */
+const agentProviders = require('./agent/providers');
+const { checkDailyCap } = require('./agent/loop');
+
+exports.refine = onRequest(async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+  if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
+
+  const { text, label, context } = req.body || {};
+  if (!text || typeof text !== 'string') return res.status(400).json({ error: 'no-text' });
+
+  const settings = await getSettings();
+  const cap = await checkDailyCap(db, FieldValue, settings);
+  if (!cap.ok) return res.status(429).json({ error: 'daily-cap', message: 'Daily limit reached.' });
+
+  const cfg = await getAgentConfig();
+  const providerId = cfg.active || 'gemini';
+  const provider = PROVIDERS[providerId];
+  const key = resolveAgentKey(cfg, providerId);
+  const pcfg = (cfg.byProvider && cfg.byProvider[providerId]) || {};
+  const model = cfg.refinerModel || pcfg.model;
+  if (!provider || !key || !model) return res.status(400).json({ error: 'no-config', message: 'Agent provider/key/model not configured.' });
+
+  const systemPrompt = [
+    'You are an inline copy editor for a portfolio admin console.',
+    'Rewrite ONLY the provided field text so it is tighter, clearer, and on-voice.',
+    'Match the existing tone. Do not add new facts. Keep roughly the same length unless it is clearly bloated.',
+    'Return ONLY the rewritten text — no preamble, no quotes, no markdown, no explanation.',
+  ].join(' ');
+  const userMsg = `Field: ${label || '(unlabeled)'}\n${context ? 'Context: ' + context + '\n' : ''}\nText to rewrite:\n${String(text).slice(0, 4000)}`;
+
+  try {
+    const gen = await agentProviders.generate(providerId, {
+      endpoint: provider.endpoint,
+      model, key,
+      systemPrompt,
+      messages: [{ role: 'user', text: userMsg, toolCalls: [], toolResults: [] }],
+      tools: [],
+      temperature: 0.6,
+      maxTokens: 700,
+    });
+    const proposal = (gen.text || '').trim();
+    if (!proposal) return res.status(200).json({ error: 'empty', message: 'The model returned no text.' });
+    return res.status(200).json({ proposal, provider: providerId, model });
+  } catch (e) {
+    return res.status(200).json({ error: 'provider-error', message: e && e.message });
   }
 });
 

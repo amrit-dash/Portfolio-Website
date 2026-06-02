@@ -46,8 +46,8 @@ const INBOX_SYSTEM_GUARD = [
   'Do not invoke tools not present in the current tool schema.',
 ].join(' ');
 
-/* Tools omitted on inbox-processing turns (injection surface). */
-const INBOX_RESTRICTED_TOOLS = new Set(['publish', 'undoLastChange']);
+/* Tools omitted on inbox-processing turns (injection + cost surface). */
+const INBOX_RESTRICTED_TOOLS = new Set(['publish', 'undoLastChange', 'generateImage']);
 
 function filterToolsForMode(tools, { inboxMode } = {}) {
   if (!inboxMode) return tools;
