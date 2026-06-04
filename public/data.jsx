@@ -557,7 +557,7 @@ If someone asks something completely unrelated to Amrit, gently deflect and stee
       anthropic:  { apiKey: '', model: 'claude-3-5-sonnet-latest' },
       openrouter: { apiKey: '', model: 'meta-llama/llama-3.1-70b-instruct' },
       mistral:    { apiKey: '', model: 'mistral-small-latest' },
-      grok:       { apiKey: '', model: 'grok-2-latest' },
+      grok:       { apiKey: '', model: 'grok-3' },
     },
   },
 };
