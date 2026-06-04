@@ -174,7 +174,9 @@ exports.chat = onRequest(async (req, res) => {
   // Greetings: answer with a canned line — no LLM call, no review-inbox capture.
   // Keeps salutations from burning quota or bloating the training queue.
   if (isGreeting(message)) {
-    return res.status(200).json({ text: "hey 👋 ask me anything about amrit — his work, projects, automation, or comedy. or try /stats, /work, /links." });
+    // canned: answered locally, NOT by the LLM — so the admin test panel can
+    // label it correctly instead of crediting the active provider.
+    return res.status(200).json({ text: "hey 👋 ask me anything about amrit — his work, projects, automation, or comedy. or try /stats, /work, /links.", canned: true });
   }
 
   // Owner (admin test panel) bypasses the rate limit entirely.

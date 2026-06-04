@@ -41,7 +41,7 @@ async function proxyChat(message, suggestion) {
   }
   const res = await fetch(base + '/chat', { method: 'POST', headers, body: JSON.stringify({ message, suggestion }) });
   const d = await res.json().catch(() => ({}));
-  return { ok: !!d.text, text: d.text, error: d.error, status: res.status };
+  return { ok: !!d.text, text: d.text, canned: !!d.canned, error: d.error, status: res.status };
 }
 
 /* ---- Test chat ---- */
@@ -61,7 +61,8 @@ function LiveTest({ bot }) {
     try {
       const r = await proxyChat(q, matched);
       if (r.ok) {
-        setMsgs((m) => [...m, { from: 'bot', text: r.text }, { from: 'sys', text: 'via ' + (PROV ? PROV.label : 'proxy') + ' (live)' }]);
+        const tag = r.canned ? 'canned greeting (no LLM call)' : 'via ' + (PROV ? PROV.label : 'proxy') + ' (live)';
+        setMsgs((m) => [...m, { from: 'bot', text: r.text }, { from: 'sys', text: tag }]);
       } else {
         const reply = matched || "i'm offline right now — try /stats, /links, /work or /comedy.";
         setMsgs((m) => [...m, { from: 'bot', text: reply }, { from: 'sys', text: r.error ? ('⚠ ' + r.error + ' — fell back to local Q&A') : 'local Q&A (no key active)' }]);

@@ -91,7 +91,9 @@
       { id: 'mistral-small-latest', label: 'Mistral Small', free: false },
     ],
     grok: [
-      { id: 'grok-2-latest', label: 'Grok 2', free: false },
+      { id: 'grok-4', label: 'Grok 4', free: false },
+      { id: 'grok-3', label: 'Grok 3', free: false },
+      { id: 'grok-3-mini', label: 'Grok 3 mini', free: false },
     ],
   };
 

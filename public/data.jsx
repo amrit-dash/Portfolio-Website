@@ -464,7 +464,7 @@ const LLM_PROVIDERS = [
   { id: 'anthropic',  label: 'Anthropic Claude', tag: '',        endpoint: 'https://api.anthropic.com/v1/messages',                                            keyHint: 'sk-ant-…', docs: 'https://console.anthropic.com/settings/keys',         models: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest'] },
   { id: 'openrouter', label: 'OpenRouter',       tag: '',        endpoint: 'https://openrouter.ai/api/v1/chat/completions',                                    keyHint: 'sk-or-…',  docs: 'https://openrouter.ai/keys',                          models: ['meta-llama/llama-3.1-70b-instruct', 'google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'mistralai/mistral-large'] },
   { id: 'mistral',    label: 'Mistral',          tag: '',        endpoint: 'https://api.mistral.ai/v1/chat/completions',                                       keyHint: '…',        docs: 'https://console.mistral.ai/api-keys',                 models: ['mistral-large-latest', 'mistral-small-latest', 'open-mistral-nemo'] },
-  { id: 'grok',       label: 'xAI Grok',         tag: '',        endpoint: 'https://api.x.ai/v1/chat/completions',                                             keyHint: 'xai-…',    docs: 'https://console.x.ai',                                models: ['grok-2-latest', 'grok-2-mini', 'grok-beta'] },
+  { id: 'grok',       label: 'xAI Grok',         tag: '',        endpoint: 'https://api.x.ai/v1/chat/completions',                                             keyHint: 'xai-…',    docs: 'https://console.x.ai',                                models: ['grok-4', 'grok-3', 'grok-3-mini'] },
 ];
 
 const DEFAULT_BOT = {

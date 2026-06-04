@@ -12,7 +12,9 @@ const GROUPS = [
     ['start', 'Alias of dev'],
   ]],
   ['Build', [
-    ['build', 'Assemble the two bundles → dist/site (portfolio) + dist/admin (console)'],
+    ['build', 'Compile JSX→JS (esbuild) + assemble dist/site (portfolio) + dist/admin (console)'],
+    ['preview', 'Build, then serve the production dist/site at http://localhost:3001'],
+    ['smoke', 'Build, then headless-test that dist/site mounts (needs playwright)'],
   ]],
   ['Deploy', [
     ['deploy:site', 'Build + deploy ONLY the portfolio → amritdash.web.app'],

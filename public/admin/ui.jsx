@@ -72,6 +72,18 @@ function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
     case 'chip': return (<svg {...p}><rect x="6.5" y="6.5" width="11" height="11" rx="2.6"/><path d="M9.2 6.5V3.6M14.8 6.5V3.6M9.2 20.4v-2.9M14.8 20.4v-2.9M6.5 9.2H3.6M6.5 14.8H3.6M20.4 9.2h-2.9M20.4 14.8h-2.9"/><path d="M12 9.3l.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9z" fill="currentColor" stroke="none"/></svg>);
     // 'send' — paper-plane, placed after the "Send" label.
     case 'send': return (<svg {...p}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>);
+    /* Expertise-module icons — mirror the site's set (public/app.jsx Icon) so the
+       admin's module list + selects render the same glyphs the live site shows. */
+    case 'automation': return (<svg {...p}><circle cx="9" cy="9" r="2.5"/><path d="M9 4v1.2M9 12.8V14M4 9h1.2M12.8 9H14M5.8 5.8l.85.85M11.35 11.35l.85.85M5.8 12.2l.85-.85M11.35 6.65l.85-.85"/><circle cx="15.5" cy="15.5" r="2"/><path d="M15.5 11.8v1M15.5 18v1M11.8 15.5h1M18 15.5h1M13.2 13.2l.7.7M17.6 17.6l.7.7M13.2 17.8l.7-.7M17.6 13.9l.7-.7"/></svg>);
+    case 'rag': return (<svg {...p}><circle cx="6" cy="7" r="2"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="12" r="2"/><circle cx="12" cy="12" r="1.4"/><path d="M8 7l2.6 4.3M8 17l2.6-4.3M16 12h-2.6"/></svg>);
+    case 'gas': return (<svg {...p}><path d="M8 4c-2 0-3 1-3 3v3c0 1-.6 2-2 2 1.4 0 2 1 2 2v3c0 2 1 3 3 3"/><path d="M16 4c2 0 3 1 3 3v3c0 1 .6 2 2 2-1.4 0-2 1-2 2v3c0 2-1 3-3 3"/></svg>);
+    case 'flutter': return (<svg {...p}><rect x="6" y="3" width="12" height="18" rx="2.5"/><path d="M9 18h6"/><path d="M10 8l3 3-3 3"/></svg>);
+    case 'bots': return (<svg {...p}><rect x="4" y="7" width="16" height="12" rx="3"/><circle cx="9" cy="13" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.4" fill="currentColor" stroke="none"/><path d="M12 3v4"/><circle cx="12" cy="2.5" r="1" fill="currentColor" stroke="none"/></svg>);
+    case 'shopify': return (<svg {...p}><path d="M5 8h14l-1.5 12h-11L5 8z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>);
+    case 'web': return (<svg {...p}><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="6.5" cy="6.5" r=".6" fill="currentColor"/><circle cx="9" cy="6.5" r=".6" fill="currentColor"/><path d="M8 13l-2 2 2 2"/><path d="M16 13l2 2-2 2"/><line x1="11" y1="17" x2="13" y2="13"/></svg>);
+    case 'ios': return (<svg {...p}><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><line x1="10.5" y1="5.5" x2="13.5" y2="5.5"/><line x1="11" y1="18.5" x2="13" y2="18.5"/></svg>);
+    case 'comedy': return (<svg {...p}><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M6 12.5a6 6 0 0 0 12 0"/><line x1="12" y1="18.5" x2="12" y2="21.5"/><line x1="9" y1="21.5" x2="15" y2="21.5"/></svg>);
+    case 'brain': return (<svg {...p}><path d="M12 5.5a3 3 0 00-5 2.2 2.6 2.6 0 00-1.4 4.4A2.6 2.6 0 007 16.5a2.8 2.8 0 005 1.2"/><path d="M12 5.5a3 3 0 015 2.2 2.6 2.6 0 011.4 4.4A2.6 2.6 0 0117 16.5a2.8 2.8 0 01-5 1.2"/><path d="M12 5.5v12.2"/></svg>);
     default: return <svg {...p} />;
   }
 }
