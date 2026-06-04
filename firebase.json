@@ -18,7 +18,10 @@
   ],
   "functions": {
     "source": "functions",
-    "runtime": "nodejs20"
+    "runtime": "nodejs20",
+    "predeploy": [
+      "cp \"$PROJECT_DIR/public/shared-schema.js\" \"$RESOURCE_DIR/shared-schema.js\""
+    ]
   },
   "firestore": {
     "rules": "firestore.rules",

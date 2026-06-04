@@ -7,7 +7,7 @@
    instead of ~50 → better tool-selection on weaker models, bounded context. */
 
 const path = require('path');
-const schema = require(path.join(__dirname, '../../public/shared-schema'));
+const schema = require(path.join(__dirname, '../shared-schema'));
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');

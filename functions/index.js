@@ -419,7 +419,10 @@ async function getSettings() {
 /*  the public bot never reads them, and they never reach  */
 /*  the browser or any content/published doc.              */
 /* ===================================================== */
-const sharedSchema = require('../public/shared-schema');
+// Synced copy of public/shared-schema.js — kept inside functions/ so it ships
+// in the deploy package (the public/ dir is NOT uploaded). Refreshed from the
+// canonical public/ copy by the functions predeploy hook in firebase.json.
+const sharedSchema = require('./shared-schema');
 
 async function getAgentConfig() {
   try {

@@ -6,7 +6,7 @@
    without caring which; the adapter owns canonical↔native serialization. */
 
 const path = require('path');
-const schema = require(path.join(__dirname, '../../../public/shared-schema'));
+const schema = require(path.join(__dirname, '../../shared-schema'));
 
 const gemini = require('./gemini');
 const anthropic = require('./anthropic');
