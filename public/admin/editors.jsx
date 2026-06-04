@@ -181,22 +181,47 @@ function AboutEditor({ content, setAt }) {
 
 /* ============ EXPERTISE ============ */
 function ExpertiseEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, Input, Select, Btn, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, Input, Select, Btn, AdminIcon, SkillIcon, Reorderable, ListItem } = window.ADMIN_UI;
   const list = content.expertise;
+  const customIcons = content.icons || [];
   const [open, setOpen] = useState(null);
+  const fileRef = React.useRef(null);
   const update = (i, key, val) => setAt('expertise', list.map((e, j) => j === i ? { ...e, [key]: val } : e));
   const renumber = (arr) => arr.map((e, i) => ({ ...e, num: String(i + 1).padStart(2, '0') }));
   const add = () => { const n = renumber([...list, { num: '', icon: 'automation', title: 'New module', sub: '' }]); setAt('expertise', n); setOpen(n.length - 1); };
 
+  // Upload a custom SVG → sanitize → store in content.icons (selectable as an icon).
+  const onAddIcon = async (file) => {
+    if (!file) return;
+    let text = '';
+    try { text = await file.text(); } catch (e) { return; }
+    const svg = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.sanitizeSvg(text)) || '';
+    if (!svg) { alert('That doesn’t look like a valid SVG (or it’s too large).'); return; }
+    const id = 'custom_' + Math.random().toString(36).slice(2, 10);
+    const name = (file.name || 'icon').replace(/\.svg$/i, '').slice(0, 40) || 'icon';
+    setAt('icons', [...customIcons, { id, name, svg }]);
+  };
+  const removeIcon = (id) => {
+    setAt('icons', customIcons.filter((ic) => ic.id !== id));
+    // Reset any module still pointing at the removed icon to a safe default.
+    if (list.some((e) => e.icon === id)) setAt('expertise', list.map((e) => e.icon === id ? { ...e, icon: 'automation' } : e));
+  };
+  const iconOptions = EXPERTISE_ICONS.map((i) => ({ value: i, label: i })).concat(customIcons.map((ic) => ({ value: ic.id, label: '★ ' + ic.name })));
+
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/EXPERTISE.SYS" title="Expertise modules">The clickable skill grid. Drag to reorder — numbers (MOD_01…) renumber automatically. Each module can filter projects on the site.</PageHead>
-      <Panel title="Installed modules" sub={`${list.length} modules`} actions={<Btn sm icon="plus" kind="primary" onClick={add}>Add module</Btn>}>
+      <Panel title="Installed modules" sub={`${list.length} modules`} actions={<>
+        <input ref={fileRef} type="file" accept=".svg,image/svg+xml" style={{ display: 'none' }}
+          onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; onAddIcon(f); }} />
+        <Btn sm icon="upload" onClick={() => fileRef.current && fileRef.current.click()}>Add Icon</Btn>
+        <Btn sm icon="plus" kind="primary" onClick={add}>Add module</Btn>
+      </>}>
         <Reorderable items={list} getKey={(_, i) => i}
           onReorder={(next) => setAt('expertise', renumber(next))}
           renderItem={(e, i, { gripProps }) => (
             <ListItem gripProps={gripProps} num={'MOD_' + (e.num || String(i + 1).padStart(2, '0'))}
-              icon={<AdminIcon name={EXPERTISE_ICONS.includes(e.icon) ? e.icon : 'sparkle'} size={16} />}
+              icon={<SkillIcon name={e.icon} icons={customIcons} size={16} />}
               title={e.title} sub={e.sub} open={open === i}
               onToggle={() => setOpen(open === i ? null : i)}
               onDelete={() => { setAt('expertise', renumber(list.filter((_, j) => j !== i))); setOpen(null); }}>
@@ -204,9 +229,23 @@ function ExpertiseEditor({ content, setAt }) {
                 <Field label="Title"><Input value={e.title} onChange={(v) => update(i, 'title', v)} /></Field>
                 <Field label="Subtitle"><Input value={e.sub} onChange={(v) => update(i, 'sub', v)} /></Field>
               </div>
-              <Field label="Icon" hint="used for the card + project filter"><Select value={e.icon} options={EXPERTISE_ICONS} onChange={(v) => update(i, 'icon', v)} /></Field>
+              <Field label="Icon" hint="built-in or your uploaded SVGs (★)"><Select value={e.icon} options={iconOptions} onChange={(v) => update(i, 'icon', v)} /></Field>
             </ListItem>
           )} />
+        {customIcons.length > 0 && (
+          <div className="iconlib">
+            <div className="iconlib__hd">Uploaded icons</div>
+            <div className="iconlib__grid">
+              {customIcons.map((ic) => (
+                <div className="iconlib__item" key={ic.id} title={ic.name}>
+                  <SkillIcon name={ic.id} icons={customIcons} size={20} />
+                  <span className="iconlib__name">{ic.name}</span>
+                  <button className="iconlib__del" onClick={() => removeIcon(ic.id)} title="Remove icon"><AdminIcon name="x" size={12} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Panel>
     </div>
   );

@@ -42,6 +42,14 @@ function logEvent(type, meta) {
 
 function Icon({ name, size = 18 }) {
   const s = { width: size, height: size, display: 'block' };
+  // Custom uploaded SVG icons (admin → Expertise → Add Icon), stored in
+  // content.icons and published. Resolved here so the live site shows them.
+  if (typeof name === 'string' && name.indexOf('custom_') === 0) {
+    const lib = (typeof window !== 'undefined' && window.__SKILL_ICONS) || (CONTENT && CONTENT.icons) || [];
+    const hit = Array.isArray(lib) ? lib.find((ic) => ic && ic.id === name) : null;
+    if (hit && hit.svg) return (<span className="skillicon" style={s} dangerouslySetInnerHTML={{ __html: hit.svg }} />);
+    return <span style={s} />;
+  }
   const common = {
     width: size, height: size, viewBox: '0 0 24 24',
     fill: 'none', stroke: 'currentColor', strokeWidth: '1.6',
@@ -1331,6 +1339,9 @@ function App() {
     const unsub = window.subscribeContent ? window.subscribeContent((c) => setLiveContent(c)) : null;
     return () => { if (typeof unsub === 'function') unsub(); };
   }, []);
+  // Expose the custom-icon library so the standalone Icon() resolver can render
+  // uploaded SVGs, and keep it fresh as live content streams in (admin preview).
+  useEffect(() => { window.__SKILL_ICONS = (liveContent && liveContent.icons) || []; }, [liveContent]);
 
   // Preview iframe always reflects the published "Default mode"; real visitors
   // keep a choice only once they've explicitly toggled (amritos.theme.explicit),

@@ -97,6 +97,26 @@
     ],
   };
 
+  /* Sanitize an uploaded SVG before it's stored in content + rendered inline.
+     Owner-only upload, but we still strip the obvious script/handler vectors and
+     cap the size so a pasted blob can't bloat the doc or run code. */
+  function sanitizeSvg(raw) {
+    let s = String(raw || '').trim();
+    if (!s) return '';
+    const m = s.match(/<svg[\s\S]*<\/svg>/i);
+    if (!m) return '';
+    s = m[0]
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+      .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+      .replace(/javascript:/gi, '');
+    if (s.length > 20000) return '';
+    return s;
+  }
+  function isCustomIcon(id) { return typeof id === 'string' && id.indexOf('custom_') === 0; }
+
   function renumberExpertise(arr) {
     if (!Array.isArray(arr)) return arr;
     return arr.map((e, i) => ({ ...e, num: String(i + 1).padStart(2, '0') }));
@@ -121,6 +141,8 @@
     validateSocialIcon,
     validateCollection,
     providerKind,
+    sanitizeSvg,
+    isCustomIcon,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

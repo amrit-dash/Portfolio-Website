@@ -88,6 +88,16 @@ function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
   }
 }
 
+/* Resolve an expertise/skill icon: a custom uploaded SVG (content.icons) renders
+   inline; otherwise fall back to the built-in AdminIcon glyph. */
+function SkillIcon({ name, size = 16, icons }) {
+  const custom = Array.isArray(icons) ? icons.find((ic) => ic && ic.id === name) : null;
+  if (custom && custom.svg) {
+    return <span className="skillicon" style={{ width: size, height: size }} dangerouslySetInnerHTML={{ __html: custom.svg }} />;
+  }
+  return <AdminIcon name={name} size={size} />;
+}
+
 /* ---------- Layout ---------- */
 function PageHead({ eyebrow, title, children }) {
   return (
@@ -378,7 +388,7 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 }
 
 window.ADMIN_UI = {
-  AdminIcon, PageHead, Panel, Btn, Field, DelBtn, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
+  AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
   Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes,
   storageReady, uploadToStorage,
 };

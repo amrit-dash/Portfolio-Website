@@ -1076,6 +1076,9 @@ ul { margin: 0; padding: 0; list-style: none; }
   border-radius: 6px;
   color: var(--accent);
 }
+/* Custom uploaded SVG icons render inline via a .skillicon wrapper. */
+.skillicon { display: inline-flex; align-items: center; justify-content: center; }
+.skillicon svg { width: 100%; height: 100%; display: block; }
 .expertise-card__num {
   font-family: var(--font-mono);
   font-size: 10px;
