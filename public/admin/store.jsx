@@ -369,68 +369,60 @@ const Store = {
     if (!this.fsReady() || !window.fb.auth.currentUser) return null;
     return window.fb.auth.currentUser.getIdToken();
   },
-  async agentTurn({ message, currentRoute, inboxMode, chatId }) {
+  // Shared agent/refine/inbox POST with actionable error surfacing. A thrown
+  // fetch (TypeError "Failed to fetch") means the endpoint is unreachable —
+  // almost always because the new functions aren't deployed yet (or, on
+  // localhost without ?emu=1, FUNCTIONS_BASE points at production). A non-OK
+  // response body is read and surfaced so the real reason (403 / 400 no-config /
+  // 429 cap / provider error) shows in the UI instead of a blank "Failed to fetch".
+  async _agentFetch(path, payload) {
+    const base = window.FUNCTIONS_BASE || '';
     const tok = await this._ownerToken();
-    if (!tok) return { error: 'not-signed-in' };
+    if (!tok) return { error: 'not-signed-in', message: 'Sign in as the owner to use the agent.' };
+    const url = base + path;
+    let r;
     try {
-      const r = await fetch(window.FUNCTIONS_BASE + '/agent', {
+      r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-        body: JSON.stringify({ message, currentRoute, inboxMode: !!inboxMode, chatId: chatId || 'default' }),
+        body: JSON.stringify(payload || {}),
       });
-      return await r.json();
-    } catch (e) { return { error: 'network', message: e && e.message }; }
+    } catch (e) {
+      return {
+        error: 'unreachable',
+        message: `Couldn't reach ${url} (${(e && e.message) || 'network error'}). `
+          + `These agent endpoints are new — deploy the backend with \`npm run deploy:backend\`, `
+          + `or run the Firebase emulator and open the admin with ?emu=1.`,
+      };
+    }
+    let body = '';
+    try { body = await r.text(); } catch (e) { /* no body */ }
+    let data = null;
+    if (body) { try { data = JSON.parse(body); } catch (e) { /* non-JSON */ } }
+    if (!r.ok) {
+      const msg = (data && (data.message || data.error))
+        || `HTTP ${r.status} from ${path}${body ? ' — ' + body.slice(0, 400) : ''}`;
+      return { error: data && data.error ? data.error : ('http-' + r.status), message: msg, status: r.status };
+    }
+    return data != null ? data : { error: 'bad-response', message: 'Empty/invalid response from ' + path };
   },
-  async agentUndo(chatId) {
-    const tok = await this._ownerToken();
-    if (!tok) return { error: 'not-signed-in' };
-    try {
-      const r = await fetch(window.FUNCTIONS_BASE + '/agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-        body: JSON.stringify({ action: 'undo', chatId: chatId || 'default' }),
-      });
-      return await r.json();
-    } catch (e) { return { error: 'network', message: e && e.message }; }
+  agentTurn({ message, currentRoute, chatId }) {
+    return this._agentFetch('/agent', { message, currentRoute, chatId: chatId || 'default' });
   },
-  async agentRevertPath(path, before) {
-    const tok = await this._ownerToken();
-    if (!tok) return { error: 'not-signed-in' };
-    try {
-      const r = await fetch(window.FUNCTIONS_BASE + '/agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-        body: JSON.stringify({ action: 'revert-path', path, before }),
-      });
-      return await r.json();
-    } catch (e) { return { error: 'network', message: e && e.message }; }
+  agentUndo(chatId) {
+    return this._agentFetch('/agent', { action: 'undo', chatId: chatId || 'default' });
   },
-  // Inbox triage — batch-classify visitor questions via /inboxProcess (owner token).
-  // Server caps a run at 25 ids and processes them 5 at a time in one conversation.
-  async inboxProcess(ids) {
-    const tok = await this._ownerToken();
-    if (!tok) return { error: 'not-signed-in' };
-    try {
-      const r = await fetch(window.FUNCTIONS_BASE + '/inboxProcess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-        body: JSON.stringify({ ids }),
-      });
-      return await r.json();
-    } catch (e) { return { error: 'network', message: e && e.message }; }
+  agentRevertPath(path, before) {
+    return this._agentFetch('/agent', { action: 'revert-path', path, before });
   },
-  // Inline field refiner — single-shot rewrite via /refine (owner token).
-  async refineText({ text, label, context }) {
-    const tok = await this._ownerToken();
-    if (!tok) return { error: 'not-signed-in' };
-    try {
-      const r = await fetch(window.FUNCTIONS_BASE + '/refine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-        body: JSON.stringify({ text, label, context }),
-      });
-      return await r.json();
-    } catch (e) { return { error: 'network', message: e && e.message }; }
+  // Inbox triage — batch-classify visitor questions (server caps a run at 25,
+  // processed 5 at a time in one conversation).
+  inboxProcess(ids) {
+    return this._agentFetch('/inboxProcess', { ids });
+  },
+  // Inline field refiner — single-shot rewrite.
+  refineText({ text, label, context }) {
+    return this._agentFetch('/refine', { text, label, context });
   },
   // Chat history + clear (owner-only Firestore reads).
   async fsLoadAgentMessages(chatId, n) {

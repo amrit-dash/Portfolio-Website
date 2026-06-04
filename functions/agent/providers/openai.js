@@ -86,10 +86,13 @@ async function generate({ endpoint, model, key, systemPrompt, messages, tools, t
     headers,
     body: JSON.stringify(body),
   });
-  const d = await r.json();
+  const raw = await r.text();
+  let d = {};
+  try { d = raw ? JSON.parse(raw) : {}; } catch (e) { d = { _nonJson: raw }; }
   if (!r.ok || d.error) {
-    const msg = (d && (d.error?.message || (typeof d.error === 'string' ? d.error : null) || d.message)) || ('HTTP ' + r.status);
-    throw Object.assign(new Error(String(msg)), { status: r.status, provider: provider || 'openai' });
+    const detail = (d && (d.error?.message || (typeof d.error === 'string' ? d.error : null) || d.message))
+      || (d._nonJson ? String(d._nonJson).slice(0, 300) : null) || ('HTTP ' + r.status);
+    throw Object.assign(new Error(`${provider || 'openai'} [${r.status}]: ${detail}`), { status: r.status, provider: provider || 'openai' });
   }
   return parseResponse(d);
 }

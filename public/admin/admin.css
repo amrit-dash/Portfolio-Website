@@ -595,10 +595,14 @@ body::before {
 /* Inline refiner (✨) */
 .refine { position: relative; }
 .refine__wrap { position: relative; }
-/* Icon-only refine affordance — tidy 28px rounded square pinned bottom-right. */
-.refine__spark { position: absolute; right: 10px; bottom: 10px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--accent); background: var(--bg-elev); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 8px; cursor: pointer; opacity: .9; transition: background .15s, opacity .15s; }
-.refine__spark:hover:not(:disabled) { opacity: 1; background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev)); }
-.refine__spark:disabled { opacity: .35; cursor: not-allowed; }
+/* Icon-only refine affordance — tidy 30px rounded square pinned top-right, clear
+   of the textarea's bottom-right resize handle, with a backdrop so it stays
+   legible over any text underneath. */
+.refine__wrap { position: relative; }
+.refine__spark { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--accent); background: var(--bg-elev); border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); border-radius: 8px; cursor: pointer; opacity: .92; box-shadow: 0 1px 4px rgba(0,0,0,.25); transition: background .15s, opacity .15s, transform .1s; }
+.refine__spark:hover:not(:disabled) { opacity: 1; background: color-mix(in srgb, var(--accent) 18%, var(--bg-elev)); transform: translateY(-1px); }
+.refine__spark:active:not(:disabled) { transform: translateY(0); }
+.refine__spark:disabled { opacity: .3; cursor: not-allowed; }
 .refine__spark--busy { animation: refinepulse 1s ease-in-out infinite; }
 @keyframes refinepulse { 50% { opacity: .4; } }
 

@@ -81,10 +81,13 @@ async function generate({ endpoint, model, key, systemPrompt, messages, tools, t
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const d = await r.json();
+  const raw = await r.text();
+  let d = {};
+  try { d = raw ? JSON.parse(raw) : {}; } catch (e) { d = { _nonJson: raw }; }
   if (!r.ok || d.error) {
-    const msg = (d && (d.error?.message || d.error)) || ('HTTP ' + r.status);
-    throw Object.assign(new Error(String(msg)), { status: r.status, provider: 'gemini' });
+    const detail = (d && (d.error?.message || (typeof d.error === 'string' ? d.error : null)))
+      || (d._nonJson ? String(d._nonJson).slice(0, 300) : null) || ('HTTP ' + r.status);
+    throw Object.assign(new Error(`gemini [${r.status}]: ${detail}`), { status: r.status, provider: 'gemini' });
   }
   return parseResponse(d);
 }

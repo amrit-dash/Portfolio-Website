@@ -40,7 +40,7 @@ function RefineField({ label, value, onChange, rows = 3, mono, context, placehol
           onClick={refine}
           disabled={state === 'working' || !String(value || '').trim()}
         >
-          <AdminIcon name="sparkle" size={15} />
+          <AdminIcon name="sparkles" size={16} />
         </button>
       </div>
 

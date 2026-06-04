@@ -72,10 +72,13 @@ async function generate({ endpoint, model, key, systemPrompt, messages, tools, t
     },
     body: JSON.stringify(body),
   });
-  const d = await r.json();
+  const raw = await r.text();
+  let d = {};
+  try { d = raw ? JSON.parse(raw) : {}; } catch (e) { d = { _nonJson: raw }; }
   if (!r.ok || d.type === 'error' || d.error) {
-    const msg = (d && (d.error?.message || (d.type === 'error' && d.error && d.error.message))) || ('HTTP ' + r.status);
-    throw Object.assign(new Error(String(msg)), { status: r.status, provider: 'anthropic' });
+    const detail = (d && (d.error?.message || (d.type === 'error' && d.error && d.error.message)))
+      || (d._nonJson ? String(d._nonJson).slice(0, 300) : null) || ('HTTP ' + r.status);
+    throw Object.assign(new Error(`anthropic [${r.status}]: ${detail}`), { status: r.status, provider: 'anthropic' });
   }
   return parseResponse(d);
 }

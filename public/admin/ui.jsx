@@ -58,6 +58,8 @@ function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
     case 'info': return (<svg {...p}><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" /></svg>);
     case 'download': return (<svg {...p}><path d="M12 4v12M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>);
     case 'sparkle': return (<svg {...p}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>);
+    // 'sparkles' — a multi-star twinkle (filled), for the AI refine affordance.
+    case 'sparkles': return (<svg {...p}><path d="M11.5 2.6l1.7 4.8 4.8 1.7-4.8 1.7-1.7 4.8-1.7-4.8L5 9.1l4.8-1.7z" fill="currentColor" stroke="none"/><path d="M18.2 14l.85 2.35 2.35.85-2.35.85-.85 2.35-.85-2.35-2.35-.85 2.35-.85z" fill="currentColor" stroke="none"/></svg>);
     case 'chat': return (<svg {...p}><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg>);
     case 'reset': return (<svg {...p}><path d="M3 12a9 9 0 109-9 9 9 0 00-7.5 4M3 4v4h4"/></svg>);
     case 'doc': return (<svg {...p}><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/></svg>);
