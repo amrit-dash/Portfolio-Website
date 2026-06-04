@@ -32,7 +32,7 @@ function logEvent(type, meta) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, meta, referrer: (typeof document !== 'undefined' && document.referrer) || '' }),
       keepalive: true, // survive page navigation (e.g. CV download / external link)
-    }).catch(() => {});
+    }).catch(() => { });
   } catch (e) { /* never let analytics break the UX */ }
 }
 
@@ -250,19 +250,19 @@ function Icon({ name, size = 18 }) {
 window.Icon = Icon;
 
 const BOOT_LINES = [
-{ text: '', delay: 60 },
-{ text: 'AMRIT.OS v5.0.0 (build 26.05.28)', color: 'acc', delay: 120 },
-{ text: 'Copyright (c) 2017—2026 amrit dash & co.', color: 'dim', delay: 80 },
-{ text: '', delay: 80 },
-{ text: 'self-test ........... PASS', delay: 90 },
-{ text: 'mem check ........... 16384k OK', delay: 90 },
-{ text: 'init devices ........ keyboard, mouse, retina', delay: 90 },
-{ text: 'mount /home/amrit ... ok', delay: 90 },
-{ text: 'load profile ........ software-engineer.cfg', delay: 90 },
-{ text: 'loading modules ..... [automation] [rag] [flutter] [gas]', delay: 110 },
-{ text: 'compile portfolio ... done', delay: 90 },
-{ text: '', delay: 60 },
-{ text: '> launching desktop session ...', color: 'acc', delay: 140 }];
+  { text: '', delay: 60 },
+  { text: 'AMRIT.OS v5.0.0 (build 26.05.28)', color: 'acc', delay: 120 },
+  { text: 'Copyright (c) 2017—2026 amrit dash & co.', color: 'dim', delay: 80 },
+  { text: '', delay: 80 },
+  { text: 'self-test ........... PASS', delay: 90 },
+  { text: 'mem check ........... 16384k OK', delay: 90 },
+  { text: 'init devices ........ keyboard, mouse, retina', delay: 90 },
+  { text: 'mount /home/amrit ... ok', delay: 90 },
+  { text: 'load profile ........ software-engineer.cfg', delay: 90 },
+  { text: 'loading modules ..... [automation] [rag] [flutter] [gas]', delay: 110 },
+  { text: 'compile portfolio ... done', delay: 90 },
+  { text: '', delay: 60 },
+  { text: '> launching desktop session ...', color: 'acc', delay: 140 }];
 
 
 function BootSequence({ onDone }) {
@@ -313,7 +313,7 @@ function BootSequence({ onDone }) {
     <div className={'boot ' + (phase === 'fading' ? 'boot--fading' : '')}>
       <div className="boot__crt-frame">
         {phase === 'booting' &&
-        <div className="boot__panel">
+          <div className="boot__panel">
             <div className="boot__header">
               <span className="acc">●</span> <span>system boot</span>
               <span className="boot__progress-num">[ {progress.toString().padStart(3, ' ')}% ]</span>
@@ -323,17 +323,17 @@ function BootSequence({ onDone }) {
             </div>
             <div className="boot__lines">
               {BOOT_LINES.slice(0, visible).map((line, i) =>
-            <div key={i} className="crt__line">
+                <div key={i} className="crt__line">
                   <span className={line.color || ''}>{line.text || '\u00A0'}</span>
                 </div>
-            )}
+              )}
               {visible < BOOT_LINES.length && <span className="boot__cursor" />}
             </div>
           </div>
         }
 
         {(phase === 'logo' || phase === 'fading') &&
-        <div className="boot__logo">
+          <div className="boot__logo">
             <pre className="boot__ascii">{`   █████╗ ███╗   ███╗██████╗ ██╗████████╗
   ██╔══██╗████╗ ████║██╔══██╗██║╚══██╔══╝
   ███████║██╔████╔██║██████╔╝██║   ██║
@@ -358,11 +358,11 @@ function MenuBar({ theme, onToggleTheme, active }) {
   const t = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const d = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   const items = [
-  { id: 'intro', label: 'intro' },
-  { id: 'about', label: 'about' },
-  { id: 'work', label: 'work' },
-  { id: 'projects', label: 'projects' },
-  { id: 'contact', label: 'contact' }];
+    { id: 'intro', label: 'intro' },
+    { id: 'about', label: 'about' },
+    { id: 'work', label: 'work' },
+    { id: 'projects', label: 'projects' },
+    { id: 'contact', label: 'contact' }];
 
   return (
     <header className="menubar" data-comment-anchor="25c503c02a-header-216-5">
@@ -374,7 +374,7 @@ function MenuBar({ theme, onToggleTheme, active }) {
       </div>
       <nav className="menubar__items">
         {items.map((it) =>
-        <a key={it.id} href={'#' + it.id} className={active === it.id ? 'active' : ''}>{it.label}</a>
+          <a key={it.id} href={'#' + it.id} className={active === it.id ? 'active' : ''}>{it.label}</a>
         )}
       </nav>
       <div className="menubar__right">
@@ -386,7 +386,7 @@ function MenuBar({ theme, onToggleTheme, active }) {
             const root = document.querySelector('.os-root');
             const bot = document.querySelector('.hero__bot');
             if (root && bot) root.scrollTo({ top: bot.offsetTop - 80, behavior: 'smooth' });
-            setTimeout(() => {const inp = document.querySelector('.console__input input');if (inp) inp.focus();}, 600);
+            setTimeout(() => { const inp = document.querySelector('.console__input input'); if (inp) inp.focus(); }, 600);
           }}>
           <span className="dot" /> amrit-bot</button>
         <span className="menubar__clock">{d}  ·  {t}</span>
@@ -420,10 +420,10 @@ const BOT_BEHAVIOR = BOT.behavior || { temperature: 0.7, maxTokens: 300, matchTh
 
 // ─── Local Q&A matcher — fallback when no API key is set; also used as a
 // suggested-answer hint to the LLM when a key is present. ─────────────────
-const STOPWORDS = new Set(['a','an','the','is','are','am','was','were','do','does','did','you','your','i','me','my','what','who','where','when','why','how','tell','about','some','any','can','could','would','have','has','had','will','be','been','being','of','in','on','at','to','for','with','by','from','it','its','this','that','these','those','he','she','they','we','or','and','but','if','so','than','too','very','just','get','into']);
-function qaStem(w){return w.replace(/(ing|tion|tions|ed|er|ly)$/,'').replace(/ies$/,'y');}
-function qaTokenize(s){return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>2&&!STOPWORDS.has(w)).map(qaStem);}
-function qaJaccard(a,b){const A=new Set(qaTokenize(a)),B=new Set(qaTokenize(b));if(!A.size||!B.size)return 0;const inter=[...A].filter(w=>B.has(w)).length;return inter/new Set([...A,...B]).size;}
+const STOPWORDS = new Set(['a', 'an', 'the', 'is', 'are', 'am', 'was', 'were', 'do', 'does', 'did', 'you', 'your', 'i', 'me', 'my', 'what', 'who', 'where', 'when', 'why', 'how', 'tell', 'about', 'some', 'any', 'can', 'could', 'would', 'have', 'has', 'had', 'will', 'be', 'been', 'being', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'it', 'its', 'this', 'that', 'these', 'those', 'he', 'she', 'they', 'we', 'or', 'and', 'but', 'if', 'so', 'than', 'too', 'very', 'just', 'get', 'into']);
+function qaStem(w) { return w.replace(/(ing|tion|tions|ed|er|ly)$/, '').replace(/ies$/, 'y'); }
+function qaTokenize(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOPWORDS.has(w)).map(qaStem); }
+function qaJaccard(a, b) { const A = new Set(qaTokenize(a)), B = new Set(qaTokenize(b)); if (!A.size || !B.size) return 0; const inter = [...A].filter(w => B.has(w)).length; return inter / new Set([...A, ...B]).size; }
 function findBestMatch(query, threshold) {
   const th = typeof threshold === 'number' ? threshold : (BOT_BEHAVIOR.matchThreshold != null ? BOT_BEHAVIOR.matchThreshold : 0.28);
   const pick = (v) => Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] : v;
@@ -465,8 +465,8 @@ function BotMsg({ children, typing }) {
       <span className="bot-msg__avatar"><Icon name="bots" size={12} /></span>
       <div className="bot-msg__bubble">
         {typing ?
-        <span className="bot-typing"><span /><span /><span /></span> :
-        children}
+          <span className="bot-typing"><span /><span /><span /></span> :
+          children}
       </div>
     </div>);
 
@@ -546,17 +546,17 @@ function StatsCard() {
 
 function LinksCard() {
   const links = [
-  { name: 'linkedin', href: 'https://linkedin.com/in/amritdash60', label: 'LinkedIn' },
-  { name: 'github', href: 'https://github.com/the-AoG-guy', label: 'GitHub' },
-  { name: 'instagram', href: 'https://www.instagram.com/_amrit_dash_', label: 'Instagram' },
-  { name: 'whatsapp', href: 'https://wa.me/917978416962', label: 'WhatsApp' },
-  { name: 'email', href: 'mailto:amrit.dash60@gmail.com', label: 'Email' },
-  { name: 'aboutme', href: 'https://about.me/amritdash', label: 'About.me' }];
+    { name: 'linkedin', href: 'https://linkedin.com/in/amritdash60', label: 'LinkedIn' },
+    { name: 'github', href: 'https://github.com/the-AoG-guy', label: 'GitHub' },
+    { name: 'instagram', href: 'https://www.instagram.com/_amrit_dash_', label: 'Instagram' },
+    { name: 'whatsapp', href: 'https://wa.me/917978416962', label: 'WhatsApp' },
+    { name: 'email', href: 'mailto:amrit.dash60@gmail.com', label: 'Email' },
+    { name: 'aboutme', href: 'https://about.me/amritdash', label: 'About.me' }];
 
   return (
     <div className="bot-links">
       {links.map((l) =>
-      <a key={l.name} className="bot-link" href={l.href} target="_blank" rel="noreferrer">
+        <a key={l.name} className="bot-link" href={l.href} target="_blank" rel="noreferrer">
           <Icon name={l.name} size={14} />
           <span>{l.label}</span>
         </a>
@@ -634,7 +634,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
       setThread((prev) => trim([...prev, { from: 'bot', body: a }]));
       setScriptIdx((i) => i + 1);
     }, delay + 2400);
-    return () => {clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [phase, scriptIdx]);
 
   const runCommand = useCallback((cmd) => {
@@ -649,20 +649,20 @@ function AmritBotConsole({ botIcon, botIconColor }) {
         case 'whoami':
           body = <>Amrit Dash — AI &amp; Automation Engineer based in Bangalore. Specializing in process automation + RAG / agentic AI workflows.</>;
           break;
-        case 'stats':body = <StatsCard />;break;
-        case 'links':body = <LinksCard />;break;
-        case 'work':body = <WorkCard />;break;
-        case 'stack':body = <StackCard />;break;
-        case 'projects':body = <ProjectsCard />;break;
-        case 'edu':body = <EduCard />;break;
-        case 'origin':body = <OriginCard />;break;
-        case 'comedy':body = <ComedyCard />;break;
+        case 'stats': body = <StatsCard />; break;
+        case 'links': body = <LinksCard />; break;
+        case 'work': body = <WorkCard />; break;
+        case 'stack': body = <StackCard />; break;
+        case 'projects': body = <ProjectsCard />; break;
+        case 'edu': body = <EduCard />; break;
+        case 'origin': body = <OriginCard />; break;
+        case 'comedy': body = <ComedyCard />; break;
         case 'help':
         case 'commands':
           body = (
-            <div style={{display:'flex',flexWrap:'wrap',gap:'6px',paddingTop:'2px'}}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: '2px' }}>
               {(Array.isArray(BOT.commands) ? BOT.commands : []).map((c) =>
-              <button key={c.id} className="console__chip" onClick={() => runCommand(c.id)} title={c.desc || ''}>/{c.id}</button>
+                <button key={c.id} className="console__chip" onClick={() => runCommand(c.id)} title={c.desc || ''}>/{c.id}</button>
               )}
             </div>);
           break;
@@ -671,7 +671,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
           setPhase('intro');
           setScriptIdx(0);
           return;
-        default:body = <em>command not found: /{cmd}</em>;
+        default: body = <em>command not found: /{cmd}</em>;
       }
       setThread((prev) => [...prev, { from: 'bot', body }]);
     }, 480);
@@ -719,16 +719,16 @@ function AmritBotConsole({ botIcon, botIconColor }) {
 
       <div className="console__body" ref={bodyRef} data-comment-anchor="9ae4af3e04-div-552-7">
         {thread.map((m, i) =>
-        m.from === 'bot' ?
-        <BotMsg key={i}>{m.body}</BotMsg> :
-        <UserMsg key={i}>{m.body}</UserMsg>
+          m.from === 'bot' ?
+            <BotMsg key={i}>{m.body}</BotMsg> :
+            <UserMsg key={i}>{m.body}</UserMsg>
         )}
         {thinking && <BotMsg typing />}
       </div>
 
       <div className="console__chips" data-comment-anchor="e4fa8aa953-div-515-7">
         {QUICK_PROMPTS.map((p) =>
-        <button key={p.id} className="console__chip" onClick={() => runCommand(p.id)}>
+          <button key={p.id} className="console__chip" onClick={() => runCommand(p.id)}>
             /{p.label}
           </button>
         )}
@@ -736,7 +736,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
 
       <form
         className="console__input"
-        onSubmit={(e) => {e.preventDefault();sendInput();}}>
+        onSubmit={(e) => { e.preventDefault(); sendInput(); }}>
         <span className="console__prompt">›</span>
         <input
           type="text"
@@ -872,17 +872,17 @@ function ExpertiseWindow() {
         <div className="window__body" data-comment-anchor="fe2f9673c1-div-233-9">
           <div className="expertise-grid">
             {EXPERTISE.map((e, i) =>
-            <button
-              type="button"
-              key={e.num}
-              className="expertise-card"
-              data-reveal
-              data-reveal-type="up"
-              data-reveal-delay={Math.min(i, 5)}
-              data-active={activeSkill === e.icon}
-              onClick={() => handleClick(e.icon)}
-              aria-pressed={activeSkill === e.icon}
-              title={activeSkill === e.icon ? 'Click again to clear filter' : 'Filter projects by ' + e.title}>
+              <button
+                type="button"
+                key={e.num}
+                className="expertise-card"
+                data-reveal
+                data-reveal-type="up"
+                data-reveal-delay={Math.min(i, 5)}
+                data-active={activeSkill === e.icon}
+                onClick={() => handleClick(e.icon)}
+                aria-pressed={activeSkill === e.icon}
+                title={activeSkill === e.icon ? 'Click again to clear filter' : 'Filter projects by ' + e.title}>
                 <div className="expertise-card__head">
                   <div className="expertise-card__icon"><Icon name={e.icon} size={18} /></div>
                   <div className="expertise-card__num">MOD_{e.num}</div>
@@ -909,8 +909,8 @@ function ExperienceFolder() {
   if (!EXPERIENCE.length) return null;
   const current = EXPERIENCE.find((x) => x.id === active) || EXPERIENCE[0];
   const currentRole = current.roles ?
-  current.roles.find((r) => r.id === activeRole[current.id]) || current.roles[0] :
-  null;
+    current.roles.find((r) => r.id === activeRole[current.id]) || current.roles[0] :
+    null;
   const displayBullets = currentRole ? currentRole.bullets : current.bullets;
   const displayDate = currentRole ? currentRole.date : current.date;
   const displayPath = currentRole ? `~/work/${current.id}/${currentRole.id}/` : `~/work/${current.id}/`;
@@ -935,12 +935,12 @@ function ExperienceFolder() {
         <div className="exp-folder__body">
           <div className="exp-sidebar">
             {EXPERIENCE.map((e) =>
-            <button
-              key={e.id}
-              className="exp-tab"
-              data-active={e.id === active}
-              onClick={() => setActive(e.id)}>
-              
+              <button
+                key={e.id}
+                className="exp-tab"
+                data-active={e.id === active}
+                onClick={() => setActive(e.id)}>
+
                 <span className="exp-tab__name">{e.short}</span>
                 <span className="exp-tab__date">{e.date}</span>
               </button>
@@ -953,32 +953,32 @@ function ExperienceFolder() {
             <div className="exp-detail__date">{displayDate}</div>
             <div className="exp-detail__desc" data-comment-anchor="f7f62644aa-div-705-13">{current.desc}</div>
             {current.roles &&
-            <div className="exp-roles">
+              <div className="exp-roles">
                 {current.roles.map((r) =>
-              <button
-                key={r.id}
-                className="exp-role-tab"
-                data-active={r.id === currentRole.id}
-                onClick={() => setActiveRole((s) => ({ ...s, [current.id]: r.id }))}>
-                
+                  <button
+                    key={r.id}
+                    className="exp-role-tab"
+                    data-active={r.id === currentRole.id}
+                    onClick={() => setActiveRole((s) => ({ ...s, [current.id]: r.id }))}>
+
                     {r.name}
                   </button>
-              )}
+                )}
               </div>
             }
             {displayBullets &&
-            <ul className="exp-bullets">
+              <ul className="exp-bullets">
                 {displayBullets.map((b) => <li key={b}>{b}</li>)}
               </ul>
             }
             {current.clients &&
-            <ul className="exp-clients">
+              <ul className="exp-clients">
                 {current.clients.map((c) =>
-              <li key={c.name}>
+                  <li key={c.name}>
                     <span className="exp-clients__name">{c.name}</span>
                     <span className="exp-clients__detail">{c.detail}</span>
                   </li>
-              )}
+                )}
               </ul>
             }
             <div className="exp-detail__stack">
@@ -1028,7 +1028,7 @@ function FolderIcon({ project, onOpen }) {
       <div className="folder-icon__art">
         <img src={project.image} alt="" />
         {project.directLink &&
-        <span className="folder-icon__ext-badge" title="Opens external link">↗</span>
+          <span className="folder-icon__ext-badge" title="Opens external link">↗</span>
         }
       </div>
       <div className="folder-icon__label">{project.title}</div>
@@ -1039,7 +1039,7 @@ function FolderIcon({ project, onOpen }) {
 
 function ProjectModal({ project, onClose }) {
   useEffect(() => {
-    const onKey = (e) => {if (e.key === 'Escape') onClose();};
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
@@ -1075,7 +1075,7 @@ function ProjectModal({ project, onClose }) {
             </div>
             <div className="project-modal__buttons" data-comment-anchor="bb9fb0b309-div-929-13">
               {project.links.map((l) =>
-              <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="btn btn--primary">
+                <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="btn btn--primary">
                   {l.label} <span className="btn__arrow">↗</span>
                 </a>
               )}
@@ -1100,8 +1100,8 @@ function ProjectsDesktop() {
   }, []);
 
   const filtered = filter ?
-  PROJECTS.filter((p) => Array.isArray(p.skills) && p.skills.includes(filter)) :
-  PROJECTS;
+    PROJECTS.filter((p) => Array.isArray(p.skills) && p.skills.includes(filter)) :
+    PROJECTS;
   const filterModule = filter ? EXPERTISE.find((e) => e.icon === filter) : null;
 
   const clearFilter = () => {
@@ -1118,13 +1118,15 @@ function ProjectsDesktop() {
       }} data-reveal data-reveal-type="up" data-comment-anchor="a78875ae98-h2-622-7">
         Selected work — <em style={{ fontStyle: 'italic', color: 'var(--accent)' }}>click</em> any folder to inspect.
       </h2>
-      <p style={{ color: 'var(--fg-mute)', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px',
-        letterSpacing: '.08em', marginBottom: filterModule ? '16px' : '32px' }} data-reveal data-reveal-type="up" data-reveal-delay="1">
+      <p style={{
+        color: 'var(--fg-mute)', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px',
+        letterSpacing: '.08em', marginBottom: filterModule ? '16px' : '32px'
+      }} data-reveal data-reveal-type="up" data-reveal-delay="1">
         {filtered.length} {filtered.length === 1 ? 'ITEM' : 'ITEMS'} · {filterModule ? `FILTERED BY ${filterModule.title.toUpperCase()}` : 'SORTED BY RECENCY · TOTAL 12.4 MB'}
       </p>
 
       {filterModule &&
-      <div className="filter-pill" role="status" aria-live="polite">
+        <div className="filter-pill" role="status" aria-live="polite">
           <Icon name={filterModule.icon} size={13} />
           <span>Filtered by <b>{filterModule.title}</b></span>
           <button className="filter-pill__close" onClick={clearFilter} aria-label="Clear filter">×</button>
@@ -1133,12 +1135,12 @@ function ProjectsDesktop() {
 
       <div className="projects-desktop" data-reveal data-reveal-type="window" data-comment-anchor="a60579f3f5-div-430-7">
         {filtered.length === 0 ?
-        <div className="projects-empty">No projects tagged with {filterModule?.title} yet.</div> :
-        filtered.map((p, i) =>
-        <div key={p.id} data-reveal data-reveal-type="scale" data-reveal-delay={Math.min(i, 5)}>
-            <FolderIcon project={p} onOpen={(proj) => { logEvent('project:open', { id: proj.id, title: proj.title }); setOpen(proj); }} />
-          </div>
-        )}
+          <div className="projects-empty">No projects tagged with {filterModule?.title} yet.</div> :
+          filtered.map((p, i) =>
+            <div key={p.id} data-reveal data-reveal-type="scale" data-reveal-delay={Math.min(i, 5)}>
+              <FolderIcon project={p} onOpen={(proj) => { logEvent('project:open', { id: proj.id, title: proj.title }); setOpen(proj); }} />
+            </div>
+          )}
       </div>
 
       {open && <ProjectModal project={open} onClose={() => setOpen(null)} />}
@@ -1223,7 +1225,7 @@ function Dock() {
       </div>
       <div className="dock-rail">
         <div className="dock-copy"><span style={{ color: 'var(--accent)' }}>©</span> <span style={{ color: 'var(--accent)' }}>AMRIT DASH</span> <span style={{ color: 'var(--accent)' }}>2026</span></div>
-        <div className="dock-built">BUILT WITH STACKS OF RED BULLS, PUNCHLINES &amp; QUERY LOGS</div>
+        <div className="dock-built">BUILT WITH STACKS OF RED BULLS...</div>
       </div>
     </footer>);
 
@@ -1235,21 +1237,21 @@ function Dock() {
 
 const BOT_ICON_OPTIONS = [
   { value: 'brain-computer', label: 'Brain + Computer' },
-  { value: 'brain',         label: 'Brain (original)' },
-  { value: 'brain14',       label: 'Brain Outline' },
-  { value: 'intelligence',  label: 'Intelligence' },
-  { value: 'bot-ai',        label: 'Bot AI' },
-  { value: 'brain-pc2',     label: 'Brain + Computer 2' },
-  { value: 'brain-pc',      label: 'Brain + Computer 3' },
+  { value: 'brain', label: 'Brain (original)' },
+  { value: 'brain14', label: 'Brain Outline' },
+  { value: 'intelligence', label: 'Intelligence' },
+  { value: 'bot-ai', label: 'Bot AI' },
+  { value: 'brain-pc2', label: 'Brain + Computer 2' },
+  { value: 'brain-pc', label: 'Brain + Computer 3' },
 ];
 
 const BOT_ICON_SRCS = {
   'brain-computer': 'assets/icons/brain-computer.svg',
-  brain14:          'assets/icons/brain-14.svg',
-  intelligence:     'https://www.svgrepo.com/download/173302/intelligence.svg',
-  'bot-ai':         'https://www.svgrepo.com/download/416376/artificial-bot-intelligence.svg',
-  'brain-pc2':      'https://www.svgrepo.com/download/416385/artificial-brain-computer-2.svg',
-  'brain-pc':       'https://www.svgrepo.com/download/416386/artificial-brain-computer.svg',
+  brain14: 'assets/icons/brain-14.svg',
+  intelligence: 'https://www.svgrepo.com/download/173302/intelligence.svg',
+  'bot-ai': 'https://www.svgrepo.com/download/416376/artificial-bot-intelligence.svg',
+  'brain-pc2': 'https://www.svgrepo.com/download/416385/artificial-brain-computer-2.svg',
+  'brain-pc': 'https://www.svgrepo.com/download/416386/artificial-brain-computer.svg',
 };
 
 function BotAvatarIcon({ icon, size = 24, iconColor = 'white' }) {
@@ -1294,20 +1296,20 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
 const TWEAK_DEFAULTS = (() => {
   const c = (CONTENT && CONTENT.cosmetics) || {};
   return {
-    accent:       typeof c.accent === 'string' ? c.accent : _COSMETICS_BASE.accent,
-    accentTone:   typeof c.accentTone === 'number' ? c.accentTone : _COSMETICS_BASE.accentTone,
-    scanlines:    c.scanlines == null ? _COSMETICS_BASE.scanlines : !!c.scanlines,
-    cursorStyle:  typeof c.cursorStyle === 'string' ? c.cursorStyle : _COSMETICS_BASE.cursorStyle,
-    cursorColor:  typeof c.cursorColor === 'string' ? c.cursorColor : _COSMETICS_BASE.cursorColor,
-    botIcon:      typeof c.botIcon === 'string' ? c.botIcon : _COSMETICS_BASE.botIcon,
+    accent: typeof c.accent === 'string' ? c.accent : _COSMETICS_BASE.accent,
+    accentTone: typeof c.accentTone === 'number' ? c.accentTone : _COSMETICS_BASE.accentTone,
+    scanlines: c.scanlines == null ? _COSMETICS_BASE.scanlines : !!c.scanlines,
+    cursorStyle: typeof c.cursorStyle === 'string' ? c.cursorStyle : _COSMETICS_BASE.cursorStyle,
+    cursorColor: typeof c.cursorColor === 'string' ? c.cursorColor : _COSMETICS_BASE.cursorColor,
+    botIcon: typeof c.botIcon === 'string' ? c.botIcon : _COSMETICS_BASE.botIcon,
     botIconColor: typeof c.botIconColor === 'string' ? c.botIconColor : _COSMETICS_BASE.botIconColor,
-    type:         typeof c.type === 'string' ? c.type : _COSMETICS_BASE.type,
-    fontScale:    typeof c.fontScale === 'number' ? c.fontScale : _COSMETICS_BASE.fontScale,
-    headingFont:  typeof c.headingFont === 'string' ? c.headingFont : _COSMETICS_BASE.headingFont,
-    tracking:     typeof c.tracking === 'string' ? c.tracking : _COSMETICS_BASE.tracking,
-    bgPattern:    typeof c.bgPattern === 'string' ? c.bgPattern : _COSMETICS_BASE.bgPattern,
-    glow:         typeof c.glow === 'number' ? c.glow : _COSMETICS_BASE.glow,
-    radius:       typeof c.radius === 'string' ? c.radius : _COSMETICS_BASE.radius,
+    type: typeof c.type === 'string' ? c.type : _COSMETICS_BASE.type,
+    fontScale: typeof c.fontScale === 'number' ? c.fontScale : _COSMETICS_BASE.fontScale,
+    headingFont: typeof c.headingFont === 'string' ? c.headingFont : _COSMETICS_BASE.headingFont,
+    tracking: typeof c.tracking === 'string' ? c.tracking : _COSMETICS_BASE.tracking,
+    bgPattern: typeof c.bgPattern === 'string' ? c.bgPattern : _COSMETICS_BASE.bgPattern,
+    glow: typeof c.glow === 'number' ? c.glow : _COSMETICS_BASE.glow,
+    radius: typeof c.radius === 'string' ? c.radius : _COSMETICS_BASE.radius,
   };
 })();
 
@@ -1346,7 +1348,7 @@ function App() {
   // Visitor-initiated toggle: records an explicit preference so it sticks across
   // future default changes (preview ignores the flag so the admin always sees the default).
   const chooseTheme = useCallback((next) => {
-    try { localStorage.setItem('amritos.theme.explicit', '1'); } catch (e) {}
+    try { localStorage.setItem('amritos.theme.explicit', '1'); } catch (e) { }
     setTheme(next);
   }, []);
   const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
@@ -1362,9 +1364,9 @@ function App() {
     if (!liveCos) return;
     const next = {};
     ['accent', 'accentTone', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale',
-     'headingFont', 'tracking', 'bgPattern', 'glow', 'radius'].forEach((k) => {
-      if (liveCos[k] !== undefined) next[k] = liveCos[k];
-    });
+      'headingFont', 'tracking', 'bgPattern', 'glow', 'radius'].forEach((k) => {
+        if (liveCos[k] !== undefined) next[k] = liveCos[k];
+      });
     setTweak(next);
     // Default mode follows the published cosmetics: always in preview, and for
     // real visitors who haven't explicitly toggled their own theme.
@@ -1380,10 +1382,10 @@ function App() {
   // Also warm the bot proxy now so the first chat reply isn't a cold start.
   useEffect(() => {
     let preview = false;
-    try { preview = new URLSearchParams(location.search).has('adminpreview'); } catch (e) {}
+    try { preview = new URLSearchParams(location.search).has('adminpreview'); } catch (e) { }
     if (!preview) {
       logEvent('view');
-      try { if (window.FUNCTIONS_BASE) fetch(window.FUNCTIONS_BASE + '/warmup', { mode: 'cors' }).catch(() => {}); } catch (e) {}
+      try { if (window.FUNCTIONS_BASE) fetch(window.FUNCTIONS_BASE + '/warmup', { mode: 'cors' }).catch(() => { }); } catch (e) { }
     }
   }, []);
 
@@ -1460,7 +1462,7 @@ function App() {
           theme={theme}
           active={navActive}
           onToggleTheme={() => chooseTheme(theme === 'dark' ? 'light' : 'dark')} />
-        
+
         <Hero botIcon={t.botIcon} botIconColor={t.botIconColor} />
         <AboutWindow cvUrl={cvUrl} cvVariant={cvVariant} />
         <ExpertiseWindow />
@@ -1470,48 +1472,48 @@ function App() {
         <Dock />
       </div>
       {TweaksPanel &&
-      <TweaksPanel title="amrit.os tweaks">
+        <TweaksPanel title="amrit.os tweaks">
           <TweakSection label="Theme" />
           <TweakRadio label="Mode" value={theme} options={['dark', 'light']}
-        onChange={(v) => setTheme(v)} />
+            onChange={(v) => setTheme(v)} />
           <TweakColor label="Accent (swatch)" value={t.accent} options={ACCENT_OPTIONS}
-        onChange={(v) => setTweak('accent', v)} />
+            onChange={(v) => setTweak('accent', v)} />
           <TweakColor label="Accent (custom)" value={t.accent}
-        onChange={(v) => setTweak('accent', v)} />
+            onChange={(v) => setTweak('accent', v)} />
           <TweakSlider label="Accent brightness" value={t.accentTone == null ? 50 : t.accentTone} min={0} max={100} step={5} unit=""
-        onChange={(v) => setTweak('accentTone', v)} />
+            onChange={(v) => setTweak('accentTone', v)} />
           <TweakSection label="Typography" />
           <TweakSelect label="Font set" value={t.type} options={TYPE_OPTIONS}
-        onChange={(v) => setTweak('type', v)} />
+            onChange={(v) => setTweak('type', v)} />
           <TweakSelect label="Heading font" value={t.headingFont || 'match'} options={HEADING_FONT_OPTIONS}
-        onChange={(v) => setTweak('headingFont', v)} />
+            onChange={(v) => setTweak('headingFont', v)} />
           <TweakRadio label="Tracking" value={t.tracking || 'normal'} options={TRACKING_OPTIONS}
-        onChange={(v) => setTweak('tracking', v)} />
+            onChange={(v) => setTweak('tracking', v)} />
           <TweakSlider label="Font size" value={t.fontScale} min={85} max={120} step={5} unit="%"
-        onChange={(v) => setTweak('fontScale', v)} />
+            onChange={(v) => setTweak('fontScale', v)} />
           <TweakSection label="Background & glow" />
           <TweakSelect label="Wallpaper" value={t.bgPattern || 'grid'} options={BG_PATTERN_OPTIONS}
-        onChange={(v) => setTweak('bgPattern', v)} />
+            onChange={(v) => setTweak('bgPattern', v)} />
           <TweakSlider label="Accent glow" value={t.glow == null ? 100 : t.glow} min={0} max={160} step={10} unit="%"
-        onChange={(v) => setTweak('glow', v)} />
+            onChange={(v) => setTweak('glow', v)} />
           <TweakRadio label="Corners" value={t.radius || 'soft'} options={RADIUS_OPTIONS}
-        onChange={(v) => setTweak('radius', v)} />
+            onChange={(v) => setTweak('radius', v)} />
           <TweakSection label="Bot Icon" />
           <TweakSelect label="Icon style" value={t.botIcon || 'brain'}
-        options={BOT_ICON_OPTIONS.map(o => o.value)}
-        onChange={(v) => setTweak('botIcon', v)} />
+            options={BOT_ICON_OPTIONS.map(o => o.value)}
+            onChange={(v) => setTweak('botIcon', v)} />
           <TweakRadio label="Icon color" value={t.botIconColor || 'white'}
-        options={['white', 'accent']}
-        onChange={(v) => setTweak('botIconColor', v)} />
+            options={['white', 'accent']}
+            onChange={(v) => setTweak('botIconColor', v)} />
           <TweakSection label="Effects" />
           <TweakToggle label="CRT scanlines" value={t.scanlines}
-        onChange={(v) => setTweak('scanlines', v)} />
+            onChange={(v) => setTweak('scanlines', v)} />
           <TweakSelect label="Cursor type" value={t.cursorStyle || 'ring'}
-        options={['ring', 'pixel', 'dot', 'cross']}
-        onChange={(v) => setTweak('cursorStyle', v)} />
+            options={['ring', 'pixel', 'dot', 'cross']}
+            onChange={(v) => setTweak('cursorStyle', v)} />
           <TweakColor label="Cursor color" value={t.cursorColor || t.accent}
-        options={CURSOR_COLOR_OPTIONS}
-        onChange={(v) => setTweak('cursorColor', v)} />
+            options={CURSOR_COLOR_OPTIONS}
+            onChange={(v) => setTweak('cursorColor', v)} />
         </TweaksPanel>
       }
       <CustomCursor cursorStyle={t.cursorStyle || 'ring'} />
@@ -1536,15 +1538,15 @@ function CustomCursor({ cursorStyle }) {
     const trail = trailRef.current;
     if (!primary) return;
 
-    let mx = -200,my = -200;
-    let tx = -200,ty = -200;
+    let mx = -200, my = -200;
+    let tx = -200, ty = -200;
     let raf;
 
-    const onMove = (e) => {mx = e.clientX;my = e.clientY;};
+    const onMove = (e) => { mx = e.clientX; my = e.clientY; };
 
     // ring hover expand
-    const onEnter = () => {if (trail) trail.classList.add('cursor-ring--active');};
-    const onLeave = () => {if (trail) trail.classList.remove('cursor-ring--active');};
+    const onEnter = () => { if (trail) trail.classList.add('cursor-ring--active'); };
+    const onLeave = () => { if (trail) trail.classList.remove('cursor-ring--active'); };
     const SEL = 'a, button, [role="button"], input, textarea, .folder-icon';
     document.querySelectorAll(SEL).forEach((el) => {
       el.addEventListener('mouseenter', onEnter);
@@ -1586,7 +1588,7 @@ function CustomCursor({ cursorStyle }) {
       <div className="cursor-pixel" ref={primaryRef}>
         <svg width="22" height="22" viewBox="0 0 22 22" style={{ display: 'block', marginLeft: '-2px', marginTop: '-2px' }}>
           <path d="M2 2 L2 15 L6.5 11.5 L9.5 18 L13 16.5 L10 10.5 L15.5 10.5 Z"
-          fill="currentColor" stroke="currentColor" strokeWidth="0.6" strokeLinejoin="round" />
+            fill="currentColor" stroke="currentColor" strokeWidth="0.6" strokeLinejoin="round" />
         </svg>
       </div>);
   }
