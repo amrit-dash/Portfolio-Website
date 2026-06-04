@@ -48,6 +48,17 @@ cp('admin', admin, 'admin');             // admin/*.jsx + admin.css
 cp('shared-schema.js', admin);           // plain-JS global used by the agent UI
 shared.forEach((f) => cp(f, admin));
 
+// ---- Keep the backend's shared-schema copy in lockstep with the source ----
+// public/shared-schema.js is authoritative (client + agent validators). The
+// functions/ folder ships its OWN copy so the deployed Cloud Functions don't
+// reach outside their root, but it must never drift from the source — mirror it
+// on every build so server enums/validators always match the client.
+const fnSchema = join(root, 'functions', 'shared-schema.js');
+if (existsSync(join(pub, 'shared-schema.js'))) {
+  cpSync(join(pub, 'shared-schema.js'), fnSchema);
+  console.log('✓ synced functions/shared-schema.js ← public/shared-schema.js');
+}
+
 // ---------------------------------------------------------------------------
 // 1. Compile every *.jsx in dist → minified *.js (classic React global runtime)
 //    and remove the original .jsx so only compiled output ships.
