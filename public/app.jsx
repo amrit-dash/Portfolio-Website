@@ -1225,7 +1225,7 @@ function Dock() {
       </div>
       <div className="dock-rail">
         <div className="dock-copy"><span style={{ color: 'var(--accent)' }}>©</span> <span style={{ color: 'var(--accent)' }}>AMRIT DASH</span> <span style={{ color: 'var(--accent)' }}>2026</span></div>
-        <div className="dock-built">BUILT WITH STACKS OF RED BULLS...</div>
+        <div className="dock-built">BUILT WITH STACKS OF RED BULLS</div>
       </div>
     </footer>);
 
