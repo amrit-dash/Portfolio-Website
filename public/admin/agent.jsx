@@ -55,7 +55,7 @@ function pathToRoute(path) {
 }
 
 /* ---------- the send action (shared) ---------- */
-async function sendAgentMessage({ text, route, inboxMode, setAgentBusy }) {
+async function sendAgentMessage({ text, route, setAgentBusy }) {
   const Store = window.ADMIN_STORE.Store;
   if (!text.trim() || agentChat.sending) return;
   agentChat.push({ role: 'user', text });
@@ -63,7 +63,7 @@ async function sendAgentMessage({ text, route, inboxMode, setAgentBusy }) {
   agentChat.setSending(true);
   if (setAgentBusy) setAgentBusy(true);
   try {
-    const res = await Store.agentTurn({ message: text, currentRoute: route, inboxMode, chatId: 'default' });
+    const res = await Store.agentTurn({ message: text, currentRoute: route, chatId: 'default' });
     if (res && res.error) {
       agentChat.patchLast({ pending: false, text: '', error: res.message || res.error });
     } else {
@@ -181,7 +181,6 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
   const { AdminIcon } = window.ADMIN_UI;
   const chat = useAgentChat();
   const [input, setInput] = useState('');
-  const [inbox, setInbox] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const scroller = useRef(null);
 
@@ -193,7 +192,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
     if (e) e.preventDefault();
     const t = input;
     setInput('');
-    sendAgentMessage({ text: t, route, inboxMode: inbox, setAgentBusy });
+    sendAgentMessage({ text: t, route, setAgentBusy });
   };
 
   return (
@@ -202,7 +201,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
         {chat.messages.length === 0 && (
           <div className="agentchat__empty">
             <p>Ask me to edit the portfolio — “tighten my hero”, “add a project for X with these tags”,
-              “validate the inbox and turn the good ones into Q&amp;A”. I write to the <b>draft</b>; you review and publish.</p>
+              “add two Q&amp;A pairs about my stack”. I write to the <b>draft</b>; you review and publish.</p>
           </div>
         )}
         {chat.messages.map((m, i) => <MessageBubble key={i} msg={m} go={go} openPreview={openPreview} />)}
@@ -213,27 +212,18 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
           className="composer__input"
           rows={compact ? 2 : 3}
           value={input}
-          placeholder={inbox ? 'inbox triage — describe how to handle visitor questions…' : 'message the agent…'}
+          placeholder="message the agent…"
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(e); }}
         />
         <div className="composer__bar">
-          <button
-            type="button"
-            className="composer__tool"
-            data-on={inbox}
-            title="Inbox triage mode — runs the turn over visitor questions (bot_questions) with a restricted, injection-guarded tool set (no publish/undo)."
-            onClick={() => setInbox((v) => !v)}
-          >
-            <AdminIcon name="chat" size={14} /> Inbox{inbox ? ' on' : ''}
+          <button type="button" className="composer__tool" title="Agent settings (keys & model)" onClick={() => setSettingsOpen(true)}>
+            <AdminIcon name="settings" size={16} />
           </button>
           <span className="spacer" style={{ flex: 1 }} />
-          <button type="button" className="composer__tool" title="Agent settings (keys & model)" onClick={() => setSettingsOpen(true)}>
-            <AdminIcon name="settings" size={15} />
-          </button>
           <button className="composer__send" type="submit" disabled={chat.sending || !input.trim()} title="Send (⌘/Ctrl + Enter)">
-            <AdminIcon name="rocket" size={14} />
             <span>{chat.sending ? 'Working…' : 'Send'}</span>
+            <AdminIcon name="send" size={15} />
           </button>
         </div>
       </form>
@@ -254,7 +244,7 @@ function AgentPage({ route, go, openPreview, setAgentBusy }) {
       <PageHead eyebrow="/AGENT.AI" title="Agent">
         Drive every admin control by chatting. Changes apply to the draft and appear live in the editors; nothing publishes until you say so.
       </PageHead>
-      <div className="agentpage canvas--narrow">
+      <div className="agentpage">
         {chat.messages.length > 0 && (
           <div className="agentpage__bar">
             <span className="spacer" style={{ flex: 1 }} />
@@ -290,7 +280,7 @@ function AgentDock({ route, go, openPreview, setAgentBusy }) {
         </div>
       ) : (
         <button className="agentdock__bubble" title="Ask the agent" onClick={() => setOpen(true)}>
-          <AdminIcon name="chip" size={22} />
+          <AdminIcon name="chip" size={28} strokeWidth={2.2} />
           {chat.sending && <span className="agentdock__pulse" />}
         </button>
       )}

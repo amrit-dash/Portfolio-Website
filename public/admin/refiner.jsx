@@ -34,13 +34,13 @@ function RefineField({ label, value, onChange, rows = 3, mono, context, placehol
         <TextArea value={value} onChange={onChange} rows={rows} mono={mono} placeholder={placeholder} />
         <button
           type="button"
-          className="refine__spark"
+          className={'refine__spark' + (state === 'working' ? ' refine__spark--busy' : '')}
           title="Refine this field with AI"
+          aria-label="Refine this field with AI"
           onClick={refine}
           disabled={state === 'working' || !String(value || '').trim()}
         >
-          <AdminIcon name="sparkle" size={14} />
-          {state === 'working' ? <span className="refine__lbl">…</span> : <span className="refine__lbl">Refine</span>}
+          <AdminIcon name="sparkle" size={15} />
         </button>
       </div>
 

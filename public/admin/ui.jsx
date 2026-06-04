@@ -19,8 +19,8 @@ window.assetUrl = function (u) {
 };
 
 /* ---------- Icons ---------- */
-function AdminIcon({ name, size = 16 }) {
-  const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { display: 'block' } };
+function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
+  const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', style: { display: 'block' } };
   switch (name) {
     case 'overview': return (<svg {...p}><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg>);
     case 'hero': return (<svg {...p}><path d="M4 19V9l8-5 8 5v10"/><path d="M4 19h16"/><path d="M9 19v-5h6v5"/></svg>);
@@ -68,6 +68,8 @@ function AdminIcon({ name, size = 16 }) {
     case 'os-window': return (<svg {...p}><rect x="2.5" y="3.5" width="19" height="17" rx="2.8"/><path d="M5.3 3.5H18.7a2.8 2.8 0 0 1 2.8 2.8V8H2.5V6.3a2.8 2.8 0 0 1 2.8-2.8Z" fill="currentColor" stroke="none"/><circle cx="5.4" cy="5.75" r=".82" fill="var(--bg-elev)" stroke="none"/><circle cx="7.8" cy="5.75" r=".82" fill="var(--bg-elev)" stroke="none"/><circle cx="10.2" cy="5.75" r=".82" fill="var(--bg-elev)" stroke="none"/><path d="M6 12.2l2.6 2-2.6 2"/><path d="M11.6 16.2H17"/></svg>);
     // 'chip' — an intelligent AI chip: CPU body with pins + a lit core spark.
     case 'chip': return (<svg {...p}><rect x="6.5" y="6.5" width="11" height="11" rx="2.6"/><path d="M9.2 6.5V3.6M14.8 6.5V3.6M9.2 20.4v-2.9M14.8 20.4v-2.9M6.5 9.2H3.6M6.5 14.8H3.6M20.4 9.2h-2.9M20.4 14.8h-2.9"/><path d="M12 9.3l.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9z" fill="currentColor" stroke="none"/></svg>);
+    // 'send' — paper-plane, placed after the "Send" label.
+    case 'send': return (<svg {...p}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>);
     default: return <svg {...p} />;
   }
 }

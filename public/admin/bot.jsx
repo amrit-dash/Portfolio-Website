@@ -173,17 +173,63 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
     finally { setQLoading(false); }
   };
   useBEffect(() => { if (tab === 'review' && questions === null) loadQuestions(); }, [tab]);
-  const addToQA = (q) => {
-    const text = (q.q || '').trim();
-    if (!text) return;
-    setAt('bot.qa', [...(bot.qa || []), { qs: [text], as: [''] }]);
-    window.ADMIN_STORE.Store.fsDeleteBotQuestion(q.id);
-    setQuestions((list) => (list || []).filter((x) => x.id !== q.id));
+
+  // ---- AI triage: classify visitor questions in batches of 5 (server-side
+  //      conversation), then apply suggestions by TEXT match (never a stale index).
+  const [suggestions, setSuggestions] = useBState({}); // id -> suggestion
+  const [aiBusy, setAiBusy] = useBState(false);
+  const [aiErr, setAiErr] = useBState(null);
+  const [openInfo, setOpenInfo] = useBState(null);     // id whose suggestion panel is open
+  const [procIds, setProcIds] = useBState({});         // id -> true while in-flight
+
+  const aiProcess = async () => {
+    if (!questions || aiBusy) return;
+    const batch = questions.filter((q) => !suggestions[q.id]).slice(0, 25);
+    if (!batch.length) return;
+    setAiBusy(true); setAiErr(null);
+    const inFlight = {}; batch.forEach((q) => { inFlight[q.id] = true; }); setProcIds(inFlight);
+    const res = await window.ADMIN_STORE.Store.inboxProcess(batch.map((q) => q.id));
+    if (res && Array.isArray(res.suggestions)) {
+      setSuggestions((prev) => { const next = { ...prev }; res.suggestions.forEach((s) => { next[s.id] = s; }); return next; });
+    }
+    if (res && res.error) setAiErr(res.message || res.error);
+    setProcIds({}); setAiBusy(false);
   };
-  const dismissQ = (q) => {
-    window.ADMIN_STORE.Store.fsDeleteBotQuestion(q.id);
-    setQuestions((list) => (list || []).filter((x) => x.id !== q.id));
+
+  // Delete the inbox question only AFTER the QA write is enqueued + the delete
+  // resolves; restore the row on failure.
+  const removeQuestion = async (id) => {
+    try {
+      await window.ADMIN_STORE.Store.fsDeleteBotQuestion(id);
+      setQuestions((list) => (list || []).filter((x) => x.id !== id));
+      setOpenInfo(null);
+    } catch (e) { setAiErr('could not remove question — try again'); }
   };
+  const applyNew = async (q, s) => {
+    const qs = (s && s.suggestedQuestions && s.suggestedQuestions.length) ? s.suggestedQuestions : [(q.q || '').trim()];
+    const as = (s && s.suggestedAnswers && s.suggestedAnswers.length) ? s.suggestedAnswers : [''];
+    setAt('bot.qa', [...(bot.qa || []), { qs, as }]);   // enqueue QA write first
+    await removeQuestion(q.id);
+  };
+  const applyPhrase = async (q, s) => {
+    const phrasing = ((s && s.phrasing) || (q.q || '')).trim();
+    // Resolve the target by TEXT (matchQuestion), not the raw index — the Q&A list
+    // may have changed since processing. Fall back to a new entry if not found.
+    let idx = -1;
+    if (s && typeof s.matchQuestion === 'string') {
+      const t = s.matchQuestion.trim().toLowerCase();
+      idx = (bot.qa || []).findIndex((x) => (((x.qs && x.qs[0]) || '').trim().toLowerCase()) === t);
+    }
+    if (idx < 0 && s && Number.isInteger(s.matchIndex) && bot.qa && bot.qa[s.matchIndex]) idx = s.matchIndex;
+    if (idx < 0 || !bot.qa[idx]) { await applyNew(q, s); return; } // pair gone → add as new
+    const cur = (bot.qa[idx].qs) || [];
+    if (!cur.some((p) => p.trim().toLowerCase() === phrasing.toLowerCase())) setQA(idx, 'qs', [...cur, phrasing]);
+    await removeQuestion(q.id);
+  };
+  const dismissQ = (q) => { removeQuestion(q.id); };
+  const verdictLabel = (v) => v === 'existing_phrase' ? 'Already covered' : v === 'irrelevant' ? 'Not worth automating' : 'New question';
+  const unprocessedCount = () => (questions || []).filter((q) => !suggestions[q.id]).length;
+
   const qWhen = (q) => {
     const ms = q.at && q.at.toMillis ? q.at.toMillis() : (q.at && q.at.seconds ? q.at.seconds * 1000 : 0);
     if (!ms) return '';
@@ -358,24 +404,55 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
       {tab === 'review' && (
         <div className="canvas--narrow">
           <Panel title="Visitor questions" sub={questions ? `${questions.length} captured` : '…'}
-            actions={<Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading}>{qLoading ? 'Loading…' : 'Refresh'}</Btn>}>
-            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Turn good ones into canned answers with <b>Add to Q&amp;A</b> (then write the answer in the Q&amp;A tab), or dismiss the rest. This is how the bot gets smarter over time.</p>
+            actions={<>
+              <Btn sm kind="primary" icon="sparkle" onClick={aiProcess} disabled={aiBusy || !questions || !unprocessedCount()}>
+                {aiBusy ? 'Processing…' : (unprocessedCount() > 25 ? 'AI process 25' : 'AI process')}
+              </Btn>
+              <Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading}>{qLoading ? 'Loading…' : 'Refresh'}</Btn>
+            </>}>
+            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Hit <b>AI process</b> to let the agent triage them (5 at a time) — it suggests merging a question into an existing Q&amp;A, creating a new one with answers, or dismissing junk. Then open each <AdminIcon name="info" size={12} /> to apply. Or add one manually. Publish to push the Q&amp;A live.</p>
+            {aiErr && <div className="helptext" style={{ color: '#e0a341', marginBottom: 10 }}>⚠ {aiErr}</div>}
             {questions === null ? <p className="helptext" style={{ margin: 0 }}>Loading…</p>
               : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
-              : questions.map((q) => (
-                <div className="item" key={q.id}>
-                  <div className="item__hd" style={{ cursor: 'default' }}>
-                    <span className="miniico"><AdminIcon name="chat" size={15} /></span>
-                    <div style={{ minWidth: 0 }}>
-                      <div className="item__title">{q.q}</div>
-                      <div className="item__sub">{qWhen(q)}</div>
+              : questions.map((q) => {
+                const s = suggestions[q.id];
+                const proc = procIds[q.id];
+                const open = openInfo === q.id;
+                return (
+                  <div className="item" key={q.id}>
+                    <div className="item__hd" style={{ cursor: 'default' }}>
+                      <span className="miniico"><AdminIcon name="chat" size={15} /></span>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="item__title">{q.q}</div>
+                        <div className="item__sub">{qWhen(q)}{s ? <span className={'verdicttag verdicttag--' + s.verdict}>{verdictLabel(s.verdict)}</span> : null}</div>
+                      </div>
+                      <span className="spacer" style={{ flex: 1 }} />
+                      {proc ? <span className="helptext">processing…</span>
+                        : s ? <span className={'iconbtn infobtn infobtn--' + s.verdict} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion"><AdminIcon name="info" size={15} /></span>
+                          : <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, null)}>Add to Q&amp;A</Btn>}
+                      <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
                     </div>
-                    <span className="spacer" style={{ flex: 1 }} />
-                    <Btn sm kind="primary" icon="plus" onClick={() => addToQA(q)}>Add to Q&amp;A</Btn>
-                    <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
+                    {open && s && (
+                      <div className="item__bd inboxsug">
+                        {s.reason && <p className="helptext" style={{ marginTop: 0 }}>{s.reason}</p>}
+                        {s.verdict === 'existing_phrase' && <div className="inboxsug__match">Matches: <b>{s.matchQuestion || ('Q&A #' + s.matchIndex)}</b></div>}
+                        {s.verdict === 'new_question' && (s.suggestedQuestions.length || s.suggestedAnswers.length) ? (
+                          <div className="inboxsug__preview">
+                            {!!s.suggestedQuestions.length && <div><span className="inboxsug__k">phrasings</span> {s.suggestedQuestions.join('  ·  ')}</div>}
+                            {!!s.suggestedAnswers.length && <div><span className="inboxsug__k">answers</span> {s.suggestedAnswers.join('   /   ')}</div>}
+                          </div>
+                        ) : null}
+                        <div className="inboxsug__actions">
+                          {s.verdict === 'existing_phrase' && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
+                          {s.verdict === 'new_question' && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
+                          {s.verdict !== 'new_question' && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
+                          <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </Panel>
         </div>
       )}

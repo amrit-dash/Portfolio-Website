@@ -405,6 +405,20 @@ const Store = {
       return await r.json();
     } catch (e) { return { error: 'network', message: e && e.message }; }
   },
+  // Inbox triage — batch-classify visitor questions via /inboxProcess (owner token).
+  // Server caps a run at 25 ids and processes them 5 at a time in one conversation.
+  async inboxProcess(ids) {
+    const tok = await this._ownerToken();
+    if (!tok) return { error: 'not-signed-in' };
+    try {
+      const r = await fetch(window.FUNCTIONS_BASE + '/inboxProcess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+        body: JSON.stringify({ ids }),
+      });
+      return await r.json();
+    } catch (e) { return { error: 'network', message: e && e.message }; }
+  },
   // Inline field refiner — single-shot rewrite via /refine (owner token).
   async refineText({ text, label, context }) {
     const tok = await this._ownerToken();
