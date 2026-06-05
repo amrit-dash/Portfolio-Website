@@ -464,7 +464,8 @@ const LLM_PROVIDERS = [
   { id: 'anthropic',  label: 'Anthropic Claude', tag: '',        endpoint: 'https://api.anthropic.com/v1/messages',                                            keyHint: 'sk-ant-…', docs: 'https://console.anthropic.com/settings/keys',         models: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest'] },
   { id: 'openrouter', label: 'OpenRouter',       tag: '',        endpoint: 'https://openrouter.ai/api/v1/chat/completions',                                    keyHint: 'sk-or-…',  docs: 'https://openrouter.ai/keys',                          models: ['meta-llama/llama-3.1-70b-instruct', 'google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'mistralai/mistral-large'] },
   { id: 'mistral',    label: 'Mistral',          tag: '',        endpoint: 'https://api.mistral.ai/v1/chat/completions',                                       keyHint: '…',        docs: 'https://console.mistral.ai/api-keys',                 models: ['mistral-large-latest', 'mistral-small-latest', 'open-mistral-nemo'] },
-  { id: 'grok',       label: 'xAI Grok',         tag: '',        endpoint: 'https://api.x.ai/v1/chat/completions',                                             keyHint: 'xai-…',    docs: 'https://console.x.ai',                                models: ['grok-4', 'grok-3', 'grok-3-mini'] },
+  { id: 'grok',       label: 'xAI Grok',         tag: '',          endpoint: 'https://api.x.ai/v1/chat/completions',                                             keyHint: 'xai-…',    docs: 'https://console.x.ai',                                models: ['grok-4', 'grok-3', 'grok-3-mini'] },
+  { id: 'groq',       label: 'Groq',             tag: 'free tier', endpoint: 'https://api.groq.com/openai/v1/chat/completions',                                  keyHint: 'gsk_…',    docs: 'https://console.groq.com/keys',                       models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct'] },
 ];
 
 const DEFAULT_BOT = {
@@ -558,6 +559,7 @@ If someone asks something completely unrelated to Amrit, gently deflect and stee
       openrouter: { apiKey: '', model: 'meta-llama/llama-3.1-70b-instruct' },
       mistral:    { apiKey: '', model: 'mistral-small-latest' },
       grok:       { apiKey: '', model: 'grok-3' },
+      groq:       { apiKey: '', model: 'llama-3.3-70b-versatile' },
     },
   },
 };
