@@ -179,10 +179,19 @@ function MessageBubble({ msg, go, openPreview }) {
 /* ---------- the shared chat surface (used by page + dock) ---------- */
 function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
   const { AdminIcon } = window.ADMIN_UI;
+  const Store = window.ADMIN_STORE.Store;
   const chat = useAgentChat();
   const [input, setInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const scroller = useRef(null);
+
+  // Clear is only offered when there's a conversation to clear; once cleared it
+  // hides until the next message lands (driven by chat.messages.length).
+  const clearChat = async () => {
+    if (!chat.messages.length || chat.sending) return;
+    await Store.fsClearAgentChat('default');
+    chat.reset();
+  };
 
   useEffect(() => {
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
@@ -221,6 +230,11 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
             <AdminIcon name="settings" size={16} />
           </button>
           <span className="spacer" style={{ flex: 1 }} />
+          {chat.messages.length > 0 && (
+            <button type="button" className="composer__tool" title="Clear conversation" aria-label="Clear conversation" disabled={chat.sending} onClick={clearChat}>
+              <AdminIcon name="trash" size={16} />
+            </button>
+          )}
           <button className="composer__send" type="submit" disabled={chat.sending || !input.trim()} title="Send (⌘/Ctrl + Enter)">
             <span>{chat.sending ? 'Working…' : 'Send'}</span>
             <AdminIcon name="send" size={15} />
@@ -235,22 +249,13 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
 
 /* ---------- dedicated Agent page ---------- */
 function AgentPage({ route, go, openPreview, setAgentBusy }) {
-  const { PageHead, Btn } = window.ADMIN_UI;
-  const Store = window.ADMIN_STORE.Store;
-  const chat = useAgentChat();
-  const clear = async () => { await Store.fsClearAgentChat('default'); chat.reset(); };
+  const { PageHead } = window.ADMIN_UI;
   return (
     <div>
       <PageHead eyebrow="/AGENT.AI" title="Agent">
         Drive every admin control by chatting. Changes apply to the draft and appear live in the editors; nothing publishes until you say so.
       </PageHead>
       <div className="agentpage">
-        {chat.messages.length > 0 && (
-          <div className="agentpage__bar">
-            <span className="spacer" style={{ flex: 1 }} />
-            <Btn sm kind="ghost" icon="trash" onClick={clear}>Clear conversation</Btn>
-          </div>
-        )}
         <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
       </div>
     </div>
