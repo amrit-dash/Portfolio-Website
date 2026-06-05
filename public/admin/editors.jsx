@@ -340,7 +340,7 @@ function CardsEditor({ content, setAt }) {
 
 /* ============ CONTACT ============ */
 function ContactEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, Input, TextArea, Select, Btn, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, Input, TextArea, Btn, AdminIcon, Reorderable } = window.ADMIN_UI;
   const c = content.contact;
   const setSocial = (i, key, val) => setAt('contact.socials', c.socials.map((s, j) => j === i ? { ...s, [key]: val } : s));
   return (
@@ -358,18 +358,21 @@ function ContactEditor({ content, setAt }) {
       </Panel>
       <Panel title="Social links" sub={`${c.socials.length} links`}
         actions={<Btn sm icon="plus" kind="primary" onClick={() => setAt('contact.socials', [...c.socials, { label: '', icon: 'web', href: '' }])}>Add link</Btn>}>
+        {/* Inline row: grip · icon · label · icon dropdown · full-width URL · delete.
+            The old title/sub column duplicated these fields and wrapped long URLs
+            into an unreadable stack, so it's dropped in favour of one clean row. */}
         <Reorderable items={c.socials} getKey={(_, i) => i} onReorder={(next) => setAt('contact.socials', next)}
           renderItem={(s, i, { gripProps }) => (
-            <ListItem gripProps={gripProps} title={s.label || '(unnamed)'} sub={s.href}
-              icon={<AdminIcon name="link" size={15} />}
-              onDelete={() => setAt('contact.socials', c.socials.filter((_, j) => j !== i))}
-              headRight={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input className="inp" style={{ width: 120 }} value={s.label} placeholder="Label" onClick={(e) => e.stopPropagation()} onChange={(e) => setSocial(i, 'label', e.target.value)} />
-                <select className="sel" style={{ width: 130 }} value={s.icon} onClick={(e) => e.stopPropagation()} onChange={(e) => setSocial(i, 'icon', e.target.value)}>
-                  {SOCIAL_ICONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
-                </select>
-                <input className="inp" style={{ width: 220 }} value={s.href} placeholder="https://" onClick={(e) => e.stopPropagation()} onChange={(e) => setSocial(i, 'href', e.target.value)} />
-              </div>} />
+            <div className="socirow">
+              <span className="item__grip" {...gripProps} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
+              <span className="miniico"><AdminIcon name={SOCIAL_ICONS.includes(s.icon) ? s.icon : 'web'} size={16} /></span>
+              <input className="inp socirow__label" value={s.label} placeholder="Label" onChange={(e) => setSocial(i, 'label', e.target.value)} />
+              <select className="sel socirow__sel" value={s.icon} onChange={(e) => setSocial(i, 'icon', e.target.value)}>
+                {SOCIAL_ICONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
+              </select>
+              <input className="inp socirow__href" value={s.href} placeholder="https://" onChange={(e) => setSocial(i, 'href', e.target.value)} />
+              <span className="iconbtn iconbtn--danger" onClick={() => setAt('contact.socials', c.socials.filter((_, j) => j !== i))} title="Delete"><AdminIcon name="trash" size={14} /></span>
+            </div>
           )} />
       </Panel>
     </div>
