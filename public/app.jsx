@@ -802,7 +802,8 @@ function Hero({ botIcon, botIconColor }) {
         <p className="hero__role" data-reveal data-reveal-type="up" data-reveal-delay="2" dangerouslySetInnerHTML={rt(h.role)} />
         <div className="hero__cta-row" data-reveal data-reveal-type="up" data-reveal-delay="3">
           {ctas.map((c, i) => (
-            <a key={i} href={c.href || '#'} className={'btn' + (c.primary ? ' btn--primary' : '')}>
+            <a key={i} href={c.href || '#'} className={'btn' + (c.primary ? ' btn--primary' : '')}
+              onClick={() => logEvent('cta:click', { label: c.label, href: c.href || '' })}>
               {c.label}{c.primary && <span className="btn__arrow"> ↗</span>}
             </a>
           ))}
@@ -1106,7 +1107,8 @@ function ProjectModal({ project, onClose }) {
             </div>
             <div className="project-modal__buttons" data-comment-anchor="bb9fb0b309-div-929-13">
               {project.links.map((l) =>
-                <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="btn btn--primary">
+                <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="btn btn--primary"
+                  onClick={() => logEvent('link:click', { label: l.label, href: l.href, project: project.id })}>
                   {l.label} <span className="btn__arrow">↗</span>
                 </a>
               )}
@@ -1216,7 +1218,8 @@ function ContactWindow() {
                 <label>SOCIAL</label>
                 <div className="links-row">
                   {socials.map((s, i) => (
-                    <a key={s.label || i} href={s.href} target="_blank" rel="noreferrer">
+                    <a key={s.label || i} href={s.href} target="_blank" rel="noreferrer"
+                      onClick={() => logEvent('social:click', { label: s.label || s.icon, href: s.href })}>
                       <Icon name={s.icon} size={13} />
                       <span>{s.label}</span>
                     </a>
