@@ -252,6 +252,16 @@ const Store = {
     if (!this.fsReady()) return;
     try { await window.fb.db.collection('bot_questions').doc(id).delete(); } catch (e) {}
   },
+  // Background AI-inbox run state (suggestions + processed marks) so triage
+  // survives navigation AND reload. config/{doc} is owner read/write.
+  async fsSaveInboxRun(data) {
+    if (!this.fsReady()) return;
+    try { await window.fb.db.doc('config/inboxRun').set({ ...data, updatedAt: window.fb.serverTimestamp() }, { merge: true }); } catch (e) { console.warn('[inboxRun] save', e && e.message); }
+  },
+  async fsLoadInboxRun() {
+    if (!this.fsReady()) return null;
+    try { const s = await window.fb.db.doc('config/inboxRun').get(); return s.exists ? s.data() : null; } catch (e) { return null; }
+  },
   async fsClearStats() {
     if (!this.fsReady()) return false;
     try {

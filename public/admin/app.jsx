@@ -703,6 +703,7 @@ function AdminApp() {
       <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
         content={content} publishedContent={window.ADMIN_STORE.Store.loadPublished()} dirty={dirty} onDiscard={doDiscard} />
       <window.ADMIN_AGENT.AgentDock route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
+      {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} />}
     </div>
   );
 }

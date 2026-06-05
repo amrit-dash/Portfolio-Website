@@ -189,24 +189,22 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
 
   // ---- AI triage: classify visitor questions in batches of 5 (server-side
   //      conversation), then apply suggestions by TEXT match (never a stale index).
-  const [suggestions, setSuggestions] = useBState({}); // id -> suggestion
-  const [aiBusy, setAiBusy] = useBState(false);
-  const [aiErr, setAiErr] = useBState(null);
+  // Triage runs in a module-level background runner (survives page navigation +
+  // reload, syncs to Firestore) instead of local component state.
+  const inboxRun = window.ADMIN_INBOX.useInboxRunner();
+  const suggestions = inboxRun.suggestions;   // id -> suggestion
+  const aiBusy = inboxRun.running;
+  const aiErr = inboxRun.error;
+  const [actErr, setActErr] = useBState(null);         // errors from apply/dismiss actions
   const [openInfo, setOpenInfo] = useBState(null);     // id whose suggestion panel is open
-  const [procIds, setProcIds] = useBState({});         // id -> true while in-flight
 
-  const aiProcess = async () => {
+  // Kick off background triage for every unprocessed question. The runner chunks
+  // the work (5/call), keeps going after you leave this page, and persists each
+  // step — so you can navigate away and come back to ready suggestions.
+  const aiProcess = () => {
     if (!questions || aiBusy) return;
-    const batch = questions.filter((q) => !suggestions[q.id]).slice(0, 25);
-    if (!batch.length) return;
-    setAiBusy(true); setAiErr(null);
-    const inFlight = {}; batch.forEach((q) => { inFlight[q.id] = true; }); setProcIds(inFlight);
-    const res = await window.ADMIN_STORE.Store.inboxProcess(batch.map((q) => q.id));
-    if (res && Array.isArray(res.suggestions)) {
-      setSuggestions((prev) => { const next = { ...prev }; res.suggestions.forEach((s) => { next[s.id] = s; }); return next; });
-    }
-    if (res && res.error) setAiErr(res.message || res.error);
-    setProcIds({}); setAiBusy(false);
+    const ids = questions.filter((q) => !suggestions[q.id]).map((q) => q.id);
+    inboxRun.start(ids);
   };
 
   // Delete the inbox question only AFTER the QA write is enqueued + the delete
@@ -215,8 +213,9 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
     try {
       await window.ADMIN_STORE.Store.fsDeleteBotQuestion(id);
       setQuestions((list) => (list || []).filter((x) => x.id !== id));
+      inboxRun.resolve(id);   // drop its background-run suggestion + processed mark
       setOpenInfo(null);
-    } catch (e) { setAiErr('could not remove question — try again'); }
+    } catch (e) { setActErr('could not remove question — try again'); }
   };
   const applyNew = async (q, s) => {
     const qs = (s && s.suggestedQuestions && s.suggestedQuestions.length) ? s.suggestedQuestions : [(q.q || '').trim()];
@@ -425,17 +424,17 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
           <Panel title="Visitor questions" sub={questions ? `${questions.length} captured` : '…'}
             actions={<>
               <Btn sm kind="primary" icon="sparkle" onClick={aiProcess} disabled={aiBusy || !questions || !unprocessedCount()}>
-                {aiBusy ? 'Processing…' : (unprocessedCount() > 25 ? 'AI process 25' : 'AI process')}
+                {aiBusy ? `Processing… ${inboxRun.done}/${inboxRun.total}` : 'AI process'}
               </Btn>
               <Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading}>{qLoading ? 'Loading…' : 'Refresh'}</Btn>
             </>}>
-            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Hit <b>AI process</b> to let the agent triage them (5 at a time) — it suggests merging a question into an existing Q&amp;A, creating a new one with answers, or dismissing junk.</p>
-            {aiErr && <div className="helptext" style={{ color: '#e0a341', marginBottom: 10 }}>⚠ {aiErr}</div>}
+            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Hit <b>AI process</b> to let the agent triage them (5 at a time) — it suggests merging a question into an existing Q&amp;A, creating a new one with answers, or dismissing junk. Triage runs in the background, so you can leave this page and come back to ready suggestions.</p>
+            {(aiErr || actErr) && <div className="helptext" style={{ color: '#e0a341', marginBottom: 10 }}>⚠ {aiErr || actErr}</div>}
             {questions === null ? <p className="helptext" style={{ margin: 0 }}>Loading…</p>
               : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
                 : questions.map((q) => {
                   const s = suggestions[q.id];
-                  const proc = procIds[q.id];
+                  const proc = aiBusy && !s;   // queued/processing in the background run
                   const open = openInfo === q.id;
                   return (
                     <div className="item" key={q.id}>
