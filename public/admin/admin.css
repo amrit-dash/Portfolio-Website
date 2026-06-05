@@ -1789,6 +1789,22 @@ body::before {
    flex-direction: column;
 }
 
+/* Fixed-height, scrollable recent-activity feed. Pages of 20 events load on
+   scroll (see useAnalytics) instead of one upfront 150-doc read. */
+.activity--scroll {
+   max-height: 340px;
+   overflow-y: auto;
+   padding-right: 6px;
+   overscroll-behavior: contain;
+}
+
+.activity__foot {
+   display: flex;
+   justify-content: center;
+   padding: 10px 0 2px;
+   margin: 0;
+}
+
 .activity li {
    display: flex;
    align-items: center;
@@ -2722,19 +2738,26 @@ body::before {
    position: relative;
 }
 
-/* Icon-only refine affordance — tidy 30px rounded square pinned top-right, clear
-   of the textarea's bottom-right resize handle, with a backdrop so it stays
-   legible over any text underneath. */
+/* Icon-only refine affordance — tidy 28px rounded square pinned to the
+   bottom-right, just inside the corner so the textarea's native resize grip
+   stays draggable. The field reserves bottom padding (below) so no line of
+   text ever slides underneath it, and a backdrop keeps the icon legible. */
 .refine__wrap {
    position: relative;
 }
 
+/* Reserve clear space at the bottom-right of the field so text never overlaps
+   the floating refine button, whatever the field's height or scroll position. */
+.refine__wrap .ta {
+   padding-bottom: 46px;
+}
+
 .refine__spark {
    position: absolute;
-   top: 8px;
-   right: 8px;
-   width: 36px;
-   height: 36px;
+   bottom: 13px;
+   right: 9px;
+   width: 30px;
+   height: 30px;
    display: inline-flex;
    align-items: center;
    justify-content: center;
@@ -2774,18 +2797,96 @@ body::before {
 }
 
 /* Custom uploaded SVG icons (Expertise → Add Icon) */
-.skillicon { display: inline-flex; align-items: center; justify-content: center; }
-.skillicon svg { width: 100%; height: 100%; display: block; }
-.iconlib { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
-.iconlib__hd { font-size: 11px; font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-mute); margin-bottom: 10px; }
-.iconlib__grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.iconlib__item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 78px; padding: 10px 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg-elev); color: var(--fg-dim); }
-.iconlib__name { font-size: 10px; color: var(--fg-mute); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.iconlib__del { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); color: var(--fg-dim); cursor: pointer; }
-.iconlib__del:hover { color: var(--danger); border-color: var(--danger); }
+.skillicon {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+}
+
+.skillicon svg {
+   width: 100%;
+   height: 100%;
+   display: block;
+}
+
+.iconlib {
+   margin-top: 14px;
+   border-top: 1px solid var(--line);
+   padding-top: 12px;
+}
+
+.iconlib__hd {
+   font-size: 11px;
+   font-family: var(--font-mono);
+   letter-spacing: .08em;
+   text-transform: uppercase;
+   color: var(--fg-mute);
+   margin-bottom: 10px;
+}
+
+.iconlib__grid {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 8px;
+}
+
+.iconlib__item {
+   position: relative;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   gap: 5px;
+   width: 78px;
+   padding: 10px 6px;
+   border: 1px solid var(--line);
+   border-radius: 9px;
+   background: var(--bg-elev);
+   color: var(--fg-dim);
+}
+
+.iconlib__name {
+   font-size: 10px;
+   color: var(--fg-mute);
+   max-width: 100%;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+}
+
+.iconlib__del {
+   position: absolute;
+   top: -7px;
+   right: -7px;
+   width: 18px;
+   height: 18px;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   border-radius: 50%;
+   border: 1px solid var(--line-2);
+   background: var(--surface);
+   color: var(--fg-dim);
+   cursor: pointer;
+}
+
+.iconlib__del:hover {
+   color: var(--danger);
+   border-color: var(--danger);
+}
 
 /* Post-upload icon editor (modal) */
-.iconup__preview { display: grid; place-items: center; width: 72px; height: 72px; margin: 0 auto 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--bg); color: var(--accent); }
+.iconup__preview {
+   display: grid;
+   place-items: center;
+   width: 72px;
+   height: 72px;
+   margin: 0 auto 14px;
+   border: 1px solid var(--line-2);
+   border-radius: 12px;
+   background: var(--bg);
+   color: var(--accent);
+}
+
 /* Per-color rows in the icon-upload editor: a source-color swatch, a
    theme/transparent/custom segmented control, and an optional color picker. */
 .iconup__color {
@@ -2821,15 +2922,42 @@ body::before {
    cursor: pointer;
 }
 
-.iconup__ft { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.iconup__ft {
+   display: flex;
+   justify-content: flex-end;
+   gap: 8px;
+   margin-top: 16px;
+}
 
 /* Contact → social links: one inline row per link. The URL field grows to fill
    the row so the full link is readable, with fixed-width label + icon controls. */
-.socirow { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
-.socirow > .item__grip, .socirow > .miniico, .socirow > .iconbtn { flex: 0 0 auto; }
-.socirow__label { width: 130px; flex: 0 0 auto; }
-.socirow__sel { width: 132px; flex: 0 0 auto; }
-.socirow__href { flex: 1 1 auto; min-width: 0; }
+.socirow {
+   display: flex;
+   align-items: center;
+   gap: 10px;
+   padding: 9px 12px;
+}
+
+.socirow>.item__grip,
+.socirow>.miniico,
+.socirow>.iconbtn {
+   flex: 0 0 auto;
+}
+
+.socirow__label {
+   width: 130px;
+   flex: 0 0 auto;
+}
+
+.socirow__sel {
+   width: 132px;
+   flex: 0 0 auto;
+}
+
+.socirow__href {
+   flex: 1 1 auto;
+   min-width: 0;
+}
 
 /* Inbox AI triage — info button, verdict tag, suggestion panel */
 .infobtn {
