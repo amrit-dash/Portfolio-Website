@@ -50,6 +50,8 @@ function AgentSettingsPage({ modal }) {
   const [fetched, setFetched] = useState({});   // providerId -> [modelId]
   const [fetching, setFetching] = useState(null);
   const [modelErr, setModelErr] = useState({});
+  const [testing, setTesting] = useState(null);   // providerId being tested
+  const [testRes, setTestRes] = useState({});      // providerId -> { ok, text }
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +89,17 @@ function AgentSettingsPage({ modal }) {
       else setModelErr((e) => ({ ...e, [id]: d.error || 'no models returned' }));
     } catch (e) { setModelErr((er) => ({ ...er, [id]: e.message })); }
     setFetching(null);
+  };
+
+  const testModel = async (id) => {
+    setTesting(id); setTestRes((r) => ({ ...r, [id]: null }));
+    const c = pcfg(id);
+    const res = await Store.testModel({ scope: 'agent', provider: id, model: c.model || '', key: c.apiKey || '' });
+    setTesting(null);
+    const ok = res && res.ok;
+    setTestRes((r) => ({ ...r, [id]: { ok, text: ok ? (res.reply || 'ok') + (res.ms ? ` (${res.ms}ms)` : '') : (res && (res.message || res.error)) || 'failed' } }));
+    // Flip the Agent page to its Logs view so the test (and any error) is visible there.
+    try { window.ADMIN_AGENT && window.ADMIN_AGENT.agentChat && window.ADMIN_AGENT.agentChat.openLogs && window.ADMIN_AGENT.agentChat.openLogs(); } catch (e) {}
   };
 
   const save = async () => {
@@ -161,8 +174,14 @@ function AgentSettingsPage({ modal }) {
                   <div className="modelrow">
                     <Select value={c.model || ''} options={modelOptions(p.id, c.model, Reflect.get(fetched, p.id))} onChange={(v) => setLocal(p.id, 'model', v)} />
                     <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</Btn>
+                    <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !c.apiKey || !c.model} title="Send a hello to this model — result shows in Logs">{testing === p.id ? 'Testing…' : 'Test model'}</Btn>
                   </div>
                   {Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
+                  {Reflect.get(testRes, p.id) && (
+                    <div className="helptext" style={{ marginTop: 6, color: Reflect.get(testRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
+                      {Reflect.get(testRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(testRes, p.id).text}
+                    </div>
+                  )}
                 </Field>
                 {p.docs && <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>}
               </div>

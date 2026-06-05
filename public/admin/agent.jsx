@@ -249,14 +249,31 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
 
 /* ---------- dedicated Agent page ---------- */
 function AgentPage({ route, go, openPreview, setAgentBusy }) {
-  const { PageHead } = window.ADMIN_UI;
+  const { PageHead, Segmented } = window.ADMIN_UI;
+  const LogsView = window.ADMIN_LOGS && window.ADMIN_LOGS.LogsView;
+  const [mode, setMode] = useState('chat');
+  const isLogs = mode === 'logs';
+
+  // Let the "Test model" button (in the settings modal) flip this page to Logs.
+  useEffect(() => {
+    agentChat.openLogs = () => setMode('logs');
+    return () => { if (agentChat.openLogs) delete agentChat.openLogs; };
+  }, []);
+
   return (
     <div>
-      <PageHead eyebrow="/AGENT.AI" title="Agent">
-        Drive every admin control by chatting. Changes apply to the draft and appear live in the editors; nothing publishes until you say so.
+      <PageHead
+        eyebrow={isLogs ? '/AGENT.AI/LOGS' : '/AGENT.AI'}
+        title={isLogs ? 'Agent logs' : 'Agent'}
+        actions={LogsView ? <Segmented value={mode} options={[{ value: 'chat', label: 'Chat' }, { value: 'logs', label: 'Logs' }]} onChange={setMode} /> : null}>
+        {isLogs
+          ? 'Live agent + refine activity from Cloud Logging — model calls, successes and errors from the last hour. Nothing is stored.'
+          : 'Drive every admin control by chatting. Changes apply to the draft and appear live in the editors; nothing publishes until you say so.'}
       </PageHead>
       <div className="agentpage">
-        <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
+        {isLogs && LogsView
+          ? <LogsView source="agent" height={520} />
+          : <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />}
       </div>
     </div>
   );

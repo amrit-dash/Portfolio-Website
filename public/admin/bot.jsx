@@ -102,6 +102,8 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const [fetchedModels, setFetchedModels] = useBState({}); // { providerId: [ids] }
   const [modelErr, setModelErr] = useBState({});           // { providerId: 'message' }
   const [fetching, setFetching] = useBState(null);          // providerId currently fetching
+  const [testing, setTesting] = useBState(null);            // providerId currently being test-pinged
+  const [testRes, setTestRes] = useBState({});              // { providerId: { ok, text } }
   const [saveState, setSaveState] = useBState(null);        // null | 'saving' | 'saved' | 'error'
   const provDirty = JSON.stringify(pcfg) !== JSON.stringify(bot.providers);
 
@@ -142,6 +144,15 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
       else setModelErr((m) => ({ ...m, [id]: d.error || 'No models returned' }));
     } catch (e) { setModelErr((m) => ({ ...m, [id]: (e && e.message) || 'fetch failed' })); }
     finally { setFetching(null); }
+  };
+
+  const testModel = async (id) => {
+    setTesting(id); setTestRes((m) => ({ ...m, [id]: null }));
+    const cfg = localCfg(id);
+    const res = await window.ADMIN_STORE.Store.testModel({ scope: 'bot', provider: id, model: cfg.model || '', key: cfg.apiKey || '' });
+    setTesting(null);
+    const ok = res && res.ok;
+    setTestRes((m) => ({ ...m, [id]: { ok, text: ok ? (res.reply || 'ok') + (res.ms ? ` (${res.ms}ms)` : '') : (res && (res.message || res.error)) || 'failed' } }));
   };
 
   const saveProviders = async () => {
@@ -371,8 +382,14 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                     <div className="modelrow">
                       <Select value={cfg.model || ''} options={modelOptions(p, cfg)} onChange={(v) => setLocal(p.id, 'model', v)} />
                       <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</Btn>
+                      <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !cfg.apiKey || !cfg.model} title="Send a hello to this model — result also logged in AmritBot logs">{testing === p.id ? 'Testing…' : 'Test model'}</Btn>
                     </div>
                     {modelErr && Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
+                    {testRes && Reflect.get(testRes, p.id) && (
+                      <div className="helptext" style={{ marginTop: 6, color: Reflect.get(testRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
+                        {Reflect.get(testRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(testRes, p.id).text}
+                      </div>
+                    )}
                   </Field>
                   <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>
                 </div>
