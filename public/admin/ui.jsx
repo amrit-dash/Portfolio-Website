@@ -106,14 +106,46 @@ function SkillIcon({ name, size = 16, icons }) {
 }
 
 /* ---------- Layout ---------- */
-function PageHead({ eyebrow, title, children }) {
+function PageHead({ eyebrow, title, children, actions }) {
   return (
     <div className="phead">
-      {eyebrow && <div className="phead__eyebrow">{eyebrow}</div>}
-      <h1>{title}</h1>
+      <div className="phead__row">
+        <div className="phead__main">
+          {eyebrow && <div className="phead__eyebrow">{eyebrow}</div>}
+          <h1>{title}</h1>
+        </div>
+        {actions && <div className="phead__actions">{actions}</div>}
+      </div>
       {children && <p>{children}</p>}
     </div>
   );
+}
+
+/* Lightweight inline-markdown → React nodes. Models often reply with **bold**,
+   *italic*, `code` and newlines even when asked not to; render them instead of
+   showing the raw asterisks. Safe by construction (builds React elements, never
+   injects HTML). Shared by the agent bubbles + the bot test panel. */
+function mdInline(text) {
+  const src = String(text == null ? '' : text);
+  const lines = src.split('\n');
+  const out = [];
+  lines.forEach((line, li) => {
+    if (li > 0) out.push(React.createElement('br', { key: 'br' + li }));
+    // Tokenize **bold**, *italic*/_italic_, `code`.
+    const re = /(\*\*([^*]+)\*\*|`([^`]+)`|\*([^*]+)\*|_([^_]+)_)/g;
+    let last = 0, m, k = 0;
+    while ((m = re.exec(line)) !== null) {
+      if (m.index > last) out.push(line.slice(last, m.index));
+      const key = li + '-' + (k++);
+      if (m[2] != null) out.push(React.createElement('strong', { key }, m[2]));
+      else if (m[3] != null) out.push(React.createElement('code', { key }, m[3]));
+      else if (m[4] != null) out.push(React.createElement('em', { key }, m[4]));
+      else if (m[5] != null) out.push(React.createElement('em', { key }, m[5]));
+      last = m.index + m[0].length;
+    }
+    if (last < line.length) out.push(line.slice(last));
+  });
+  return out;
 }
 
 function Panel({ title, sub, actions, children, tight }) {
@@ -397,5 +429,5 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 window.ADMIN_UI = {
   AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
   Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes,
-  storageReady, uploadToStorage,
+  storageReady, uploadToStorage, mdInline,
 };
