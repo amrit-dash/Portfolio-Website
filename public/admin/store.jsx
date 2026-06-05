@@ -439,6 +439,16 @@ const Store = {
   refineText({ text, label, context }) {
     return this._agentFetch('/refine', { text, label, context });
   },
+  // Read-only function-log feed from Cloud Logging (nothing stored). `source`:
+  // 'agent' | 'bot' | 'all'. `sinceMs` fetches only newer entries for live polls.
+  fetchLogs({ source, errorsOnly, sinceMs, beforeMs, limit } = {}) {
+    return this._agentFetch('/logs', { source: source || 'all', errorsOnly: !!errorsOnly, sinceMs: sinceMs || 0, beforeMs: beforeMs || 0, limit: limit || 60 });
+  },
+  // Connectivity check for one provider — sends "hello", logs the result.
+  // `key`/`model` are optional overrides so a just-typed (unsaved) key can be tested.
+  testModel({ scope, provider, model, key }) {
+    return this._agentFetch('/testModel', { scope: scope || 'agent', provider, model, key });
+  },
   // Chat history + clear (owner-only Firestore reads).
   async fsLoadAgentMessages(chatId, n) {
     if (!this.fsReady()) return [];
