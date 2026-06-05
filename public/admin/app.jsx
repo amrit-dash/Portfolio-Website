@@ -159,7 +159,6 @@ function AnalyticsPage({ analytics, onReset }) {
   const a = analytics;
   const daily = a.daily || [];
   const [actFilter, setActFilter] = useAState('all');
-  const [actExpanded, setActExpanded] = useAState(false);
 
   // Aggregate map-style breakdowns across the loaded day-buckets.
   const agg = (field) => {
@@ -200,7 +199,13 @@ function AnalyticsPage({ analytics, onReset }) {
   const hasData = (a.totalEvents || 0) > 0;
 
   const filteredActivity = actFilter === 'all' ? a.activity : a.activity.filter((e) => e.type === actFilter);
-  const shownActivity = actExpanded ? filteredActivity : filteredActivity.slice(0, 8);
+
+  // Infinite scroll: pull the next 20-event page when the feed nears its bottom.
+  // Reads happen only on scroll, never as one upfront 150-doc listener.
+  const onActivityScroll = (e) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 90) a.loadMoreEvents && a.loadMoreEvents();
+  };
 
   const Bars = ({ rows, label, empty, sub }) => {
     const max = Math.max(1, ...rows.map((r) => r[1]));
@@ -268,24 +273,25 @@ function AnalyticsPage({ analytics, onReset }) {
 
       <Panel
         title="Recent activity"
-        sub={filteredActivity.length + (actFilter === 'all' ? ' events' : ' matching')}
+        sub={filteredActivity.length + (actFilter === 'all' ? ' loaded' : ' matching') + (a.eventsDone ? '' : ' · scroll for more')}
         actions={
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <Segmented value={actFilter} options={ACT_FILTERS} onChange={(v) => { setActFilter(v); setActExpanded(false); }} />
+            <Segmented value={actFilter} options={ACT_FILTERS} onChange={(v) => setActFilter(v)} />
+            <Btn sm kind="ghost" icon="reset" onClick={() => a.refreshEvents && a.refreshEvents()} title="Reload latest events">Refresh</Btn>
           </div>
         }>
-        {filteredActivity.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No matching activity.</p> : (
+        {filteredActivity.length === 0 ? <p className="helptext" style={{ margin: 0 }}>{a.eventsLoading ? 'Loading…' : 'No matching activity.'}</p> : (
           <>
-            <ul className="activity">
-              {shownActivity.map((ev, i) => (
+            <ul className="activity activity--scroll" onScroll={onActivityScroll}>
+              {filteredActivity.map((ev, i) => (
                 <li key={i}><span className="when">{ev.when}</span><span className="dot" /><span>{ev.what}</span><span className="who">{ev.who}</span></li>
               ))}
             </ul>
-            {filteredActivity.length > 8 && (
-              <Btn sm kind="ghost" icon={actExpanded ? 'chevron-up' : 'chevron-down'} onClick={() => setActExpanded((s) => !s)}>
-                {actExpanded ? 'Show less' : `Show all ${filteredActivity.length}`}
-              </Btn>
-            )}
+            <div className="activity__foot helptext">
+              {a.eventsLoading ? 'Loading more…'
+                : a.eventsDone ? 'All caught up.'
+                  : <button className="linkbtn" onClick={() => a.loadMoreEvents && a.loadMoreEvents()}>Load more</button>}
+            </div>
           </>
         )}
       </Panel>
@@ -295,10 +301,12 @@ function AnalyticsPage({ analytics, onReset }) {
 
 /* ---------- Sync & deploy ---------- */
 function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
-  const { PageHead, Panel, Btn, Field, Input, AdminIcon } = window.ADMIN_UI;
+  const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
+  const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) || 'amrit-dash-portfolio';
+  const consoleHref = (path) => `https://console.firebase.google.com/project/${projectId}/${path}`;
   return (
     <div className="canvas--narrow">
-      <PageHead eyebrow="/SYSTEM.SYNC" title="Sync & deploy">How the dashboard talks to the live site — today via the browser store, and the recommended Firebase wiring for the IDE migration.</PageHead>
+      <PageHead eyebrow="/SYSTEM.SYNC" title="Sync & deploy">How the dashboard talks to the live site — you edit a private draft, then Publish promotes it to the snapshot the live site reads in real time. Content, media, keys and analytics all live in Firebase.</PageHead>
 
       <Panel title="Publish state">
         <div className="bars">
@@ -310,16 +318,21 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
           <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
           <Btn kind="primary" icon="rocket" onClick={onPublish}>Publish to site</Btn>
           <span className="spacer" style={{ flex: 1 }} />
-          <Btn kind="danger" icon="reset" onClick={() => { if (confirm('Reset draft to the original site content? This discards unpublished edits.')) onReset(); }}>Reset draft</Btn>
+          <Btn kind="danger" icon="reset" disabled={!dirty} onClick={onReset}>Discard draft changes</Btn>
         </div>
+        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
+          {dirty
+            ? 'Discard drops every unpublished edit and reverts the draft to the live published version — returning this console to “all changes published”.'
+            : 'Draft matches the live published version — nothing to discard.'}
+        </p>
       </Panel>
 
-      <Panel title="How sync works" sub="recommended">
+      <Panel title="How sync works" sub="live on Firebase">
         <p className="helptext" style={{ marginBottom: 14 }}>
-          The dashboard edits a <b style={{ color: 'var(--fg)' }}>draft</b>; <b style={{ color: 'var(--fg)' }}>Publish</b> promotes it to a <b style={{ color: 'var(--fg)' }}>published snapshot</b> that the live site reads. This keeps work-in-progress off the site until you ship it. Today both live in the browser; the migration maps them 1:1 onto Firebase:
+          The dashboard edits a <b style={{ color: 'var(--fg)' }}>draft</b>; <b style={{ color: 'var(--fg)' }}>Publish</b> promotes it to a <b style={{ color: 'var(--fg)' }}>published snapshot</b> the live site reads. Work-in-progress stays off the site until you ship it. Each concern is backed by a Firebase service:
         </p>
         <div className="bars">
-          {[['Admin login', 'Firebase Auth', 'replaces the demo passphrase'], ['Draft + published content', 'Cloud Firestore', 'content/draft + content/published docs'], ['Images & CV PDFs', 'Firebase Storage', 'store download URL on the field'], ['Live site read', 'Firestore listener', 'real-time — no rebuild/redeploy needed'], ['LLM keys', 'Cloud Function proxy', 'keys never reach the browser']].map(([a, b, c]) => (
+          {[['Admin login', 'Firebase Auth', 'Google sign-in, restricted to the owner account'], ['Draft + published content', 'Cloud Firestore', 'content/draft + content/published docs'], ['Images & CV PDFs', 'Firebase Storage', 'download URL stored on the field'], ['Live site read', 'Firestore listener', 'real-time — no rebuild/redeploy needed'], ['LLM keys + agent', 'Cloud Functions', 'keys read server-side, never reach the browser']].map(([a, b, c]) => (
             <div className="barrow" key={a} style={{ gridTemplateColumns: '180px 170px 1fr' }}>
               <span>{a}</span><span className="mono" style={{ color: 'var(--accent)', fontSize: 11 }}>{b}</span><span className="helptext">{c}</span>
             </div>
@@ -327,26 +340,31 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
         </div>
         <div className="callout" style={{ marginTop: 16, marginBottom: 0 }}>
           <AdminIcon name="info" size={16} />
-          <div>Firestore beats a re-deployed static JSON here: edits go live the instant you publish (a snapshot listener), with no hosting rebuild. Storage handles the cropped images. The data shapes in this prototype already match that structure, so the swap is mostly wiring, not rework.</div>
+          <div>Firestore beats a re-deployed static JSON: edits go live the instant you publish (a snapshot listener), with no hosting rebuild. Storage serves the cropped images, and Cloud Functions proxy every LLM call so keys stay server-side.</div>
         </div>
       </Panel>
 
-      <Panel title="Where content lives today" sub="all client-side">
+      <Panel title="Where content lives" sub="Firestore + Storage are the source of truth">
         <div className="bars">
           {[
-            ['amritos.draft',     'localStorage', 'in-progress edits, autosaved on every change'],
-            ['amritos.published', 'localStorage', 'the snapshot the live site reads'],
-            ['amritos.preview',   'localStorage', 'transient — written by Preview, cleared on close/publish'],
-            ['amritos.events',    'localStorage', 'live analytics — written by the portfolio'],
-            ['amritos.theme',     'localStorage', 'last-used theme of the visitor'],
-            ['admin session',     'Firebase Auth', 'Google sign-in, restricted to the owner account'],
-          ].map(([k, store, note]) => (
-            <div className="barrow" key={k} style={{ gridTemplateColumns: '200px 130px 1fr' }}>
-              <span className="mono" style={{ fontSize: 11 }}>{k}</span><span className="mono" style={{ color: 'var(--accent)', fontSize: 11 }}>{store}</span><span className="helptext">{note}</span>
+            ['content/draft',       'Firestore',     'in-progress edits, autosaved on every change', 'firestore/data/content/draft'],
+            ['content/published',   'Firestore',     'the snapshot the live site reads in real time', 'firestore/data/content/published'],
+            ['config/llm · config/agent', 'Firestore', 'bot + agent provider keys — owner-locked rules, server-read only', 'firestore/data/config'],
+            ['events · stats/global · stats_daily', 'Firestore', 'visitor analytics — counters, daily buckets, recent feed', 'firestore/data/stats'],
+            ['media (images, CV PDFs)', 'Storage',    'uploaded assets; the field stores the download URL', 'storage'],
+            ['admin session',       'Firebase Auth', 'Google sign-in, restricted to the owner account', 'authentication/users'],
+          ].map(([k, store, note, path]) => (
+            <div className="barrow" key={k} style={{ gridTemplateColumns: '230px 110px 1fr auto' }}>
+              <span className="mono" style={{ fontSize: 11 }}>{k}</span>
+              <span className="mono" style={{ color: 'var(--accent)', fontSize: 11 }}>{store}</span>
+              <span className="helptext">{note}</span>
+              <a className="helptext" href={consoleHref(path)} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>open ↗</a>
             </div>
           ))}
         </div>
-        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>Wiring Firebase swaps each row above one-for-one — Auth for the gate, Firestore listeners for the content + events, Storage for media. No UI changes required.</p>
+        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
+          <code>localStorage.amritos.*</code> still exists, but only as an offline cache + instant first paint — Firestore and Storage are the durable, cross-device source of truth. Owner-only Firestore rules deny client access to the key docs; see <code>firestore.rules</code>.
+        </p>
       </Panel>
     </div>
   );
@@ -597,13 +615,13 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, saveLLMConfig, setAgentBusy } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, discardDraft, previewDraft, dirty, publishedAt, saveLLMConfig, setAgentBusy } = window.ADMIN_STORE.useContent();
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
     if (!confirm('Clear ALL analytics? This deletes the counters, per-day buckets and the recent-events feed. Cannot be undone.')) return;
     const ok = await window.ADMIN_STORE.Store.fsClearStats();
-    if (ok) { setFlash('Analytics cleared'); setTimeout(() => setFlash(null), 2600); analytics.refreshDaily(); }
+    if (ok) { setFlash('Analytics cleared'); setTimeout(() => setFlash(null), 2600); analytics.refreshDaily(); analytics.refreshEvents(); }
   };
   const { AdminIcon, Btn } = window.ADMIN_UI;
 
@@ -645,7 +663,7 @@ function AdminApp() {
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
       case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
-      case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={reset} onPreview={() => openPreview('draft')} />;
+      case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={doDiscard} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
     }
   };
