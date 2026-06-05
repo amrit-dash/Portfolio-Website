@@ -15,6 +15,7 @@ const BOT_TABS = [
   { id: 'limits', label: 'Limits' },
   { id: 'review', label: 'Review / Inbox' },
   { id: 'test', label: 'Test bot' },
+  { id: 'logs', label: 'Logs' },
 ];
 
 /* ---- local Q&A matcher (mirrors the site's matcher) ---- */
@@ -46,7 +47,7 @@ async function proxyChat(message, suggestion) {
 
 /* ---- Test chat ---- */
 function LiveTest({ bot }) {
-  const { AdminIcon, Btn } = window.ADMIN_UI;
+  const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
   const PROV = window.ADMIN_STORE.LLM_PROVIDERS.find((p) => p.id === bot.providers.active);
   const [msgs, setMsgs] = useBState([{ from: 'sys', text: 'Tests the live /chat proxy with your activated config. If a key fails, the real provider error shows here. Activate keys above first.' }]);
   const [input, setInput] = useBState('');
@@ -77,7 +78,7 @@ function LiveTest({ bot }) {
   return (
     <div className="chat">
       <div className="chat__body" ref={bodyRef}>
-        {msgs.map((m, i) => <div key={i} className={'msg ' + m.from}>{m.text}</div>)}
+        {msgs.map((m, i) => <div key={i} className={'msg ' + m.from}>{m.from === 'bot' && mdInline ? mdInline(m.text) : m.text}</div>)}
         {busy && <div className="msg bot">…</div>}
       </div>
       <form className="chat__in" onSubmit={(e) => { e.preventDefault(); send(); }}>
@@ -428,49 +429,49 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
               </Btn>
               <Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading}>{qLoading ? 'Loading…' : 'Refresh'}</Btn>
             </>}>
-            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Hit <b>AI process</b> to let the agent triage them (5 at a time) — it suggests merging a question into an existing Q&amp;A, creating a new one with answers, or dismissing junk. Then open each <AdminIcon name="info" size={12} /> to apply. Or add one manually. Publish to push the Q&amp;A live.</p>
+            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Hit <b>AI process</b> to let the agent triage them (5 at a time) — it suggests merging a question into an existing Q&amp;A, creating a new one with answers, or dismissing junk.</p>
             {aiErr && <div className="helptext" style={{ color: '#e0a341', marginBottom: 10 }}>⚠ {aiErr}</div>}
             {questions === null ? <p className="helptext" style={{ margin: 0 }}>Loading…</p>
               : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
-              : questions.map((q) => {
-                const s = suggestions[q.id];
-                const proc = procIds[q.id];
-                const open = openInfo === q.id;
-                return (
-                  <div className="item" key={q.id}>
-                    <div className="item__hd" style={{ cursor: 'default' }}>
-                      <span className="miniico"><AdminIcon name="chat" size={15} /></span>
-                      <div style={{ minWidth: 0 }}>
-                        <div className="item__title">{q.q}</div>
-                        <div className="item__sub">{qWhen(q)}{s ? <span className={'verdicttag verdicttag--' + s.verdict}>{verdictLabel(s.verdict)}</span> : null}</div>
-                      </div>
-                      <span className="spacer" style={{ flex: 1 }} />
-                      {proc ? <span className="helptext">processing…</span>
-                        : s ? <span className={'iconbtn infobtn infobtn--' + s.verdict} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion"><AdminIcon name="info" size={15} /></span>
-                          : <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, null)}>Add to Q&amp;A</Btn>}
-                      <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
-                    </div>
-                    {open && s && (
-                      <div className="item__bd inboxsug">
-                        {s.reason && <p className="helptext" style={{ marginTop: 0 }}>{s.reason}</p>}
-                        {s.verdict === 'existing_phrase' && <div className="inboxsug__match">Matches: <b>{s.matchQuestion || ('Q&A #' + s.matchIndex)}</b></div>}
-                        {s.verdict === 'new_question' && (s.suggestedQuestions.length || s.suggestedAnswers.length) ? (
-                          <div className="inboxsug__preview">
-                            {!!s.suggestedQuestions.length && <div><span className="inboxsug__k">phrasings</span> {s.suggestedQuestions.join('  ·  ')}</div>}
-                            {!!s.suggestedAnswers.length && <div><span className="inboxsug__k">answers</span> {s.suggestedAnswers.join('   /   ')}</div>}
-                          </div>
-                        ) : null}
-                        <div className="inboxsug__actions">
-                          {s.verdict === 'existing_phrase' && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
-                          {s.verdict === 'new_question' && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
-                          {s.verdict !== 'new_question' && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
-                          <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>
+                : questions.map((q) => {
+                  const s = suggestions[q.id];
+                  const proc = procIds[q.id];
+                  const open = openInfo === q.id;
+                  return (
+                    <div className="item" key={q.id}>
+                      <div className="item__hd" style={{ cursor: 'default' }}>
+                        <span className="miniico"><AdminIcon name="chat" size={15} /></span>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="item__title">{q.q}</div>
+                          <div className="item__sub">{qWhen(q)}{s ? <span className={'verdicttag verdicttag--' + s.verdict}>{verdictLabel(s.verdict)}</span> : null}</div>
                         </div>
+                        <span className="spacer" style={{ flex: 1 }} />
+                        {proc ? <span className="helptext">processing…</span>
+                          : s ? <span className={'iconbtn infobtn infobtn--' + s.verdict} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion"><AdminIcon name="info" size={15} /></span>
+                            : <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, null)}>Add to Q&amp;A</Btn>}
+                        <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                      {open && s && (
+                        <div className="item__bd inboxsug">
+                          {s.reason && <p className="helptext" style={{ marginTop: 0 }}>{s.reason}</p>}
+                          {s.verdict === 'existing_phrase' && <div className="inboxsug__match">Matches: <b>{s.matchQuestion || ('Q&A #' + s.matchIndex)}</b></div>}
+                          {s.verdict === 'new_question' && (s.suggestedQuestions.length || s.suggestedAnswers.length) ? (
+                            <div className="inboxsug__preview">
+                              {!!s.suggestedQuestions.length && <div><span className="inboxsug__k">phrasings</span> {s.suggestedQuestions.join('  ·  ')}</div>}
+                              {!!s.suggestedAnswers.length && <div><span className="inboxsug__k">answers</span> {s.suggestedAnswers.join('   /   ')}</div>}
+                            </div>
+                          ) : null}
+                          <div className="inboxsug__actions">
+                            {s.verdict === 'existing_phrase' && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
+                            {s.verdict === 'new_question' && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
+                            {s.verdict !== 'new_question' && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
+                            <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
           </Panel>
         </div>
       )}
@@ -481,6 +482,17 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
             <LiveTest bot={bot} />
           </Panel>
         </div>
+      )}
+
+      {tab === 'logs' && (
+        <Panel title="AmritBot logs" sub="chat · inbox · provider errors — last hour, live">
+          <p className="helptext" style={{ marginTop: 0, marginBottom: 14 }}>
+            Read-only feed from Cloud Logging — AmritBot chat replies, fallbacks, inbox triage and provider errors from the last hour. Nothing is stored; new lines stream in live.
+          </p>
+          {window.ADMIN_LOGS
+            ? <window.ADMIN_LOGS.LogsView source="bot" height={460} />
+            : <p className="helptext">Logs view unavailable.</p>}
+        </Panel>
       )}
     </div>
   );

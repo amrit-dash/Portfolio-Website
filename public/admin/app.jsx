@@ -76,10 +76,10 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
       )}
 
       <div className="stats">
-        <Stat icon="eye"       label="PAGE VIEWS"    num={analytics.pageViews.toLocaleString()} />
-        <Stat icon="download"  label="CV DOWNLOADS"  num={analytics.cvDownloads.toLocaleString()} />
-        <Stat icon="chat"      label="BOT CHATS"     num={analytics.botChats.toLocaleString()} />
-        <Stat icon="projects"  label="PROJECT OPENS" num={analytics.projectOpens.toLocaleString()} />
+        <Stat icon="eye" label="PAGE VIEWS" num={analytics.pageViews.toLocaleString()} />
+        <Stat icon="download" label="CV DOWNLOADS" num={analytics.cvDownloads.toLocaleString()} />
+        <Stat icon="chat" label="BOT CHATS" num={analytics.botChats.toLocaleString()} />
+        <Stat icon="projects" label="PROJECT OPENS" num={analytics.projectOpens.toLocaleString()} />
       </div>
 
       <div className="grid2">
@@ -288,9 +288,7 @@ function AnalyticsPage({ analytics, onReset }) {
               ))}
             </ul>
             <div className="activity__foot helptext">
-              {a.eventsLoading ? 'Loading more…'
-                : a.eventsDone ? 'All caught up.'
-                  : <button className="linkbtn" onClick={() => a.loadMoreEvents && a.loadMoreEvents()}>Load more</button>}
+              {a.eventsLoading ? 'Loading more…' : a.eventsDone ? 'All caught up.' : 'Scroll for more…'}
             </div>
           </>
         )}
@@ -298,7 +296,7 @@ function AnalyticsPage({ analytics, onReset }) {
 
       <Panel title="Function logs" sub="agent + bot + functions · last hour, live">
         <p className="helptext" style={{ marginTop: 0, marginBottom: 12 }}>
-          Read-only feed from Cloud Logging — every function's recent successes, errors and notifications, with timestamp, origin and (for LLM calls) whether it was an <code>agent:llm</code> or <code>bot:llm</code> issue. Nothing is stored; new lines stream in live.
+          Read-only feed from Cloud Logging — every function's recent successes, errors and notifications, with timestamp, origin and source.
         </p>
         {window.ADMIN_LOGS && window.ADMIN_LOGS.LogsView
           ? <window.ADMIN_LOGS.LogsView source="all" height={420} />
@@ -356,12 +354,12 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
       <Panel title="Where content lives" sub="Firestore + Storage are the source of truth">
         <div className="bars">
           {[
-            ['content/draft',       'Firestore',     'in-progress edits, autosaved on every change', 'firestore/data/content/draft'],
-            ['content/published',   'Firestore',     'the snapshot the live site reads in real time', 'firestore/data/content/published'],
+            ['content/draft', 'Firestore', 'in-progress edits, autosaved on every change', 'firestore/data/content/draft'],
+            ['content/published', 'Firestore', 'the snapshot the live site reads in real time', 'firestore/data/content/published'],
             ['config/llm · config/agent', 'Firestore', 'bot + agent provider keys — owner-locked rules, server-read only', 'firestore/data/config'],
             ['events · stats/global · stats_daily', 'Firestore', 'visitor analytics — counters, daily buckets, recent feed', 'firestore/data/stats'],
-            ['media (images, CV PDFs)', 'Storage',    'uploaded assets; the field stores the download URL', 'storage'],
-            ['admin session',       'Firebase Auth', 'Google sign-in, restricted to the owner account', 'authentication/users'],
+            ['media (images, CV PDFs)', 'Storage', 'uploaded assets; the field stores the download URL', 'storage'],
+            ['admin session', 'Firebase Auth', 'Google sign-in, restricted to the owner account', 'authentication/users'],
           ].map(([k, store, note, path]) => (
             <div className="barrow" key={k} style={{ gridTemplateColumns: '230px 110px 1fr auto' }}>
               <span className="mono" style={{ fontSize: 11 }}>{k}</span>
@@ -379,19 +377,6 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
   );
 }
 
-/* ---------- AmritBot logs (read-only Cloud Logging feed) ---------- */
-function BotLogsPage() {
-  const { PageHead } = window.ADMIN_UI;
-  const LogsView = window.ADMIN_LOGS && window.ADMIN_LOGS.LogsView;
-  return (
-    <div>
-      <PageHead eyebrow="/AMRIT-BOT.LOGS" title="AmritBot logs">
-        Live AmritBot activity from Cloud Logging — chat replies, fallbacks, inbox triage and provider errors from the last hour. Read-only; nothing is stored.
-      </PageHead>
-      {LogsView ? <LogsView source="bot" height={560} /> : <p className="helptext">Logs view unavailable.</p>}
-    </div>
-  );
-}
 
 /* ---------- Live preview drawer ----------
    The preview iframe is the real portfolio loaded with ?adminpreview. It can be
@@ -456,8 +441,8 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
         {open && (
           device === 'mobile'
             ? <div style={{ flex: 1, display: 'grid', placeItems: 'center', background: '#060704', overflow: 'auto' }}>
-                <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} style={{ width: 390, height: 760, border: '1px solid var(--line-2)', borderRadius: 14, background: '#000' }} />
-              </div>
+              <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} style={{ width: 390, height: 760, border: '1px solid var(--line-2)', borderRadius: 14, background: '#000' }} />
+            </div>
             : <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} />
         )}
       </div>
@@ -468,28 +453,33 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
 /* ---------- Sidebar ---------- */
 const NAV = [
   { group: 'DASHBOARD', items: [{ id: 'overview', label: 'Overview', icon: 'overview' }, { id: 'analytics', label: 'Analytics', icon: 'eye' }] },
-  { group: 'CONTENT', items: [
-    { id: 'hero', label: 'Hero & intro', icon: 'hero' },
-    { id: 'about', label: 'About', icon: 'about' },
-    { id: 'expertise', label: 'Expertise', icon: 'expertise', count: 'expertise' },
-    { id: 'work', label: 'Work history', icon: 'work', count: 'experience' },
-    { id: 'projects', label: 'Projects', icon: 'projects', count: 'projects' },
-    { id: 'cards', label: 'Education & awards', icon: 'award', count: 'cards' },
-    { id: 'contact', label: 'Contact', icon: 'contact', count: 'contact.socials' },
-  ] },
-  { group: 'ASSETS & LOOK', items: [
-    { id: 'media', label: 'CV & media', icon: 'media' },
-    { id: 'appearance', label: 'Appearance', icon: 'palette' },
-  ] },
-  { group: 'ASSISTANT', items: [
-    { id: 'agent', label: 'Agent', icon: 'chip' },
-    { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
-    { id: 'botlogs', label: 'AmritBot logs', icon: 'terminal' },
-  ] },
+  {
+    group: 'CONTENT', items: [
+      { id: 'hero', label: 'Hero & intro', icon: 'hero' },
+      { id: 'about', label: 'About', icon: 'about' },
+      { id: 'expertise', label: 'Expertise', icon: 'expertise', count: 'expertise' },
+      { id: 'work', label: 'Work history', icon: 'work', count: 'experience' },
+      { id: 'projects', label: 'Projects', icon: 'projects', count: 'projects' },
+      { id: 'cards', label: 'Education & awards', icon: 'award', count: 'cards' },
+      { id: 'contact', label: 'Contact', icon: 'contact', count: 'contact.socials' },
+    ]
+  },
+  {
+    group: 'ASSETS & LOOK', items: [
+      { id: 'media', label: 'CV & media', icon: 'media' },
+      { id: 'appearance', label: 'Appearance', icon: 'palette' },
+    ]
+  },
+  {
+    group: 'ASSISTANT', items: [
+      { id: 'agent', label: 'Agent', icon: 'chip' },
+      { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
+    ]
+  },
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
 ];
 
-const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', botlogs: 'AmritBot logs', sync: 'Sync & deploy' };
+const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', sync: 'Sync & deploy' };
 
 function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
@@ -589,7 +579,7 @@ function AdminApp() {
     const root = document.documentElement;
     root.dataset.theme = adminTheme === 'light' ? 'light' : 'dark';
     root.style.setProperty('--accent-raw', adminAccent);
-    try { localStorage.setItem('amritos.admin.theme', adminTheme); localStorage.setItem('amritos.admin.accent', adminAccent); } catch (e) {}
+    try { localStorage.setItem('amritos.admin.theme', adminTheme); localStorage.setItem('amritos.admin.accent', adminAccent); } catch (e) { }
     if (window.applyFavicon) window.applyFavicon(adminAccent, 'os-window'); // admin keeps the terminal-window mark
     // Only push to the cloud once we've hydrated from it, so the initial local
     // default doesn't clobber a value saved on another device.
@@ -633,7 +623,7 @@ function AdminApp() {
     catch (e) { setAuthError((e && e.message) || 'sign-in failed'); }
     finally { setAuthBusy(false); }
   };
-  const signOut = () => { try { window.fb.auth.signOut(); } catch (e) {} };
+  const signOut = () => { try { window.fb.auth.signOut(); } catch (e) { } };
 
   const [route, setRoute] = useAState(() => (location.hash || '').replace('#', '') || 'overview');
   const [preview, setPreview] = useAState(false);
@@ -686,7 +676,6 @@ function AdminApp() {
       case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} />;
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
-      case 'botlogs': return <BotLogsPage />;
       case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={doDiscard} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
@@ -737,7 +726,7 @@ class AdminErrorBoundary extends React.Component {
     const stack = (this.state.err && this.state.err.stack) || '';
     const componentStack = (this.state.info && this.state.info.componentStack) || '';
     const reset = () => this.setState({ err: null, info: null });
-    const wipe = () => { try { localStorage.removeItem('amritos.draft'); } catch (e) {} window.location.reload(); };
+    const wipe = () => { try { localStorage.removeItem('amritos.draft'); } catch (e) { } window.location.reload(); };
     return (
       <div style={{ padding: 32, fontFamily: 'JetBrains Mono, monospace', color: '#f6f4ef', background: '#0c0d0a', minHeight: '100vh' }}>
         <h2 style={{ color: '#ff7a59', marginBottom: 8 }}>admin crashed</h2>
