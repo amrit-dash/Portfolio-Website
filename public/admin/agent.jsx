@@ -24,9 +24,34 @@ const agentChat = {
     this.emit();
   },
   setSending(b) { this.sending = b; this.emit(); },
-  reset() { this.messages = []; this.emit(); },
+  reset() { this.messages = []; this.hydrated = true; this.emit(); },
   emit() { this.listeners.forEach((l) => l()); },
+
+  // Restore the persisted conversation once per session so a reload doesn't look
+  // like a blank chat. The server keeps the canonical history (agent_chats/
+  // {chatId}/messages) and uses it for multi-turn context; here we just rebuild
+  // the visible user/assistant bubbles. Clearing the chat marks it hydrated so
+  // it won't repopulate.
+  hydrated: false,
+  async hydrate() {
+    if (this.hydrated || this.messages.length) return;
+    this.hydrated = true;
+    try {
+      const raw = await window.ADMIN_STORE.Store.fsLoadAgentMessages('default', 100);
+      const ui = (raw || [])
+        .filter((m) => (m.role === 'user' || m.role === 'assistant') && (m.text || '').trim())
+        .map((m) => ({ role: m.role, text: m.text, restored: true }));
+      if (ui.length) { this.messages = ui; this.emit(); }
+    } catch (e) { /* offline / no history */ }
+  },
 };
+
+// Rough context-size signal so we can nudge the owner to clear before a turn
+// gets expensive or hits the model's window. Counts chars across the thread.
+function agentContextChars(messages) {
+  return (messages || []).reduce((n, m) => n + ((m.text || '').length), 0);
+}
+const AGENT_CONTEXT_WARN = 14000;   // ~3.5k tokens of visible text → suggest clearing
 
 function useAgentChat() {
   const [, force] = useState(0);
@@ -107,13 +132,14 @@ function AgentSettingsModal({ open, onClose }) {
 
 /* ---------- one turn's message bubble ---------- */
 function MessageBubble({ msg, go, openPreview }) {
-  const { AdminIcon, Btn } = window.ADMIN_UI;
+  const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
   const [reverted, setReverted] = useState({});
 
   if (msg.role === 'user') {
     return <div className="agentmsg agentmsg--user"><div className="agentmsg__body">{msg.text}</div></div>;
   }
+
 
   const routes = [...new Set((msg.changedPaths || []).map(pathToRoute).filter(Boolean))];
 
@@ -131,7 +157,7 @@ function MessageBubble({ msg, go, openPreview }) {
       <div className="agentmsg__body">
         {msg.pending ? <span className="agentmsg__typing">working…</span>
           : msg.error ? <span className="login__err">⚠ {msg.error}</span>
-            : <span>{msg.text}</span>}
+            : <span>{mdInline ? mdInline(msg.text) : msg.text}</span>}
         {msg.bounded && <div className="helptext" style={{ marginTop: 4 }}>⚠ stopped at the tool-iteration limit.</div>}
       </div>
 
@@ -193,9 +219,14 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
     chat.reset();
   };
 
+  // Restore persisted history once on first mount.
+  useEffect(() => { chat.hydrate(); }, []);
+
   useEffect(() => {
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [chat.messages.length, chat.sending]);
+
+  const overContext = agentContextChars(chat.messages) > AGENT_CONTEXT_WARN;
 
   const submit = (e) => {
     if (e) e.preventDefault();
@@ -215,6 +246,14 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
         )}
         {chat.messages.map((m, i) => <MessageBubble key={i} msg={m} go={go} openPreview={openPreview} />)}
       </div>
+
+      {overContext && (
+        <div className="agentwarn">
+          <AdminIcon name="info" size={14} />
+          <span>This conversation is getting long — clearing it keeps the agent fast and within its context window.</span>
+          <button type="button" className="linkbtn" onClick={clearChat} disabled={chat.sending}>Clear now</button>
+        </div>
+      )}
 
       <form className="composer" onSubmit={submit}>
         <textarea
