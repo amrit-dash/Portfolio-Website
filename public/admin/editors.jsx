@@ -184,7 +184,7 @@ function AboutEditor({ content, setAt }) {
    it'll look once recolored to the site theme — every uploaded icon adopts the
    accent like the built-in ones, so it sits consistently in the grid. */
 function IconUploadModal({ draft, onSave, onClose }) {
-  const { AdminIcon, Field, Input, ToggleRow } = window.ADMIN_UI;
+  const { AdminIcon, Field, ToggleRow } = window.ADMIN_UI;
   const SS = window.SHARED_SCHEMA;
   // Mounted only while a draft exists (see ExpertiseEditor), so these initialise
   // fresh from the picked file each time the modal opens.
@@ -208,7 +208,10 @@ function IconUploadModal({ draft, onSave, onClose }) {
           ) : (
             <>
               <div className="iconup__preview"><span className="skillicon" style={{ width: 40, height: 40 }} dangerouslySetInnerHTML={{ __html: themed }} /></div>
-              <Field label="Icon name"><Input value={name} onChange={(v) => setName(v)} placeholder="icon" /></Field>
+              <Field label="Icon name">
+                <input className="inp" type="text" value={typeof name === 'string' ? name : ''}
+                  placeholder="icon" onChange={(e) => setName(e.target.value)} />
+              </Field>
               {canStrip && (
                 <ToggleRow title="Transparent fill (outline only)"
                   sub="Strip any solid fill so only the outline shows in the theme color"
