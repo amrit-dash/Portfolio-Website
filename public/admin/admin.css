@@ -2733,8 +2733,8 @@ body::before {
    position: absolute;
    top: 8px;
    right: 8px;
-   width: 30px;
-   height: 30px;
+   width: 36px;
+   height: 36px;
    display: inline-flex;
    align-items: center;
    justify-content: center;
