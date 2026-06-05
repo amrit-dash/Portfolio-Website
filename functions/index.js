@@ -483,7 +483,7 @@ const { undoLastChange, revertPath } = require('./agent/content-ops');
 // like chat/models/track. A browser can't auth at the Cloud Run IAM layer with a
 // Firebase token, so this is the only way to call it from the admin — declaring
 // it here stops a future deploy from silently dropping the allUsers binding.
-exports.agent = onRequest({ invoker: 'public' }, async (req, res) => {
+exports.agent = onRequest({ invoker: 'public', timeoutSeconds: 300, memory: '512MiB' }, async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).send('');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
@@ -811,7 +811,10 @@ const INBOX_SYSTEM = [
   'The "id" MUST equal the id given for that question.',
 ].join('\n');
 
-exports.inboxProcess = onRequest({ invoker: 'public' }, async (req, res) => {
+// Triages up to 25 questions in sequential LLM batches — easily exceeds the 60s
+// default, which surfaced as a browser "Failed to fetch" even though the run
+// finished server-side. Give it room (and more memory for faster cold starts).
+exports.inboxProcess = onRequest({ invoker: 'public', timeoutSeconds: 300, memory: '512MiB' }, async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).send('');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
