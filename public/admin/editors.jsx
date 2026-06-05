@@ -183,17 +183,39 @@ function AboutEditor({ content, setAt }) {
    valid SVG (or explains it isn't), lets the owner rename it, and previews how
    it'll look once recolored to the site theme — every uploaded icon adopts the
    accent like the built-in ones, so it sits consistently in the grid. */
+// Coerce a CSS color to a 6-digit hex for <input type="color"> (which only
+// accepts #rrggbb). #rgb expands; anything else falls back to black.
+function toHex6(c) {
+  const s = String(c || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(s)) return s.toLowerCase();
+  const m = s.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+  if (m) return ('#' + m[1] + m[1] + m[2] + m[2] + m[3] + m[3]).toLowerCase();
+  return '#000000';
+}
+
 function IconUploadModal({ draft, onSave, onClose }) {
-  const { AdminIcon, Field, ToggleRow } = window.ADMIN_UI;
+  const { AdminIcon, Field, Segmented } = window.ADMIN_UI;
   const SS = window.SHARED_SCHEMA;
   // Mounted only while a draft exists (see ExpertiseEditor), so these initialise
   // fresh from the picked file each time the modal opens.
   const [name, setName] = useState(typeof (draft && draft.name) === 'string' ? draft.name : 'icon');
-  // Default to outline mode for stroke-based icons — strips any baked-in fill so
-  // the interior reads transparent like the built-in icons.
-  const [stripFills, setStripFills] = useState(!!(draft && draft.svg && SS.svgHasStroke(draft.svg)));
-  const canStrip = !!(draft && draft.svg && SS.svgHasStroke(draft.svg));
-  const themed = draft && draft.svg ? SS.recolorSvg(draft.svg, 'currentColor', { stripFills }) : '';
+  // Each distinct color the SVG declares, mapped to how the owner wants it shown:
+  // theme (accent), transparent (hidden), or a custom hex. Defaults to theme.
+  const colors = draft && draft.svg ? SS.svgColors(draft.svg) : [];
+  const [modes, setModes] = useState(() => {
+    const o = {};
+    colors.forEach((c) => { o[c] = { mode: 'theme', custom: toHex6(c) }; });
+    return o;
+  });
+  const setMode = (c, patch) => setModes((s) => ({ ...s, [c]: { ...(s[c] || { mode: 'theme', custom: toHex6(c) }), ...patch } }));
+  const targetFor = (c) => {
+    const m = modes[c] || { mode: 'theme' };
+    return m.mode === 'transparent' ? 'none' : m.mode === 'custom' ? toHex6(m.custom) : 'currentColor';
+  };
+  const map = {};
+  colors.forEach((c) => { map[c] = targetFor(c); });
+  const themed = !draft || !draft.svg ? ''
+    : colors.length ? SS.recolorSvgMap(draft.svg, map) : SS.recolorSvg(draft.svg, 'currentColor');
   const save = () => onSave({ name: (String(name || '').trim() || 'icon').slice(0, 40), svg: themed });
   return (
     <div className="agentmodal" onMouseDown={onClose}>
@@ -212,12 +234,25 @@ function IconUploadModal({ draft, onSave, onClose }) {
                 <input className="inp" type="text" value={typeof name === 'string' ? name : ''}
                   placeholder="icon" onChange={(e) => setName(e.target.value)} />
               </Field>
-              {canStrip && (
-                <ToggleRow title="Transparent fill (outline only)"
-                  sub="Strip any solid fill so only the outline shows in the theme color"
-                  value={stripFills} onChange={setStripFills} />
+              {colors.length > 0 ? (
+                <Field label={colors.length === 1 ? 'Color' : `Colors (${colors.length})`}
+                  hint="theme · transparent · custom">
+                  {colors.map((c) => (
+                    <div className="iconup__color" key={c}>
+                      <span className="iconup__swatch" style={{ background: c }} title={c} />
+                      <Segmented value={(modes[c] || {}).mode || 'theme'}
+                        options={[{ value: 'theme', label: 'Theme' }, { value: 'transparent', label: 'Transparent' }, { value: 'custom', label: 'Custom' }]}
+                        onChange={(v) => setMode(c, { mode: v })} />
+                      {(modes[c] || {}).mode === 'custom' && (
+                        <input type="color" className="iconup__pick" value={toHex6((modes[c] || {}).custom)}
+                          onChange={(e) => setMode(c, { custom: e.target.value })} />
+                      )}
+                    </div>
+                  ))}
+                </Field>
+              ) : (
+                <p className="helptext" style={{ marginTop: 8 }}>This icon will use the site theme color, just like the other icons in this section.</p>
               )}
-              <p className="helptext" style={{ marginTop: 8 }}>This icon will use the site theme color, just like the other icons in this section.</p>
               <div className="iconup__ft">
                 <button className="btn btn--sm" onClick={onClose}>Cancel</button>
                 <button className="btn btn--sm btn--primary" onClick={save}>Add icon</button>

@@ -186,6 +186,32 @@
     return s;
   }
 
+  /* Per-color repaint. `map` keys are lowercased source colors (as returned by
+     svgColors); each value is the replacement — a hex, "currentColor" (follow
+     theme), or "none" (make transparent). Every fill/stroke whose value matches
+     a map key is rewritten; colors not in the map, plus none/transparent/url()
+     refs, are left untouched. If the file declares no paint at all, the single
+     map value is applied to the root <svg> fill so the choice still takes. */
+  function recolorSvgMap(svg, map) {
+    let s = String(svg || '');
+    if (!s || !map) return s;
+    const lookup = (v) => {
+      const t = String(v).trim().toLowerCase();
+      if (t === 'none' || t === 'transparent' || t.indexOf('url(') === 0) return null;
+      return Object.prototype.hasOwnProperty.call(map, t) ? map[t] : null;
+    };
+    let hits = 0;
+    const rep = (m, a, eq, v) => { const r = lookup(v); if (r == null) return m; hits++; return a + eq + '"' + r + '"'; };
+    s = s.replace(/(fill|stroke)(\s*=\s*)"([^"]*)"/gi, rep);
+    s = s.replace(/(fill|stroke)(\s*=\s*)'([^']*)'/gi, (m, a, eq, v) => { const r = lookup(v); if (r == null) return m; hits++; return a + eq + "'" + r + "'"; });
+    s = s.replace(/(fill|stroke)(\s*:\s*)([^;"'}\)]+)/gi, (m, a, c, v) => { const r = lookup(v); if (r == null) return m; hits++; return a + c + r; });
+    if (hits === 0) {
+      const only = Object.keys(map)[0];
+      if (only) s = s.replace(/<svg\b/i, '<svg fill="' + map[only] + '"');
+    }
+    return s;
+  }
+
   function renumberExpertise(arr) {
     if (!Array.isArray(arr)) return arr;
     return arr.map((e, i) => ({ ...e, num: String(i + 1).padStart(2, '0') }));
@@ -215,6 +241,7 @@
     svgColors,
     svgHasStroke,
     recolorSvg,
+    recolorSvgMap,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
