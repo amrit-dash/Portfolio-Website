@@ -15,7 +15,7 @@ const BOT_TABS = [
   { id: 'limits', label: 'Limits' },
   { id: 'review', label: 'Review / Inbox' },
   { id: 'test', label: 'Test bot' },
-  { id: 'logs', label: 'Logs' },
+  { id: 'logs', label: 'AmritBot Logs' },
 ];
 
 /* ---- local Q&A matcher (mirrors the site's matcher) ---- */
@@ -79,7 +79,7 @@ function LiveTest({ bot }) {
     <div className="chat">
       <div className="chat__body" ref={bodyRef}>
         {msgs.map((m, i) => <div key={i} className={'msg ' + m.from}>{m.from === 'bot' && mdInline ? mdInline(m.text) : m.text}</div>)}
-        {busy && <div className="msg bot">…</div>}
+        {busy && <div className="msg bot"><span className="thinking__dots"><span /><span /><span /></span></div>}
       </div>
       <form className="chat__in" onSubmit={(e) => { e.preventDefault(); send(); }}>
         <input value={input} placeholder="Ask the bot something…" onChange={(e) => setInput(e.target.value)} />
@@ -485,14 +485,16 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
       )}
 
       {tab === 'logs' && (
-        <Panel title="AmritBot logs" sub="chat · inbox · provider errors — last hour, live">
-          <p className="helptext" style={{ marginTop: 0, marginBottom: 14 }}>
-            Read-only feed from Cloud Logging — AmritBot chat replies, fallbacks, inbox triage and provider errors from the last hour. Nothing is stored; new lines stream in live.
-          </p>
-          {window.ADMIN_LOGS
-            ? <window.ADMIN_LOGS.LogsView source="bot" height={460} />
-            : <p className="helptext">Logs view unavailable.</p>}
-        </Panel>
+        <div className="canvas--narrow">
+          <Panel title="AmritBot logs" sub="chat · inbox · provider errors — last hour, live">
+            <p className="helptext" style={{ marginTop: 0, marginBottom: 14 }}>
+              Read-only feed from Cloud Logging — AmritBot chat replies, fallbacks, inbox triage and provider errors from the last hour. Nothing is stored; new lines stream in live.
+            </p>
+            {window.ADMIN_LOGS
+              ? <window.ADMIN_LOGS.LogsView source="bot" height={460} />
+              : <p className="helptext">Logs view unavailable.</p>}
+          </Panel>
+        </div>
       )}
     </div>
   );
