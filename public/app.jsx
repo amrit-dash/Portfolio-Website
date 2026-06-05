@@ -17,6 +17,29 @@ const useSiteContent = () => React.useContext(ContentCtx) || CONTENT;
    dangerouslySetInnerHTML is fine because the source is the portfolio owner. */
 const rt = (html) => ({ __html: String(html == null ? '' : html) });
 
+/* Inline markdown → React nodes for bot replies (models emit **bold**, *italic*,
+   `code` and newlines even when told not to). Builds React elements directly, so
+   it never injects HTML from the model. */
+const mdInline = (text) => {
+  const src = String(text == null ? '' : text);
+  const out = [];
+  src.split('\n').forEach((line, li) => {
+    if (li > 0) out.push(React.createElement('br', { key: 'br' + li }));
+    const re = /(\*\*([^*]+)\*\*|`([^`]+)`|\*([^*]+)\*|_([^_]+)_)/g;
+    let last = 0, m, k = 0;
+    while ((m = re.exec(line)) !== null) {
+      if (m.index > last) out.push(line.slice(last, m.index));
+      const key = li + '-' + (k++);
+      if (m[2] != null) out.push(React.createElement('strong', { key }, m[2]));
+      else if (m[3] != null) out.push(React.createElement('code', { key }, m[3]));
+      else out.push(React.createElement('em', { key }, m[4] != null ? m[4] : m[5]));
+      last = m.index + m[0].length;
+    }
+    if (last < line.length) out.push(line.slice(last));
+  });
+  return out;
+};
+
 /* =====================================================
    ANALYTICS — fire-and-forget POST to the /track function,
    which writes Firestore counters + per-day buckets + a
@@ -728,7 +751,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
       <div className="console__body" ref={bodyRef} data-comment-anchor="9ae4af3e04-div-552-7">
         {thread.map((m, i) =>
           m.from === 'bot' ?
-            <BotMsg key={i}>{m.body}</BotMsg> :
+            <BotMsg key={i}>{mdInline(m.body)}</BotMsg> :
             <UserMsg key={i}>{m.body}</UserMsg>
         )}
         {thinking && <BotMsg typing />}

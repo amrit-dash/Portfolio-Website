@@ -59,6 +59,28 @@ function LogsView({ source = 'all', height = 460, showSource = false }) {
 
   const keyOf = (e) => e.ts + '|' + (e.service || '') + '|' + (e.message || '').slice(0, 80);
   const errorsOnly = filter === 'errors';
+  const cacheKey = 'amritos.logcache.' + source;
+
+  // Hydrate from the last cached page on mount so navigating to a logs view
+  // shows entries instantly instead of flashing "Loading…" and re-reading from
+  // scratch. The background loadInitial then refreshes against Cloud Logging.
+  useLEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+      if (Array.isArray(cached) && cached.length) {
+        const rows = cached.slice().sort((a, b) => b.ts - a.ts);
+        const seen = new Set(); rows.forEach((r) => seen.add(keyOf(r))); seenRef.current = seen;
+        newestRef.current = rows[0].ts; oldestRef.current = rows[rows.length - 1].ts;
+        setEntries(rows);
+      }
+    } catch (e) { /* ignore */ }
+  }, [source]);
+
+  // Persist the current "all" feed (not a filtered subset) for next time.
+  useLEffect(() => {
+    if (errorsOnly || !entries.length) return;
+    try { localStorage.setItem(cacheKey, JSON.stringify(entries.slice(0, 120))); } catch (e) { /* quota */ }
+  }, [entries, errorsOnly, cacheKey]);
 
   // Full (re)load: reset state, pull the last hour.
   const loadInitial = useLCallback(async () => {
