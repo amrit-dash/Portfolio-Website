@@ -30,6 +30,19 @@
     } catch (e) { console.warn('[firebase-init] emulator wiring failed', e); }
   }
 
+  // Offline IndexedDB cache: repeat loads and re-queries are served locally
+  // instead of re-billing Firestore reads, and the admin keeps working offline.
+  // synchronizeTabs keeps multiple open admin tabs consistent. Enabled AFTER any
+  // useEmulator() wiring (which must run before the client starts) and skipped
+  // under the emulator. Must precede the first query — safe here since queries
+  // only begin once React mounts. Failures (private mode / unsupported) no-op.
+  if (!useEmu) {
+    try {
+      db.enablePersistence({ synchronizeTabs: true })
+        .catch((e) => console.info('[firebase-init] persistence off:', e && e.code));
+    } catch (e) { /* older SDKs */ }
+  }
+
   window.fb = {
     app, auth, db, storage,
     googleProvider: () => new firebase.auth.GoogleAuthProvider(),

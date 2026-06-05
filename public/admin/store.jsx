@@ -212,10 +212,25 @@ const Store = {
     if (!this.fsReady()) return null;
     return window.fb.db.doc('stats/global').onSnapshot((s) => cb(s.exists ? s.data() : {}), (e) => console.warn('[stats]', e && e.message));
   },
-  fsEventsListen(cb, n) {
-    if (!this.fsReady()) return null;
-    return window.fb.db.collection('events').orderBy('at', 'desc').limit(n || 25).onSnapshot(
-      (snap) => cb(snap.docs.map((d) => d.data())), (e) => console.warn('[events]', e && e.message));
+  // One page of the recent-events feed via a CURSOR (.get(), not a live
+  // listener) so the console never holds an open 150-doc subscription that
+  // re-reads on every new event. Pass the prior page's `cursor` (a doc snapshot)
+  // to fetch the next slice. Returns { rows, cursor, done } — `done` is true once
+  // a short page comes back (no more to load). This is the read-cost fix: the
+  // Analytics page now reads 20 docs up front and the rest only on scroll.
+  async fsEventsPage(after, n) {
+    const size = n || 20;
+    if (!this.fsReady()) return { rows: [], cursor: null, done: true };
+    try {
+      let q = window.fb.db.collection('events').orderBy('at', 'desc').limit(size);
+      if (after) q = q.startAfter(after);
+      const snap = await q.get();
+      return {
+        rows: snap.docs.map((d) => d.data()),
+        cursor: snap.docs.length ? snap.docs[snap.docs.length - 1] : (after || null),
+        done: snap.docs.length < size,
+      };
+    } catch (e) { console.warn('[events]', e && e.message); return { rows: [], cursor: after || null, done: true }; }
   },
   async fsDailyRange(days) {
     if (!this.fsReady()) return [];
@@ -659,24 +674,53 @@ function useContent() {
    buckets for the last 30 days. Re-attaches when the owner signs in. Returns a
    shape compatible with the existing Overview plus richer data for the
    dedicated Analytics page. */
+const EVENTS_PAGE = 20; // recent-activity slice fetched per load (cost-bounded)
+
 function useAnalytics() {
   const [counters, setCounters] = React.useState(null);
   const [recent, setRecent] = React.useState([]);
   const [daily, setDaily] = React.useState([]);
+  const cursorRef = React.useRef(null);
+  const loadingRef = React.useRef(false);           // guards against overlapping scroll loads
+  const [eventsDone, setEventsDone] = React.useState(false);
+  const [eventsLoading, setEventsLoading] = React.useState(false);
+
+  // Fetch the FIRST page (reset). Used on sign-in and on manual refresh — the
+  // only times we re-read the feed from the server.
+  const refreshEvents = React.useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true; setEventsLoading(true);
+    cursorRef.current = null; setEventsDone(false);
+    const { rows, cursor, done } = await Store.fsEventsPage(null, EVENTS_PAGE);
+    cursorRef.current = cursor; setRecent(rows); setEventsDone(done);
+    loadingRef.current = false; setEventsLoading(false);
+  }, []);
+
+  // Append the NEXT page (scroll-driven). No-op once the feed is exhausted.
+  const loadMoreEvents = React.useCallback(async () => {
+    if (loadingRef.current || eventsDone) return;
+    loadingRef.current = true; setEventsLoading(true);
+    const { rows, cursor, done } = await Store.fsEventsPage(cursorRef.current, EVENTS_PAGE);
+    cursorRef.current = cursor; setRecent((prev) => prev.concat(rows)); setEventsDone(done);
+    loadingRef.current = false; setEventsLoading(false);
+  }, [eventsDone]);
 
   React.useEffect(() => {
     if (!window.fb || !window.fb.auth) return;
-    let u1 = null, u2 = null;
+    let u1 = null;
     const unsubAuth = window.fb.auth.onAuthStateChanged(async (u) => {
-      if (u1) u1(); if (u2) u2(); u1 = u2 = null;
+      if (u1) u1(); u1 = null;
       if (u) {
-        u1 = Store.fsStatsListen(setCounters);
-        u2 = Store.fsEventsListen(setRecent, 150); // full feed for the Analytics page; Overview slices to 5
+        u1 = Store.fsStatsListen(setCounters);     // single doc — cheap to keep live
+        await refreshEvents();                     // first 20 events; rest load on scroll
         try { setDaily(await Store.fsDailyRange(30)); } catch (e) {}
-      } else { setCounters(null); setRecent([]); setDaily([]); }
+      } else {
+        setCounters(null); setRecent([]); setDaily([]);
+        cursorRef.current = null; setEventsDone(false);
+      }
     });
-    return () => { if (u1) u1(); if (u2) u2(); unsubAuth(); };
-  }, []);
+    return () => { if (u1) u1(); unsubAuth(); };
+  }, [refreshEvents]);
 
   const refreshDaily = React.useCallback(async () => {
     try { setDaily(await Store.fsDailyRange(30)); } catch (e) {}
@@ -715,6 +759,7 @@ function useAnalytics() {
     pageViews: c.views || 0, cvDownloads: c.cvDownloads || 0, botChats: c.botChats || 0, projectOpens: c.projectOpens || 0,
     socialClicks: c.socialClicks || 0, linkClicks: c.linkClicks || 0, ctaClicks: c.ctaClicks || 0,
     history, topProjects, activity, totalEvents, daily, recent, counters: c, refreshDaily,
+    loadMoreEvents, refreshEvents, eventsDone, eventsLoading,
   };
 }
 
