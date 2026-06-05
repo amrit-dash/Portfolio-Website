@@ -295,6 +295,15 @@ function AnalyticsPage({ analytics, onReset }) {
           </>
         )}
       </Panel>
+
+      <Panel title="Function logs" sub="agent + bot + functions · last hour, live">
+        <p className="helptext" style={{ marginTop: 0, marginBottom: 12 }}>
+          Read-only feed from Cloud Logging — every function's recent successes, errors and notifications, with timestamp, origin and (for LLM calls) whether it was an <code>agent:llm</code> or <code>bot:llm</code> issue. Nothing is stored; new lines stream in live.
+        </p>
+        {window.ADMIN_LOGS && window.ADMIN_LOGS.LogsView
+          ? <window.ADMIN_LOGS.LogsView source="all" height={420} />
+          : <p className="helptext" style={{ margin: 0 }}>Logs view unavailable.</p>}
+      </Panel>
     </div>
   );
 }
@@ -366,6 +375,20 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
           <code>localStorage.amritos.*</code> still exists, but only as an offline cache + instant first paint — Firestore and Storage are the durable, cross-device source of truth. Owner-only Firestore rules deny client access to the key docs; see <code>firestore.rules</code>.
         </p>
       </Panel>
+    </div>
+  );
+}
+
+/* ---------- AmritBot logs (read-only Cloud Logging feed) ---------- */
+function BotLogsPage() {
+  const { PageHead } = window.ADMIN_UI;
+  const LogsView = window.ADMIN_LOGS && window.ADMIN_LOGS.LogsView;
+  return (
+    <div>
+      <PageHead eyebrow="/AMRIT-BOT.LOGS" title="AmritBot logs">
+        Live AmritBot activity from Cloud Logging — chat replies, fallbacks, inbox triage and provider errors from the last hour. Read-only; nothing is stored.
+      </PageHead>
+      {LogsView ? <LogsView source="bot" height={560} /> : <p className="helptext">Logs view unavailable.</p>}
     </div>
   );
 }
@@ -461,11 +484,12 @@ const NAV = [
   { group: 'ASSISTANT', items: [
     { id: 'agent', label: 'Agent', icon: 'chip' },
     { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
+    { id: 'botlogs', label: 'AmritBot logs', icon: 'terminal' },
   ] },
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
 ];
 
-const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', sync: 'Sync & deploy' };
+const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', botlogs: 'AmritBot logs', sync: 'Sync & deploy' };
 
 function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
@@ -662,6 +686,7 @@ function AdminApp() {
       case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} />;
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
+      case 'botlogs': return <BotLogsPage />;
       case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
       case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} onPublish={doPublish} onReset={doDiscard} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onResetAnalytics={resetAnalytics} go={go} />;
