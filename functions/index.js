@@ -398,7 +398,7 @@ exports.track = onRequest(async (req, res) => {
 /* ===================================================== */
 /*  /clearStats — owner-only analytics reset             */
 /* ===================================================== */
-exports.clearStats = onRequest(async (req, res) => {
+exports.clearStats = onRequest({ invoker: 'public' }, async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).send('');
   if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
