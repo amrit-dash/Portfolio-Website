@@ -50,6 +50,7 @@ const PROVIDERS = {
   openrouter: { endpoint: 'https://openrouter.ai/api/v1/chat/completions' },
   mistral:    { endpoint: 'https://api.mistral.ai/v1/chat/completions' },
   grok:       { endpoint: 'https://api.x.ai/v1/chat/completions' },
+  groq:       { endpoint: 'https://api.groq.com/openai/v1/chat/completions' },
 };
 
 /* ---------- helpers ---------- */
@@ -290,8 +291,8 @@ exports.models = onRequest(async (req, res) => {
       if (useKey) headers = { Authorization: 'Bearer ' + useKey };
       pick = (d) => (d.data || []).map((m) => m.id);
     } else {
-      // OpenAI-compatible: openai, mistral, grok
-      const bases = { openai: 'https://api.openai.com/v1/models', mistral: 'https://api.mistral.ai/v1/models', grok: 'https://api.x.ai/v1/models' };
+      // OpenAI-compatible: openai, mistral, grok, groq
+      const bases = { openai: 'https://api.openai.com/v1/models', mistral: 'https://api.mistral.ai/v1/models', grok: 'https://api.x.ai/v1/models', groq: 'https://api.groq.com/openai/v1/models' };
       url = bases[provider];
       if (!url) return res.status(400).json({ error: 'unknown-provider' });
       if (!useKey) return res.status(400).json({ error: 'no-key' });
@@ -462,7 +463,12 @@ function stripAgentConfigKeys(config) {
 const { runAgentTurn } = require('./agent/loop');
 const { undoLastChange, revertPath } = require('./agent/content-ops');
 
-exports.agent = onRequest(async (req, res) => {
+// invoker:'public' = the Cloud Run service ACCEPTS the request; auth is still
+// enforced in-code by verifyOwner() (Firebase ID token === OWNER_EMAIL), exactly
+// like chat/models/track. A browser can't auth at the Cloud Run IAM layer with a
+// Firebase token, so this is the only way to call it from the admin — declaring
+// it here stops a future deploy from silently dropping the allUsers binding.
+exports.agent = onRequest({ invoker: 'public' }, async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).send('');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
@@ -536,7 +542,7 @@ const agentProviders = require('./agent/providers');
 const { checkDailyCap } = require('./agent/loop');
 const { wrapVisitorText } = require('./agent/guards');
 
-exports.refine = onRequest(async (req, res) => {
+exports.refine = onRequest({ invoker: 'public' }, async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).send('');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
@@ -643,7 +649,7 @@ const INBOX_SYSTEM = [
   'The "id" MUST equal the id given for that question.',
 ].join('\n');
 
-exports.inboxProcess = onRequest(async (req, res) => {
+exports.inboxProcess = onRequest({ invoker: 'public' }, async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).send('');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
