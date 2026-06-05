@@ -130,6 +130,19 @@ function AgentSettingsModal({ open, onClose }) {
   );
 }
 
+/* Animated thinking indicator — bouncing dots + live elapsed seconds, so a long
+   agent tool-loop reads as active rather than a frozen "working…". */
+function Thinking() {
+  const [s, setS] = useState(0);
+  useEffect(() => { const id = setInterval(() => setS((x) => x + 1), 1000); return () => clearInterval(id); }, []);
+  return (
+    <span className="thinking">
+      <span className="thinking__dots"><span /><span /><span /></span>
+      <span className="thinking__t">{s < 1 ? 'working…' : `working… ${s}s`}</span>
+    </span>
+  );
+}
+
 /* ---------- one turn's message bubble ---------- */
 function MessageBubble({ msg, go, openPreview }) {
   const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
@@ -155,9 +168,9 @@ function MessageBubble({ msg, go, openPreview }) {
   return (
     <div className="agentmsg agentmsg--bot">
       <div className="agentmsg__body">
-        {msg.pending ? <span className="agentmsg__typing">working…</span>
+        {msg.pending ? <Thinking />
           : msg.error ? <span className="login__err">⚠ {msg.error}</span>
-            : <span>{mdInline ? mdInline(msg.text) : msg.text}</span>}
+            : <span className="agentmsg__reveal">{mdInline ? mdInline(msg.text) : msg.text}</span>}
         {msg.bounded && <div className="helptext" style={{ marginTop: 4 }}>⚠ stopped at the tool-iteration limit.</div>}
       </div>
 
