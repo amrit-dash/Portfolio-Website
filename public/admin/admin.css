@@ -1167,6 +1167,13 @@ body::before {
    font-size: 11px;
 }
 
+/* Slightly taller small button — used for the Expertise panel header actions so
+   the icon-upload and add-module buttons share a comfortable, matched height. */
+.btn--sm.btn--tall {
+   padding-top: 8px;
+   padding-bottom: 8px;
+}
+
 .btn:disabled {
    opacity: .4;
    cursor: not-allowed;
@@ -2776,6 +2783,10 @@ body::before {
 .iconlib__name { font-size: 10px; color: var(--fg-mute); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .iconlib__del { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); color: var(--fg-dim); cursor: pointer; }
 .iconlib__del:hover { color: var(--danger); border-color: var(--danger); }
+
+/* Post-upload icon editor (modal) */
+.iconup__preview { display: grid; place-items: center; width: 72px; height: 72px; margin: 0 auto 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--bg); color: var(--accent); }
+.iconup__ft { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
 /* Inbox AI triage — info button, verdict tag, suggestion panel */
 .infobtn {

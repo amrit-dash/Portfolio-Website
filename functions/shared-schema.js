@@ -54,7 +54,8 @@
     openai: 'openai',       // OpenAI chat-completions tool-calling
     openrouter: 'openai',   // same wire format, own key + catalog
     mistral: 'openai',
-    grok: 'openai',
+    grok: 'openai',         // xAI Grok — api.x.ai, keys start "xai-"
+    groq: 'openai',         // Groq Cloud — api.groq.com, keys start "gsk_" (NOT xAI)
   };
 
   const AGENT_CONFIG_DEFAULTS = {
@@ -95,6 +96,12 @@
       { id: 'grok-3', label: 'Grok 3', free: false },
       { id: 'grok-3-mini', label: 'Grok 3 mini', free: false },
     ],
+    groq: [
+      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile', free: true },
+      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant', free: true },
+      { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', free: true },
+      { id: 'moonshotai/kimi-k2-instruct', label: 'Kimi K2', free: true },
+    ],
   };
 
   /* Sanitize an uploaded SVG before it's stored in content + rendered inline.
@@ -116,6 +123,38 @@
     return s;
   }
   function isCustomIcon(id) { return typeof id === 'string' && id.indexOf('custom_') === 0; }
+
+  /* Distinct concrete colors declared in an SVG (fill/stroke attrs + inline
+     styles). Ignores none/transparent/currentColor and url(...) refs. Returned
+     as a lowercased array — used to decide if an uploaded icon is monocolor. */
+  function svgColors(svg) {
+    const s = String(svg || '');
+    const set = new Set();
+    const re = /(?:fill|stroke)\s*(?:=\s*["']|:\s*)([^"';}\)]+)/gi;
+    let m;
+    while ((m = re.exec(s))) {
+      const t = m[1].trim().toLowerCase();
+      if (t && t !== 'none' && t !== 'transparent' && t !== 'currentcolor' && t.indexOf('url(') !== 0) set.add(t);
+    }
+    return Array.from(set);
+  }
+
+  /* Repaint every concrete fill/stroke in an SVG to `color` (a hex, or the
+     string "currentColor" so the icon inherits the site theme accent like the
+     built-in icons). Leaves none/transparent/url() refs intact. If the file
+     declares no fill/stroke at all (relies on the default black fill), we set
+     fill on the root <svg> so the recolor still takes. */
+  function recolorSvg(svg, color) {
+    let s = String(svg || '');
+    if (!s) return s;
+    const keep = (v) => { const t = String(v).trim().toLowerCase(); return t === 'none' || t === 'transparent' || t.indexOf('url(') === 0; };
+    let hits = 0;
+    s = s.replace(/(fill|stroke)(\s*=\s*)"([^"]*)"/gi, (m, a, eq, v) => { if (keep(v)) return m; hits++; return a + eq + '"' + color + '"'; });
+    s = s.replace(/(fill|stroke)(\s*=\s*)'([^']*)'/gi, (m, a, eq, v) => { if (keep(v)) return m; hits++; return a + eq + "'" + color + "'"; });
+    s = s.replace(/(fill|stroke)(\s*:\s*)([^;"'}\)]+)/gi, (m, a, c, v) => { if (keep(v)) return m; hits++; return a + c + color; });
+    if (hits === 0) s = s.replace(/<svg\b/i, '<svg fill="' + color + '"');
+    return s;
+  }
 
   function renumberExpertise(arr) {
     if (!Array.isArray(arr)) return arr;
@@ -143,6 +182,8 @@
     providerKind,
     sanitizeSvg,
     isCustomIcon,
+    svgColors,
+    recolorSvg,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

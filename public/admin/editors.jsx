@@ -179,27 +179,71 @@ function AboutEditor({ content, setAt }) {
   );
 }
 
+/* One-time editor shown right after an SVG is picked. Confirms the file is a
+   valid SVG (or explains it isn't), lets the owner rename it, and previews how
+   it'll look once recolored to the site theme — every uploaded icon adopts the
+   accent like the built-in ones, so it sits consistently in the grid. */
+function IconUploadModal({ draft, onSave, onClose }) {
+  const { AdminIcon, Field, Input } = window.ADMIN_UI;
+  const [name, setName] = useState(draft && draft.name ? draft.name : 'icon');
+  if (!draft) return null;
+  const themed = draft.svg ? window.SHARED_SCHEMA.recolorSvg(draft.svg, 'currentColor') : '';
+  const save = () => onSave({ name: (name || 'icon').slice(0, 40) || 'icon', svg: themed });
+  return (
+    <div className="agentmodal" onMouseDown={onClose}>
+      <div className="agentmodal__panel" style={{ width: 'min(420px, 100%)' }} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="agentmodal__hd">
+          <span className="agentmodal__title"><AdminIcon name="upload" size={15} /> {draft.error ? 'Unsupported file' : 'Add icon'}</span>
+          <button className="agentmodal__close" onClick={onClose} aria-label="Close"><AdminIcon name="x" size={16} /></button>
+        </div>
+        <div className="agentmodal__body">
+          {draft.error ? (
+            <p className="helptext" style={{ color: '#e0a341', margin: 0 }}>⚠ {draft.error}<br /><br />Only <b>.svg</b> files are accepted — pick a vector icon and try again.</p>
+          ) : (
+            <>
+              <div className="iconup__preview"><span className="skillicon" style={{ width: 40, height: 40 }} dangerouslySetInnerHTML={{ __html: themed }} /></div>
+              <Field label="Icon name"><Input value={name} onChange={setName} placeholder="icon" /></Field>
+              <p className="helptext" style={{ marginTop: 4 }}>This icon will use the site theme color, just like the other icons in this section.</p>
+              <div className="iconup__ft">
+                <button className="btn btn--sm" onClick={onClose}>Cancel</button>
+                <button className="btn btn--sm btn--primary" onClick={save}>Add icon</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============ EXPERTISE ============ */
 function ExpertiseEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, Input, Select, Btn, AdminIcon, SkillIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, Input, Select, AdminIcon, SkillIcon, Reorderable, ListItem } = window.ADMIN_UI;
   const list = content.expertise;
   const customIcons = content.icons || [];
   const [open, setOpen] = useState(null);
+  const [iconDraft, setIconDraft] = useState(null); // {name,svg} pending the modal, or {error}
   const fileRef = React.useRef(null);
   const update = (i, key, val) => setAt('expertise', list.map((e, j) => j === i ? { ...e, [key]: val } : e));
   const renumber = (arr) => arr.map((e, i) => ({ ...e, num: String(i + 1).padStart(2, '0') }));
   const add = () => { const n = renumber([...list, { num: '', icon: 'automation', title: 'New module', sub: '' }]); setAt('expertise', n); setOpen(n.length - 1); };
 
-  // Upload a custom SVG → sanitize → store in content.icons (selectable as an icon).
+  // Pick an SVG → sanitize → open the one-time editor modal (rename + preview).
   const onAddIcon = async (file) => {
     if (!file) return;
+    const isSvg = /\.svg$/i.test(file.name || '') || file.type === 'image/svg+xml';
+    if (!isSvg) { setIconDraft({ error: 'That file isn’t an SVG.' }); return; }
     let text = '';
-    try { text = await file.text(); } catch (e) { return; }
+    try { text = await file.text(); } catch (e) { setIconDraft({ error: 'Couldn’t read that file.' }); return; }
     const svg = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.sanitizeSvg(text)) || '';
-    if (!svg) { alert('That doesn’t look like a valid SVG (or it’s too large).'); return; }
-    const id = 'custom_' + Math.random().toString(36).slice(2, 10);
+    if (!svg) { setIconDraft({ error: 'That doesn’t look like a valid SVG (or it’s too large).' }); return; }
     const name = (file.name || 'icon').replace(/\.svg$/i, '').slice(0, 40) || 'icon';
+    setIconDraft({ name, svg });
+  };
+  const saveIcon = ({ name, svg }) => {
+    const id = 'custom_' + Math.random().toString(36).slice(2, 10);
     setAt('icons', [...customIcons, { id, name, svg }]);
+    setIconDraft(null);
   };
   const removeIcon = (id) => {
     setAt('icons', customIcons.filter((ic) => ic.id !== id));
@@ -212,10 +256,10 @@ function ExpertiseEditor({ content, setAt }) {
     <div className="canvas--narrow">
       <PageHead eyebrow="/EXPERTISE.SYS" title="Expertise modules">The clickable skill grid. Drag to reorder — numbers (MOD_01…) renumber automatically. Each module can filter projects on the site.</PageHead>
       <Panel title="Installed modules" sub={`${list.length} modules`} actions={<>
-        <input ref={fileRef} type="file" accept=".svg,image/svg+xml" style={{ display: 'none' }}
+        <input ref={fileRef} type="file" accept="image/svg+xml,.svg" style={{ display: 'none' }}
           onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; onAddIcon(f); }} />
-        <Btn sm icon="upload" onClick={() => fileRef.current && fileRef.current.click()}>Add Icon</Btn>
-        <Btn sm icon="plus" kind="primary" onClick={add}>Add module</Btn>
+        <button className="btn btn--sm btn--tall" type="button" onClick={() => fileRef.current && fileRef.current.click()}><AdminIcon name="upload" size={13} />Add Icon</button>
+        <button className="btn btn--sm btn--tall btn--primary" type="button" onClick={add}><AdminIcon name="plus" size={13} />Add module</button>
       </>}>
         <Reorderable items={list} getKey={(_, i) => i}
           onReorder={(next) => setAt('expertise', renumber(next))}
@@ -247,6 +291,7 @@ function ExpertiseEditor({ content, setAt }) {
           </div>
         )}
       </Panel>
+      <IconUploadModal draft={iconDraft} onSave={saveIcon} onClose={() => setIconDraft(null)} />
     </div>
   );
 }
