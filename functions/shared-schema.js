@@ -139,20 +139,50 @@
     return Array.from(set);
   }
 
-  /* Repaint every concrete fill/stroke in an SVG to `color` (a hex, or the
-     string "currentColor" so the icon inherits the site theme accent like the
-     built-in icons). Leaves none/transparent/url() refs intact. If the file
-     declares no fill/stroke at all (relies on the default black fill), we set
-     fill on the root <svg> so the recolor still takes. */
-  function recolorSvg(svg, color) {
+  /* Does an SVG draw with a concrete stroke (i.e. it's an outline icon, not a
+     solid filled shape)? Used to pick a sensible default for fill-stripping. */
+  function svgHasStroke(svg) {
+    const re = /stroke\s*(?:=\s*["']|:\s*)([^"';}\)]+)/gi;
+    let m;
+    while ((m = re.exec(String(svg || '')))) {
+      const t = m[1].trim().toLowerCase();
+      if (t && t !== 'none' && t !== 'transparent' && t.indexOf('url(') !== 0) return true;
+    }
+    return false;
+  }
+
+  /* Repaint an SVG so it inherits the site theme. `color` is a hex or the string
+     "currentColor" (so the icon picks up the accent like the built-in icons).
+     none/transparent/url() refs are always preserved.
+
+     stripFills (default true for outline icons): for outline icons — those that
+     draw with a stroke — every concrete *fill* is forced to `none` so any solid
+     interior or background the source baked in becomes transparent, leaving only
+     the recolored outline. Solid icons (no stroke) ignore stripFills, since
+     blanking their fills would erase them; their fills are recolored instead.
+     If the file declares no paint at all (relies on the default black fill), we
+     set fill on the root <svg> so the recolor still takes. */
+  function recolorSvg(svg, color, opts) {
     let s = String(svg || '');
     if (!s) return s;
+    opts = opts || {};
     const keep = (v) => { const t = String(v).trim().toLowerCase(); return t === 'none' || t === 'transparent' || t.indexOf('url(') === 0; };
-    let hits = 0;
-    s = s.replace(/(fill|stroke)(\s*=\s*)"([^"]*)"/gi, (m, a, eq, v) => { if (keep(v)) return m; hits++; return a + eq + '"' + color + '"'; });
-    s = s.replace(/(fill|stroke)(\s*=\s*)'([^']*)'/gi, (m, a, eq, v) => { if (keep(v)) return m; hits++; return a + eq + "'" + color + "'"; });
-    s = s.replace(/(fill|stroke)(\s*:\s*)([^;"'}\)]+)/gi, (m, a, c, v) => { if (keep(v)) return m; hits++; return a + c + color; });
-    if (hits === 0) s = s.replace(/<svg\b/i, '<svg fill="' + color + '"');
+    const stripFills = opts.stripFills && svgHasStroke(s);
+
+    // Strokes → the theme color.
+    let strokeHits = 0;
+    s = s.replace(/stroke(\s*=\s*)"([^"]*)"/gi, (m, eq, v) => { if (keep(v)) return m; strokeHits++; return 'stroke' + eq + '"' + color + '"'; });
+    s = s.replace(/stroke(\s*=\s*)'([^']*)'/gi, (m, eq, v) => { if (keep(v)) return m; strokeHits++; return 'stroke' + eq + "'" + color + "'"; });
+    s = s.replace(/stroke(\s*:\s*)([^;"'}\)]+)/gi, (m, c, v) => { if (keep(v)) return m; strokeHits++; return 'stroke' + c + color; });
+
+    // Fills → transparent (outline mode) or the theme color.
+    const fillTo = stripFills ? 'none' : color;
+    let fillHits = 0;
+    s = s.replace(/fill(\s*=\s*)"([^"]*)"/gi, (m, eq, v) => { if (keep(v)) return m; fillHits++; return 'fill' + eq + '"' + fillTo + '"'; });
+    s = s.replace(/fill(\s*=\s*)'([^']*)'/gi, (m, eq, v) => { if (keep(v)) return m; fillHits++; return 'fill' + eq + "'" + fillTo + "'"; });
+    s = s.replace(/fill(\s*:\s*)([^;"'}\)]+)/gi, (m, c, v) => { if (keep(v)) return m; fillHits++; return 'fill' + c + fillTo; });
+
+    if (strokeHits === 0 && fillHits === 0) s = s.replace(/<svg\b/i, '<svg fill="' + color + '"');
     return s;
   }
 
@@ -183,6 +213,7 @@
     sanitizeSvg,
     isCustomIcon,
     svgColors,
+    svgHasStroke,
     recolorSvg,
   };
 

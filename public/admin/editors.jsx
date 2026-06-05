@@ -184,26 +184,37 @@ function AboutEditor({ content, setAt }) {
    it'll look once recolored to the site theme — every uploaded icon adopts the
    accent like the built-in ones, so it sits consistently in the grid. */
 function IconUploadModal({ draft, onSave, onClose }) {
-  const { AdminIcon, Field, Input } = window.ADMIN_UI;
-  const [name, setName] = useState(draft && draft.name ? draft.name : 'icon');
-  if (!draft) return null;
-  const themed = draft.svg ? window.SHARED_SCHEMA.recolorSvg(draft.svg, 'currentColor') : '';
-  const save = () => onSave({ name: (name || 'icon').slice(0, 40) || 'icon', svg: themed });
+  const { AdminIcon, Field, Input, ToggleRow } = window.ADMIN_UI;
+  const SS = window.SHARED_SCHEMA;
+  // Mounted only while a draft exists (see ExpertiseEditor), so these initialise
+  // fresh from the picked file each time the modal opens.
+  const [name, setName] = useState(typeof (draft && draft.name) === 'string' ? draft.name : 'icon');
+  // Default to outline mode for stroke-based icons — strips any baked-in fill so
+  // the interior reads transparent like the built-in icons.
+  const [stripFills, setStripFills] = useState(!!(draft && draft.svg && SS.svgHasStroke(draft.svg)));
+  const canStrip = !!(draft && draft.svg && SS.svgHasStroke(draft.svg));
+  const themed = draft && draft.svg ? SS.recolorSvg(draft.svg, 'currentColor', { stripFills }) : '';
+  const save = () => onSave({ name: (String(name || '').trim() || 'icon').slice(0, 40), svg: themed });
   return (
     <div className="agentmodal" onMouseDown={onClose}>
       <div className="agentmodal__panel" style={{ width: 'min(420px, 100%)' }} onMouseDown={(e) => e.stopPropagation()}>
         <div className="agentmodal__hd">
-          <span className="agentmodal__title"><AdminIcon name="upload" size={15} /> {draft.error ? 'Unsupported file' : 'Add icon'}</span>
+          <span className="agentmodal__title"><AdminIcon name="upload" size={15} /> {draft && draft.error ? 'Unsupported file' : 'Add icon'}</span>
           <button className="agentmodal__close" onClick={onClose} aria-label="Close"><AdminIcon name="x" size={16} /></button>
         </div>
         <div className="agentmodal__body">
-          {draft.error ? (
+          {draft && draft.error ? (
             <p className="helptext" style={{ color: '#e0a341', margin: 0 }}>⚠ {draft.error}<br /><br />Only <b>.svg</b> files are accepted — pick a vector icon and try again.</p>
           ) : (
             <>
               <div className="iconup__preview"><span className="skillicon" style={{ width: 40, height: 40 }} dangerouslySetInnerHTML={{ __html: themed }} /></div>
-              <Field label="Icon name"><Input value={name} onChange={setName} placeholder="icon" /></Field>
-              <p className="helptext" style={{ marginTop: 4 }}>This icon will use the site theme color, just like the other icons in this section.</p>
+              <Field label="Icon name"><Input value={name} onChange={(v) => setName(v)} placeholder="icon" /></Field>
+              {canStrip && (
+                <ToggleRow title="Transparent fill (outline only)"
+                  sub="Strip any solid fill so only the outline shows in the theme color"
+                  value={stripFills} onChange={setStripFills} />
+              )}
+              <p className="helptext" style={{ marginTop: 8 }}>This icon will use the site theme color, just like the other icons in this section.</p>
               <div className="iconup__ft">
                 <button className="btn btn--sm" onClick={onClose}>Cancel</button>
                 <button className="btn btn--sm btn--primary" onClick={save}>Add icon</button>
@@ -291,7 +302,7 @@ function ExpertiseEditor({ content, setAt }) {
           </div>
         )}
       </Panel>
-      <IconUploadModal draft={iconDraft} onSave={saveIcon} onClose={() => setIconDraft(null)} />
+      {iconDraft && <IconUploadModal draft={iconDraft} onSave={saveIcon} onClose={() => setIconDraft(null)} />}
     </div>
   );
 }
