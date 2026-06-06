@@ -240,6 +240,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   };
   const dismissQ = (q) => { removeQuestion(q.id); };
   const verdictLabel = (v) => v === 'existing_phrase' ? 'Already covered' : v === 'irrelevant' ? 'Not worth automating' : 'New question';
+  const verdictLabelShort = (v) => v === 'existing_phrase' ? 'Covered' : v === 'irrelevant' ? 'Skip' : 'New';
   const unprocessedCount = () => (questions || []).filter((q) => !suggestions[q.id]).length;
 
   const qWhen = (q) => {
@@ -306,8 +307,13 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
 
       {tab === 'commands' && (
         <div className="canvas--narrow">
-          <Panel title="Slash commands" sub={`${bot.commands.length} commands`}
-            actions={<Btn sm icon="plus" kind="primary" onClick={() => setAt('bot.commands', [...bot.commands, { id: 'new', label: 'new', desc: '', card: '' }])}>Add command</Btn>}>
+          <Panel className="panel--commands" title="Slash commands" sub={`${bot.commands.length} commands`}
+            actions={<div className="panel__actions">
+              <button className="btn btn--sm btn--primary" type="button" title="Add command"
+                onClick={() => setAt('bot.commands', [...bot.commands, { id: 'new', label: 'new', desc: '', card: '' }])}>
+                <AdminIcon name="plus" size={13} /><span className="btn__label">Add command</span>
+              </button>
+            </div>}>
             <p className="helptext" style={{ marginBottom: 12 }}>Quick chips below the chat (<code>/stats</code>, <code>/links</code>…). The card text is the canned response shown when tapped.</p>
             {bot.commands.map((c, i) => (
               <div className="item" key={i}>
@@ -381,8 +387,10 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                   <Field label="Model" hint={(fetchedModels && Reflect.get(fetchedModels, p.id)) ? `${opts.length} models from ${p.label}` : 'pick a model, or refresh the list from the provider'}>
                     <div className="modelrow">
                       <Select value={cfg.model || ''} options={modelOptions(p, cfg)} onChange={(v) => setLocal(p.id, 'model', v)} />
-                      <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</Btn>
-                      <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !cfg.apiKey || !cfg.model} title="Send a hello to this model — result also logged in AmritBot logs">{testing === p.id ? 'Testing…' : 'Test model'}</Btn>
+                      <div className="modelrow__actions">
+                        <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id} title="Refresh model list from provider"><span className="btn__label">{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</span></Btn>
+                        <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !cfg.apiKey || !cfg.model} title="Send a hello to this model — result also logged in AmritBot logs"><span className="btn__label">{testing === p.id ? 'Testing…' : 'Test model'}</span></Btn>
+                      </div>
                     </div>
                     {modelErr && Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
                     {testRes && Reflect.get(testRes, p.id) && (
@@ -421,12 +429,12 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
 
       {tab === 'review' && (
         <div className="canvas--narrow">
-          <Panel title="Visitor questions" sub={questions ? `${questions.length} captured` : '…'}
+          <Panel className="panel--inbox" title="Visitor questions" sub={questions ? `${questions.length} captured` : '…'}
             actions={<>
               <Btn sm kind="primary" icon="sparkle" onClick={aiProcess} disabled={aiBusy || !questions || !unprocessedCount()}>
                 {aiBusy ? `Processing… ${inboxRun.done}/${inboxRun.total}` : 'AI process'}
               </Btn>
-              <Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading}>{qLoading ? 'Loading…' : 'Refresh'}</Btn>
+              <Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading} title="Reload visitor questions"><span className="btn__label">{qLoading ? 'Loading…' : 'Refresh'}</span></Btn>
             </>}>
             <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Hit <b>AI process</b> to let the agent triage them (5 at a time) — it suggests merging a question into an existing Q&amp;A, creating a new one with answers, or dismissing junk. Triage runs in the background, so you can leave this page and come back to ready suggestions.</p>
             {(aiErr || actErr) && <div className="helptext" style={{ color: '#e0a341', marginBottom: 10 }}>⚠ {aiErr || actErr}</div>}
@@ -438,17 +446,19 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                   const open = openInfo === q.id;
                   return (
                     <div className="item" key={q.id}>
-                      <div className="item__hd" style={{ cursor: 'default' }}>
+                      <div className="item__hd item__hd--inbox" style={{ cursor: 'default' }}>
                         <span className="miniico"><AdminIcon name="chat" size={15} /></span>
-                        <div style={{ minWidth: 0 }}>
+                        <div className="item__text">
                           <div className="item__title">{q.q}</div>
-                          <div className="item__sub">{qWhen(q)}{s ? <span className={'verdicttag verdicttag--' + s.verdict}>{verdictLabel(s.verdict)}</span> : null}</div>
+                          <div className="item__sub">{qWhen(q)}{s ? <span className={'verdicttag verdicttag--' + s.verdict} title={verdictLabel(s.verdict)}><span className="verdicttag__full">{verdictLabel(s.verdict)}</span><span className="verdicttag__short">{verdictLabelShort(s.verdict)}</span></span> : null}</div>
                         </div>
                         <span className="spacer" style={{ flex: 1 }} />
-                        {proc ? <span className="helptext">processing…</span>
-                          : s ? <span className={'iconbtn infobtn infobtn--' + s.verdict} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion"><AdminIcon name="info" size={15} /></span>
-                            : <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, null)}>Add to Q&amp;A</Btn>}
-                        <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
+                        <div className="item__actions">
+                          {proc ? <span className="helptext">processing…</span>
+                            : s ? <span className={'iconbtn infobtn infobtn--' + s.verdict} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion — review & add"><AdminIcon name="info" size={15} /></span>
+                              : <span className="helptext" style={{ fontSize: 11, opacity: .7 }}>not triaged</span>}
+                          <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
+                        </div>
                       </div>
                       {open && s && (
                         <div className="item__bd inboxsug">
@@ -485,9 +495,9 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
 
       {tab === 'logs' && (
         <div className="canvas--narrow">
-          <Panel title="AmritBot logs" sub="chat · inbox · provider errors — last hour, live">
+          <Panel title="AmritBot logs" sub="chat · inbox · provider errors — newest first, live">
             <p className="helptext" style={{ marginTop: 0, marginBottom: 14 }}>
-              Read-only feed from Cloud Logging — AmritBot chat replies, fallbacks, inbox triage and provider errors from the last hour. Nothing is stored; new lines stream in live.
+              Read-only feed from Cloud Logging — AmritBot chat replies, fallbacks, inbox triage and provider errors, newest first. Cached locally for instant reopen; new lines stream in live.
             </p>
             {window.ADMIN_LOGS
               ? <window.ADMIN_LOGS.LogsView source="bot" height={460} />
