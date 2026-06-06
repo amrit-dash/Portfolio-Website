@@ -591,30 +591,41 @@ exports.refine = onRequest({ invoker: 'public' }, async (req, res) => {
 
   const stripWrappingQuotes = (s) => {
     const t = String(s || '').trim();
-    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) return t.slice(1, -1).trim();
+    const pairs = [['"', '"'], ["'", "'"], ['\u201c', '\u201d'], ['\u2018', '\u2019']];
+    for (const [open, close] of pairs) {
+      if (t.startsWith(open) && t.endsWith(close) && t.length > 1) return t.slice(1, -1).trim();
+    }
     return t;
   };
+
+  const emTagGuidance = 'When a field supports inline HTML, wrap accent or highlight words in <em>...</em> (not double quotes or asterisks). Preserve existing <em> tags on proper nouns and key terms unless rewording removes them.';
+  const noQuoteGuidance = 'Do not wrap output strings in double quotes, single quotes, or curly quotes — return plain text (or HTML) only.';
 
   const systemPrompt = multi
     ? [
       'You are an inline copy editor for a portfolio admin console.',
       'Rewrite ONLY the provided fields so they are tighter, clearer, and on-voice.',
       'Match the existing tone. Do not add new facts. Keep roughly the same length unless clearly bloated.',
+      emTagGuidance,
       'Return ONLY a JSON object with the same keys and rewritten string values.',
-      'Do not wrap values in double quotes beyond normal JSON syntax. No preamble, no markdown fences, no explanation.',
+      noQuoteGuidance + ' No preamble, no markdown fences, no explanation.',
     ].join(' ')
     : [
       'You are an inline copy editor for a portfolio admin console.',
       'Rewrite ONLY the provided field text so it is tighter, clearer, and on-voice.',
       'Match the existing tone. Do not add new facts. Keep roughly the same length unless it is clearly bloated.',
+      emTagGuidance,
       'Return ONLY the rewritten text — no preamble, no markdown, no explanation.',
-      'Do not wrap the output in double quotes.',
+      noQuoteGuidance,
     ].join(' ');
 
   const fieldLines = multi
     ? Object.entries(fields).map(([k, v]) => `${k}: ${String(v == null ? '' : v).slice(0, 2000)}`).join('\n')
     : String(text).slice(0, 4000);
-  const userMsg = `Field: ${label || '(unlabeled)'}\n${context ? 'Context: ' + context + '\n' : ''}\n${multi ? 'Fields to rewrite:\n' : 'Text to rewrite:\n'}${fieldLines}`;
+  const htmlHint = multi && Object.prototype.hasOwnProperty.call(fields, 'html')
+    ? 'Note: the html field renders as inline HTML on the live site — use <em>...</em> for accent words.\n'
+    : '';
+  const userMsg = `Field: ${label || '(unlabeled)'}\n${context ? 'Context: ' + context + '\n' : ''}${htmlHint}\n${multi ? 'Fields to rewrite:\n' : 'Text to rewrite:\n'}${fieldLines}`;
 
   try {
     const gen = await agentProviders.generate(providerId, {
