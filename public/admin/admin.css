@@ -1229,9 +1229,17 @@ body::before {
    border-color: var(--accent);
 }
 
+.iconbtn--danger {
+   border: none;
+   background: transparent;
+   color: var(--danger);
+   outline: none;
+   box-shadow: none;
+}
+
 .iconbtn--danger:hover {
    color: var(--danger);
-   border-color: var(--danger);
+   background: transparent;
 }
 
 /* =====================================================
