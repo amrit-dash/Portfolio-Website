@@ -291,13 +291,16 @@
     const m = String(model || '').toLowerCase();
     if (!id || !m) return false;
 
-    if (id === 'groq') return false;
+    /* Groq chat models are text-only; llama-4 scout is the lone vision exception when listed. */
+    if (id === 'groq') return /llama-4.*scout/i.test(m);
 
     if (id === 'openrouter') {
       if (/gemini|gpt-4|gpt-4o|gpt-4\.1|claude|llava|pixtral|qwen.*vl|vision|moondream|phi-3.*vision/i.test(m)) return true;
+      /* Kimi K2 / K2.6 on OpenRouter accept image_url parts (verify with Test vision). */
+      if (/kimi[-/]|moonshotai\/kimi/i.test(m)) return true;
       if (/llama-?3\.|meta-llama\/llama|deepseek(?!.*vl)/i.test(m)) return false;
       const curated = (AGENT_TOOL_MODELS.openrouter || []).find((x) => x.id === model);
-      if (curated) return /gemini|claude/i.test(curated.id);
+      if (curated) return /gemini|claude|kimi/i.test(curated.id);
       return false;
     }
 
@@ -310,6 +313,11 @@
     if (id === 'mistral') return /pixtral|mistral-(large|small)/i.test(m);
     if (id === 'grok') return /grok/i.test(m);
     return false;
+  }
+
+  /* Static table OR a successful runtime vision probe (owner-only, client-sent flag). */
+  function acceptsVision(providerId, model, visionVerified) {
+    return supportsVision(providerId, model) || !!visionVerified;
   }
 
   const exportsObj = {
@@ -330,6 +338,7 @@
     validateCollection,
     providerKind,
     supportsVision,
+    acceptsVision,
     sanitizeSvg,
     isCustomIcon,
     svgColors,

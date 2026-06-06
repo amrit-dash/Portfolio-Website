@@ -554,10 +554,11 @@ exports.agent = onRequest({ invoker: 'public', timeoutSeconds: 300, memory: '512
   if (Array.isArray(rawAttachments) && rawAttachments.length) {
     const pcfg = (fullConfig.byProvider && fullConfig.byProvider[providerId]) || {};
     const model = pcfg.model || '';
-    if (!sharedSchema.supportsVision(providerId, model)) {
+    const visionVerified = body.visionVerified === true;
+    if (!sharedSchema.acceptsVision(providerId, model, visionVerified)) {
       return res.status(400).json({
         error: 'unsupported-vision',
-        message: `${providerId} / ${model || '(no model)'} does not support image attachments. Switch to a vision-capable model.`,
+        message: `${providerId} / ${model || '(no model)'} does not support image attachments. Switch to a vision-capable model or run Test vision in Agent settings.`,
       });
     }
     try {
@@ -806,6 +807,68 @@ exports.logs = onRequest({ invoker: 'public' }, async (req, res) => {
 /*  key (agent config or bot config/llm), logs the result  */
 /*  (so it appears in the Logs view) and returns the reply. */
 /* ===================================================== */
+/* Tiny 1×1 PNG used to probe multimodal support without shipping a real asset. */
+const VISION_PROBE_PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+exports.testVision = onRequest({ invoker: 'public' }, async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+  if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
+
+  const body = req.body || {};
+  const providerId = body.provider || 'gemini';
+  const scope = body.scope === 'bot' ? 'bot' : 'agent';
+  const prov = PROVIDERS[providerId];
+  if (!prov) return res.status(400).json({ error: 'unknown-provider' });
+
+  const overrideKey = (typeof body.key === 'string' && body.key.trim()) ? body.key.trim() : null;
+  let key, model;
+  if (scope === 'bot') {
+    let c = {}; try { const s = await db.doc('config/llm').get(); c = s.exists ? s.data() : {}; } catch (e) {}
+    const pc = (c.byProvider && c.byProvider[providerId]) || {};
+    key = overrideKey || pc.apiKey; model = body.model || pc.model;
+  } else {
+    const c = await getAgentConfig();
+    key = overrideKey || resolveAgentKey(c, providerId);
+    const pc = (c.byProvider && c.byProvider[providerId]) || {};
+    model = body.model || pc.model;
+  }
+  if (!key) return res.status(400).json({ error: 'no-key', message: `No ${scope} key saved for ${providerId}.` });
+  if (!model) return res.status(400).json({ error: 'no-model', message: `No model selected for ${providerId}.` });
+
+  const kind = scope === 'bot' ? 'bot:llm' : 'agent:llm';
+  const t0 = Date.now();
+  const probeAttachments = [{ mime: 'image/png', data: VISION_PROBE_PNG_B64 }];
+  try {
+    const gen = await agentProviders.generate(providerId, {
+      endpoint: prov.endpoint, model, key,
+      systemPrompt: 'You are a vision connectivity test. If you can see the attached image, reply with exactly OK.',
+      messages: [{
+        role: 'user',
+        text: 'Can you see the tiny test image? Reply with exactly OK if yes.',
+        attachments: probeAttachments,
+        toolCalls: [],
+        toolResults: [],
+      }],
+      tools: [],
+      temperature: 0,
+      maxTokens: 16,
+    });
+    const reply = (gen.text || '').trim();
+    const ok = /\bok\b/i.test(reply);
+    const ms = Date.now() - t0;
+    alog(ok ? 'INFO' : 'WARNING', kind, {
+      provider: providerId, model, ok, test: true, vision: true,
+      summary: ok ? `test vision ok (${ms}ms): ${reply.slice(0, 80)}` : `test vision failed (${ms}ms): ${reply.slice(0, 120) || 'empty reply'}`,
+    });
+    return res.status(200).json({ ok, reply, provider: providerId, model, ms });
+  } catch (e) {
+    alog('ERROR', kind, { provider: providerId, model, ok: false, test: true, vision: true, summary: `test vision failed: ${(e && e.message) || 'error'}` });
+    return res.status(200).json({ ok: false, error: (e && e.message) || 'failed', provider: providerId, model });
+  }
+});
+
 exports.testModel = onRequest({ invoker: 'public' }, async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).send('');

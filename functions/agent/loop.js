@@ -40,6 +40,7 @@ const BASE_SYSTEM = [
   'Do NOT repeat rewritten field values, blockquotes, or long detail in chat — the admin UI shows a per-path diff panel.',
   'Only include full rewritten copy when the user explicitly asks to see it.',
   'In conversational replies, use lightweight markdown (**bold**, *italic*, `-` or `1.` lists) when explaining multiple points; never use markdown inside tool JSON args.',
+  'When the owner attaches images inline, you receive them — you CAN see and describe them; never claim you cannot analyze uploaded images.',
 ].join(' ');
 
 async function loadChatMeta(db, chatId) {
