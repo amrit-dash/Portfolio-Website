@@ -497,7 +497,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
         <div className="canvas--narrow">
           <Panel title="AmritBot logs" sub="chat · inbox · provider errors — newest first, live">
             <p className="helptext" style={{ marginTop: 0, marginBottom: 14 }}>
-              Read-only feed from Cloud Logging — AmritBot chat replies, fallbacks, inbox triage and provider errors, newest first. Cached locally for instant reopen; new lines stream in live.
+              Read-only feed from Cloud Logging — AmritBot chat replies, fallbacks, inbox triage and provider errors, newest first.
             </p>
             {window.ADMIN_LOGS
               ? <window.ADMIN_LOGS.LogsView source="bot" height={460} />
