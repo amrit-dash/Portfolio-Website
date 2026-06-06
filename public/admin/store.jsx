@@ -19,10 +19,11 @@
    ===================================================== */
 
 const LS = {
-  draft:     'amritos.draft',
-  published: 'amritos.published',
-  preview:   'amritos.preview',
-  analytics: 'amritos.analytics',
+  draft:         'amritos.draft',
+  published:     'amritos.published',
+  preview:       'amritos.preview',
+  analytics:     'amritos.analytics',
+  draftUpdatedAt:'amritos.draftUpdatedAt',
 };
 
 /* ---------- Default content (seed) ----------
@@ -668,6 +669,12 @@ function useContent() {
   const [content, setContent] = React.useState(() => Store.loadDraft());
   const [dirty, setDirty] = React.useState(false);
   const [publishedAt, setPublishedAt] = React.useState(() => Store.read('amritos.publishedAt'));
+  const [draftUpdatedAt, setDraftUpdatedAt] = React.useState(() => Store.read(LS.draftUpdatedAt));
+  const touchDraftUpdatedAt = React.useCallback((ts) => {
+    const iso = ts || new Date().toISOString();
+    Store.write(LS.draftUpdatedAt, iso);
+    setDraftUpdatedAt(iso);
+  }, []);
   const [publishedSnapshot, setPublishedSnapshot] = React.useState(() => mergeContentSnapshot(Store.loadPublished()));
   const [synced, setSynced] = React.useState(false); // true once Firestore draft adopted/seeded
   const [agentBusy, setAgentBusyState] = React.useState(false);
@@ -730,6 +737,20 @@ function useContent() {
     return !draftMatchesPublished(content, publishedSnapshot);
   }, [content, publishedSnapshot]);
 
+  const hasUnpublishedEdits = React.useMemo(() => {
+    if (dirty) return true;
+    if (!draftUpdatedAt || !publishedAt) return false;
+    return new Date(draftUpdatedAt).getTime() > new Date(publishedAt).getTime();
+  }, [dirty, draftUpdatedAt, publishedAt]);
+
+  const showSyncFromLive = React.useMemo(() => {
+    if (!publishedSnapshot || !draftDiffersFromPublished || hasUnpublishedEdits) return false;
+    if (publishedAt && draftUpdatedAt) {
+      return new Date(publishedAt).getTime() > new Date(draftUpdatedAt).getTime();
+    }
+    return true;
+  }, [publishedSnapshot, draftDiffersFromPublished, hasUnpublishedEdits, publishedAt, draftUpdatedAt]);
+
   // Debounced Firestore draft write (1s after the last edit) to avoid a write
   // per keystroke while still keeping the cross-device draft current.
   const scheduleDraftSync = React.useCallback((next) => {
@@ -776,8 +797,13 @@ function useContent() {
     const unsubAuth = window.fb.auth.onAuthStateChanged((u) => {
       if (unsub) { unsub(); unsub = null; }
       if (!u) return;
-      unsub = Store.fsDraftListen(({ content: remote }) => {
+      unsub = Store.fsDraftListen(({ content: remote, updatedAtMs }) => {
         if (!remote) return;
+        if (updatedAtMs) {
+          const iso = new Date(updatedAtMs).toISOString();
+          Store.write(LS.draftUpdatedAt, iso);
+          setDraftUpdatedAt(iso);
+        }
         const json = contentStateJson(remote);
         if (json === lastJsonRef.current) return; // echo of our own write
         // Defer adoption while a field is focused so we never replace the value
@@ -818,12 +844,13 @@ function useContent() {
       return next;
     });
     setDirty(true);
+    touchDraftUpdatedAt();
     if (computed) scheduleDraftSync(computed);
-  }, [scheduleDraftSync]);
+  }, [scheduleDraftSync, touchDraftUpdatedAt]);
 
   const replace = React.useCallback((next) => {
-    setContent(next); Store.saveDraft(next); setDirty(true); scheduleDraftSync(next);
-  }, [scheduleDraftSync]);
+    setContent(next); Store.saveDraft(next); setDirty(true); touchDraftUpdatedAt(); scheduleDraftSync(next);
+  }, [scheduleDraftSync, touchDraftUpdatedAt]);
 
   const publish = React.useCallback(async () => {
     // Cancel any pending debounced draft write — it can land after publish and
@@ -850,16 +877,17 @@ function useContent() {
     const ts = new Date().toISOString();
     Store.write('amritos.publishedAt', ts);
     setPublishedAt(ts);
+    touchDraftUpdatedAt(ts);
     setDirty(false);
     try {
       await Store.fsPublish(snap);
     } catch (e) { /* local publish already applied */ }
-  }, []);
+  }, [touchDraftUpdatedAt]);
 
   const reset = React.useCallback(() => {
     const def = Store.resetDraft();
-    setContent(def); setDirty(true); scheduleDraftSync(def);
-  }, [scheduleDraftSync]);
+    setContent(def); setDirty(true); touchDraftUpdatedAt(); scheduleDraftSync(def);
+  }, [scheduleDraftSync, touchDraftUpdatedAt]);
 
   // Copy the live PUBLISHED snapshot into draft (localStorage + Firestore),
   // overwriting every in-progress edit. Prefers Firestore when signed in.
@@ -900,9 +928,10 @@ function useContent() {
     });
       Store.clearPreview();
     setDirty(false);
+    if (publishedAt) touchDraftUpdatedAt(publishedAt);
     setPublishedSnapshot(canonicalPublishedFromDraft(base) || base);
     return true;
-  }, []);
+  }, [publishedAt, touchDraftUpdatedAt]);
 
   /* Revert draft to the in-memory published snapshot (discard unpublished edits). */
   const discardDraft = React.useCallback(() => {
@@ -938,8 +967,9 @@ function useContent() {
     });
     Store.clearPreview();
     setDirty(false);
+    if (publishedAt) touchDraftUpdatedAt(publishedAt);
     return true;
-  }, [publishedSnapshot]);
+  }, [publishedSnapshot, publishedAt, touchDraftUpdatedAt]);
 
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
@@ -957,7 +987,8 @@ function useContent() {
 
   return {
     content, setAt, replace, publish, reset, discardDraft, syncDraftFromPublished, previewDraft,
-    dirty, draftDiffersFromPublished, publishedSnapshot, publishedAt, setDirty, synced,
+    dirty, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, draftUpdatedAt,
+    publishedSnapshot, publishedAt, setDirty, synced,
     saveLLMConfig, agentBusy, setAgentBusy, adoptRemoteDraft,
   };
 }
