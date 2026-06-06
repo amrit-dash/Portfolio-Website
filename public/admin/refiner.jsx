@@ -87,7 +87,7 @@ function RefineField({ label, value, onChange, rows = 3, mono, context, placehol
 
       {state === 'proposed' && (
         <RefineProposalPanel onAccept={accept} onRetry={refine} onDiscard={discard} retryBusy={state === 'working'}>
-          <div className="refine__proposal">{proposal}</div>
+          <TextArea value={proposal} onChange={setProposal} rows={rows} mono={mono} />
         </RefineProposalPanel>
       )}
     </div>
@@ -95,8 +95,8 @@ function RefineField({ label, value, onChange, rows = 3, mono, context, placehol
 }
 
 /* Impact timeline entry — one ✨ refines label + description together. */
-function RefineImpactEntry({ label, html, onLabelChange, onHtmlChange, onAccept, context }) {
-  const { TextArea, Input, Field } = window.ADMIN_UI;
+function RefineImpactEntry({ label, html, onLabelChange, onHtmlChange, onAccept, onDelete, context }) {
+  const { TextArea, Input, Field, DelBtn } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
   const [state, setState] = useRState('idle');
   const [proposal, setProposal] = useRState(null); // { label, html }
@@ -137,11 +137,17 @@ function RefineImpactEntry({ label, html, onLabelChange, onHtmlChange, onAccept,
   const showLabel = frozen ? snapRef.current.label : label;
   const showHtml = frozen ? snapRef.current.html : html;
 
+  const setProposalLabel = (v) => setProposal((p) => (p ? { ...p, label: v } : p));
+  const setProposalHtml = (v) => setProposal((p) => (p ? { ...p, html: v } : p));
+
   return (
     <div className="refine refine--entry">
-      <Field label="Label">
-        <Input value={showLabel} onChange={onLabelChange} readOnly={frozen} />
-      </Field>
+      <div className="row refine-entry__label-row">
+        <Field label="Label">
+          <Input value={showLabel} onChange={onLabelChange} readOnly={frozen} />
+        </Field>
+        {onDelete && <DelBtn onClick={onDelete} />}
+      </div>
       <Field label="Description" hint="<em> for accent · ✨ refines label + description">
         <div className="refine__wrap">
           <TextArea value={showHtml} onChange={onHtmlChange} rows={2} readOnly={frozen} />
@@ -167,11 +173,11 @@ function RefineImpactEntry({ label, html, onLabelChange, onHtmlChange, onAccept,
         >
           <div className="refine__proposal-block">
             <div className="refine__proposal-lbl">Label</div>
-            <div className="refine__proposal">{proposal.label}</div>
+            <Input value={proposal.label} onChange={setProposalLabel} />
           </div>
           <div className="refine__proposal-block">
             <div className="refine__proposal-lbl">Description</div>
-            <div className="refine__proposal">{proposal.html}</div>
+            <TextArea value={proposal.html} onChange={setProposalHtml} rows={2} />
           </div>
         </RefineProposalPanel>
       )}
