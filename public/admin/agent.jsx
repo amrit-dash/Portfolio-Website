@@ -306,12 +306,6 @@ function AgentPage({ route, go, openPreview, setAgentBusy }) {
   const [mode, setMode] = useState('chat');
   const isLogs = mode === 'logs';
 
-  // Let the "Test model" button (in the settings modal) flip this page to Logs.
-  useEffect(() => {
-    agentChat.openLogs = () => setMode('logs');
-    return () => { if (agentChat.openLogs) delete agentChat.openLogs; };
-  }, []);
-
   return (
     <div>
       <PageHead
@@ -319,7 +313,7 @@ function AgentPage({ route, go, openPreview, setAgentBusy }) {
         title={isLogs ? 'Agent logs' : 'Agent'}
         actions={LogsView ? <Segmented value={mode} options={[{ value: 'chat', label: 'Chat' }, { value: 'logs', label: 'Logs' }]} onChange={setMode} /> : null}>
         {isLogs
-          ? 'Live agent + refine activity from Cloud Logging — model calls, successes and errors from the last hour. Nothing is stored.'
+          ? 'Live agent + refine activity from Cloud Logging — model calls, successes and errors, newest first. Cached locally for instant reopen.'
           : 'Drive every admin control by chatting. Changes apply to the draft and appear live in the editors; nothing publishes until you say so.'}
       </PageHead>
       <div className="agentpage">

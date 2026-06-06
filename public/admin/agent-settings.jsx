@@ -98,8 +98,6 @@ function AgentSettingsPage({ modal }) {
     setTesting(null);
     const ok = res && res.ok;
     setTestRes((r) => ({ ...r, [id]: { ok, text: ok ? (res.reply || 'ok') + (res.ms ? ` (${res.ms}ms)` : '') : (res && (res.message || res.error)) || 'failed' } }));
-    // Flip the Agent page to its Logs view so the test (and any error) is visible there.
-    try { window.ADMIN_AGENT && window.ADMIN_AGENT.agentChat && window.ADMIN_AGENT.agentChat.openLogs && window.ADMIN_AGENT.agentChat.openLogs(); } catch (e) {}
   };
 
   const save = async () => {
@@ -173,8 +171,10 @@ function AgentSettingsPage({ modal }) {
                 <Field label="Model" hint="tool-capable models only · free tier tagged">
                   <div className="modelrow">
                     <Select value={c.model || ''} options={modelOptions(p.id, c.model, Reflect.get(fetched, p.id))} onChange={(v) => setLocal(p.id, 'model', v)} />
-                    <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id}>{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</Btn>
-                    <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !c.apiKey || !c.model} title="Send a hello to this model — result shows in Logs">{testing === p.id ? 'Testing…' : 'Test model'}</Btn>
+                    <div className="modelrow__actions">
+                      <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id} title="Refresh model list from provider"><span className="btn__label">{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</span></Btn>
+                      <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !c.apiKey || !c.model} title="Send a hello to this model — result also logged in Agent logs"><span className="btn__label">{testing === p.id ? 'Testing…' : 'Test model'}</span></Btn>
+                    </div>
                   </div>
                   {Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
                   {Reflect.get(testRes, p.id) && (
