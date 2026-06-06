@@ -107,24 +107,24 @@ function normalizeContent(content) {
       bot.providers.active = LLM_PROVIDERS[0].id;
     }
   }
-  // Heal impact-timeline rows — stable ids + string fields (guards against
-  // [object Object] labels from a bad write or legacy draft corruption).
+  // Heal impact-timeline — always an array of {id,label,html} (agent may write a
+  // single object or numeric-key map instead of replacing the whole array).
   const about = content.about;
-  if (about && Array.isArray(about.impact)) {
-    about.impact = about.impact.map((item, idx) => {
-      const row = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
-      return {
-        id: typeof row.id === 'string' && row.id ? row.id : ('imp_' + idx + '_' + String(idx)),
-        label: typeof row.label === 'string' ? row.label : '',
-        html: typeof row.html === 'string' ? row.html : '',
-      };
-    });
+  if (about) {
+    const coerce = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.coerceImpactArray)
+      || ((v, fb) => (Array.isArray(v) ? v : Array.isArray(fb) ? fb : []));
+    const fallback = (PORTFOLIO_DEFAULTS.about && PORTFOLIO_DEFAULTS.about.impact) || [];
+    about.impact = coerce(about.impact, fallback);
   }
   return content;
 }
 
 /* ---------- Store ---------- */
 const Store = {
+  _draftAdopter: null,
+  async adoptRemoteDraft(remote) {
+    if (remote && this._draftAdopter) this._draftAdopter(remote);
+  },
   read(key) {
     try { return JSON.parse(localStorage.getItem(key) || 'null'); }
     catch (e) { return null; }
@@ -578,6 +578,8 @@ function useContent() {
   const isEditingField = () => {
     const el = typeof document !== 'undefined' ? document.activeElement : null;
     if (!el) return false;
+    // Agent composer focus must not defer server draft adoption (U14).
+    if (el.closest && (el.closest('.composer') || el.closest('.agentchat') || el.closest('.agentdock'))) return false;
     const tag = (el.tagName || '').toUpperCase();
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
   };
@@ -630,6 +632,11 @@ function useContent() {
     Store.saveDraft(merged);
     setContent(merged);
   }, []);
+
+  React.useEffect(() => {
+    Store._draftAdopter = adoptRemoteDraft;
+    return () => { Store._draftAdopter = null; };
+  }, [adoptRemoteDraft]);
 
   React.useEffect(() => {
     if (!window.fb || !window.fb.auth) return;

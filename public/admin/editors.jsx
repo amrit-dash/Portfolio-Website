@@ -139,9 +139,10 @@ function AboutEditor({ content, setAt }) {
   const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon, Reorderable, inputStr } = window.ADMIN_UI;
   const { ImageSlot } = window.ADMIN_CROP;
   const a = content.about;
+  const impact = Array.isArray(a.impact) ? a.impact : [];
   const setMeta = (i, key, val) => setAt('about.meta', a.meta.map((m, j) => j === i ? { ...m, [key]: val } : m));
-  const setImpact = (i, key, val) => setAt('about.impact', a.impact.map((m, j) => j === i ? { ...m, [key]: inputStr(val) } : m));
-  const setImpactEntry = (i, patch) => setAt('about.impact', a.impact.map((m, j) => j === i ? { ...m, label: inputStr(patch.label), html: inputStr(patch.html) } : m));
+  const setImpact = (i, key, val) => setAt('about.impact', impact.map((m, j) => j === i ? { ...m, [key]: inputStr(val) } : m));
+  const setImpactEntry = (i, patch) => setAt('about.impact', impact.map((m, j) => j === i ? { ...m, label: inputStr(patch.label), html: inputStr(patch.html) } : m));
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/ABOUT.ME" title="About section">Your photo, the readme-style bio and the Now / Then / Before timeline.</PageHead>
@@ -166,8 +167,8 @@ function AboutEditor({ content, setAt }) {
         <Field label="Heading" hint="<em> for italic accent"><TextArea rows={2} value={a.heading} onChange={(v) => setAt('about.heading', v)} /></Field>
         <Field label="Intro paragraph" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="About intro paragraph" context="The intro paragraph under the About heading." rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} /></Field>
       </Panel>
-      <Panel title="Impact timeline" sub={`${a.impact.length} entries · drag to reorder`}>
-        <Reorderable items={a.impact} getKey={(m) => m.id || m.label}
+      <Panel title="Impact timeline" sub={`${impact.length} entries · drag to reorder`}>
+        <Reorderable items={impact} getKey={(m) => m.id || m.label}
           onReorder={(next) => setAt('about.impact', next)}
           renderItem={(m, i, { gripProps }) => (
             <div className="item__reorder">
@@ -179,13 +180,13 @@ function AboutEditor({ content, setAt }) {
                   onLabelChange={(v) => setImpact(i, 'label', v)}
                   onHtmlChange={(v) => setImpact(i, 'html', v)}
                   onAccept={(p) => setImpactEntry(i, p)}
-                  onDelete={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))}
+                  onDelete={() => setAt('about.impact', impact.filter((_, j) => j !== i))}
                   context="A short label and description pair in the About impact timeline (Now / Then / Before)."
                 />
               </div>
             </div>
           )} />
-        <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.impact', [...a.impact, { id: newImpactId(), label: '', html: '' }])}>Add timeline entry</Btn>
+        <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.impact', [...impact, { id: newImpactId(), label: '', html: '' }])}>Add timeline entry</Btn>
       </Panel>
     </div>
   );

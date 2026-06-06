@@ -38,9 +38,31 @@ const agentChat = {
     this.hydrated = true;
     try {
       const raw = await window.ADMIN_STORE.Store.fsLoadAgentMessages('default', 100);
-      const ui = (raw || [])
-        .filter((m) => (m.role === 'user' || m.role === 'assistant') && (m.text || '').trim())
-        .map((m) => ({ role: m.role, text: m.text, restored: true }));
+      const ui = [];
+      for (let i = 0; i < (raw || []).length; i++) {
+        const m = raw[i];
+        if (m.role === 'user' && (m.text || '').trim()) {
+          ui.push({ role: 'user', text: m.text, restored: true });
+          continue;
+        }
+        if (m.role === 'assistant' && ((m.text || '').trim() || (m.toolCalls || []).length)) {
+          const next = raw[i + 1];
+          const toolResults = next && next.role === 'tool' && Array.isArray(next.toolResults) ? next.toolResults : [];
+          const toolCalls = (m.toolCalls || []).map((tc, j) => ({
+            name: tc.name,
+            args: tc.args,
+            result: (toolResults[j] && toolResults[j].result)
+              || (toolResults.find((tr) => tr.name === tc.name) || {}).result,
+          }));
+          ui.push({
+            role: 'assistant',
+            text: m.text || '',
+            restored: true,
+            toolCalls: toolCalls.length ? toolCalls : undefined,
+          });
+          if (next && next.role === 'tool') i++;
+        }
+      }
       if (ui.length) { this.messages = ui; this.emit(); }
     } catch (e) { /* offline / no history */ }
   },
@@ -103,6 +125,12 @@ async function sendAgentMessage({ text, route, setAgentBusy }) {
         model: res.model,
         bounded: res.bounded,
       });
+      // Pull the server draft immediately so open editors update even when the
+      // agent composer (or another non-content field) still has focus.
+      try {
+        const remote = await Store.fsLoadDraft();
+        if (remote) await Store.adoptRemoteDraft(remote);
+      } catch (e) { /* offline */ }
     }
   } catch (e) {
     agentChat.patchLast({ pending: false, error: e.message });

@@ -361,19 +361,24 @@ function Swatches({ value, options, onChange, allowCustom = true }) {
 function Reorderable({ items, getKey, onReorder, renderItem }) {
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
+  const list = Array.isArray(items) ? items : [];
 
   const handleDrop = (to) => {
     if (dragIdx === null || dragIdx === to) { setDragIdx(null); setOverIdx(null); return; }
-    const next = items.slice();
+    const next = list.slice();
     const [moved] = next.splice(dragIdx, 1);
     next.splice(to, 0, moved);
     onReorder(next);
     setDragIdx(null); setOverIdx(null);
   };
 
+  if (!list.length && !Array.isArray(items)) {
+    return <p className="helptext">List data is invalid — refresh or undo the last agent change.</p>;
+  }
+
   return (
     <div>
-      {items.map((it, i) => (
+      {list.map((it, i) => (
         <div key={getKey(it, i)}
           className={'item' + (dragIdx === i ? ' dragging' : '') + (overIdx === i && dragIdx !== null && dragIdx !== i ? ' dragover' : '')}
           draggable={false}
