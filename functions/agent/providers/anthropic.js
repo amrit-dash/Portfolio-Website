@@ -15,11 +15,25 @@ function toTools(tools) {
   }));
 }
 
+function userBlocks(msg) {
+  const blocks = [];
+  for (const att of msg.attachments || []) {
+    if (att && att.data && att.mime) {
+      blocks.push({
+        type: 'image',
+        source: { type: 'base64', media_type: att.mime, data: att.data },
+      });
+    }
+  }
+  blocks.push({ type: 'text', text: msg.text || '' });
+  return blocks;
+}
+
 function canonicalToMessages(messages) {
   const out = [];
   for (const msg of messages || []) {
     if (msg.role === 'user') {
-      out.push({ role: 'user', content: [{ type: 'text', text: msg.text || '' }] });
+      out.push({ role: 'user', content: userBlocks(msg) });
     } else if (msg.role === 'assistant') {
       const blocks = [];
       if (msg.text) blocks.push({ type: 'text', text: msg.text });

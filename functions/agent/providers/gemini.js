@@ -25,11 +25,22 @@ function toDeclarations(tools) {
   });
 }
 
+function userParts(msg) {
+  const parts = [];
+  for (const att of msg.attachments || []) {
+    if (att && att.data && att.mime) {
+      parts.push({ inlineData: { mimeType: att.mime, data: att.data } });
+    }
+  }
+  parts.push({ text: msg.text || '' });
+  return parts;
+}
+
 function canonicalToContents(messages) {
   const contents = [];
   for (const msg of messages || []) {
     if (msg.role === 'user') {
-      contents.push({ role: 'user', parts: [{ text: msg.text || '' }] });
+      contents.push({ role: 'user', parts: userParts(msg) });
     } else if (msg.role === 'assistant') {
       const parts = [];
       if (msg.text) parts.push({ text: msg.text });

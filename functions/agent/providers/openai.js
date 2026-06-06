@@ -22,11 +22,27 @@ function toTools(tools) {
   }));
 }
 
+function userContent(msg) {
+  const hasImages = (msg.attachments || []).some((a) => a && a.data && a.mime);
+  if (!hasImages) return msg.text || '';
+  const content = [];
+  for (const att of msg.attachments || []) {
+    if (att && att.data && att.mime) {
+      content.push({
+        type: 'image_url',
+        image_url: { url: `data:${att.mime};base64,${att.data}` },
+      });
+    }
+  }
+  if (msg.text) content.push({ type: 'text', text: msg.text });
+  return content.length ? content : '';
+}
+
 function canonicalToMessages(systemPrompt, messages) {
   const out = [{ role: 'system', content: systemPrompt }];
   for (const msg of messages || []) {
     if (msg.role === 'user') {
-      out.push({ role: 'user', content: msg.text || '' });
+      out.push({ role: 'user', content: userContent(msg) });
     } else if (msg.role === 'assistant') {
       const m = { role: 'assistant', content: msg.text || '' };
       if ((msg.toolCalls || []).length) {
