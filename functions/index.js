@@ -229,11 +229,12 @@ exports.chat = onRequest(async (req, res) => {
   // No key configured → tell the client to fall back to local Q&A.
   if (!provider || !key) return fail('No API key set for the active provider (' + active + '). Paste a key and click Activate.');
 
-  const systemPrompt = (cfg && cfg.systemPrompt) || '';
+  const MD_STYLE = '\n\nReply formatting: use markdown (**bold**, *italic*, `-` or `1.` lists) when listing multiple points; otherwise plain text is fine. No HTML, headings, or code fences. Stay concise, casual lowercase.';
+  const systemPrompt = ((cfg && cfg.systemPrompt) || '') + MD_STYLE;
   const temperature = Number(cfg && cfg.temperature) || 0.7;
   const maxTokens = Number(cfg && cfg.maxTokens) || 300;
   const userMsg = suggestion
-    ? `Suggested answer from knowledge base: "${suggestion}"\n\nUser question: ${message}\n\nRespond using the suggested answer as reference. Rephrase naturally if needed. Keep to 1-2 sentences, casual lowercase, no markdown.`
+    ? `Suggested answer from knowledge base: "${suggestion}"\n\nUser question: ${message}\n\nRespond using the suggested answer as reference. Rephrase naturally if needed. Use **bold** or lists only when they clarify multiple points. Keep concise, casual lowercase.`
     : message;
 
   // Pull a human-readable error out of any provider's error JSON shape.

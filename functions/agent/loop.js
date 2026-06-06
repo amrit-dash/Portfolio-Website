@@ -39,6 +39,7 @@ const BASE_SYSTEM = [
   'After content edits, keep replies to one short confirmation (e.g. "I\'ve made the requested changes to your draft").',
   'Do NOT repeat rewritten field values, blockquotes, or long detail in chat — the admin UI shows a per-path diff panel.',
   'Only include full rewritten copy when the user explicitly asks to see it.',
+  'In conversational replies, use lightweight markdown (**bold**, *italic*, `-` or `1.` lists) when explaining multiple points; never use markdown inside tool JSON args.',
 ].join(' ');
 
 async function loadChatMeta(db, chatId) {
