@@ -2823,7 +2823,7 @@ body::before {
    display: flex;
    flex-wrap: wrap;
    gap: 8px;
-   padding: 0 12px 8px;
+   padding: 10px 12px 6px;
 }
 
 .agentattach__chip {
@@ -2873,8 +2873,10 @@ body::before {
 .agentattach--sent {
    display: flex;
    flex-wrap: wrap;
+   justify-content: flex-end;
    gap: 6px;
    margin-bottom: 6px;
+   max-width: 100%;
 }
 
 .agentattach--sent .agentattach__thumb {
@@ -2953,6 +2955,9 @@ body::before {
 
 .agentmsg--user {
    align-self: flex-end;
+   display: flex;
+   flex-direction: column;
+   align-items: flex-end;
 }
 
 .agentmsg--user .agentmsg__body {
