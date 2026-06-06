@@ -717,6 +717,13 @@ body::before {
    flex: 1;
 }
 
+.panel__actions {
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   flex-shrink: 0;
+}
+
 .panel__bd {
    padding: 18px 16px;
 }
@@ -1198,6 +1205,12 @@ body::before {
    flex-shrink: 0;
 }
 
+/* Primary buttons sit on accent bg — icons must inherit accent-fg, not parent
+   accent overrides (e.g. .callout svg { color: var(--accent) }). */
+.btn--primary svg {
+   color: inherit;
+}
+
 .iconbtn {
    width: 30px;
    height: 30px;
@@ -1271,9 +1284,53 @@ body::before {
    cursor: grabbing;
 }
 
+/* Left reorder strip — vertical grip alongside card content (Impact timeline). */
+.item__reorder {
+   display: flex;
+   align-items: stretch;
+}
+
+.item__reorder-grip {
+   flex: 0 0 20px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   align-self: stretch;
+   margin: 0;
+   padding: 0;
+   border: 0;
+   border-right: 1px solid var(--line);
+   border-radius: 0;
+   background: transparent;
+   color: var(--fg-mute);
+   cursor: grab;
+   line-height: 0;
+   transition: color .14s, background .14s, box-shadow .14s;
+}
+
+.item__reorder-grip:hover {
+   color: var(--accent);
+   background: color-mix(in srgb, var(--accent) 10%, transparent);
+   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.item__reorder-grip:active {
+   cursor: grabbing;
+}
+
+.item__reorder-body {
+   flex: 1 1 auto;
+   min-width: 0;
+   padding: 10px 14px 16px;
+}
+
 .item__title {
    font-size: 13.5px;
    font-weight: 500;
+}
+
+.item__text {
+   min-width: 0;
 }
 
 .item__sub {
@@ -2351,6 +2408,17 @@ body::before {
    flex-shrink: 0;
 }
 
+.modelrow__actions {
+   display: flex;
+   align-items: stretch;
+   gap: 8px;
+   flex-shrink: 0;
+}
+
+.modelrow__actions .btn {
+   height: 38px;
+}
+
 .callout {
    display: flex;
    align-items: center;
@@ -2375,6 +2443,11 @@ body::before {
    margin-top: 1px;
 }
 
+.callout .btn--primary svg {
+   color: inherit;
+   margin-top: 0;
+}
+
 .callout b {
    color: var(--fg);
 }
@@ -2386,6 +2459,18 @@ body::before {
    padding: 1px 5px;
    border-radius: 4px;
    color: var(--accent);
+}
+
+.callout__body {
+   flex: 1;
+   min-width: 0;
+}
+
+.callout__actions {
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   flex-shrink: 0;
 }
 
 .empty {
@@ -2528,8 +2613,53 @@ body::before {
       display: none !important;
    }
 
+   /* theme switch is desktop-only — sidebar is already tight on mobile */
+   .cthm {
+      display: none !important;
+   }
+
+   .callout--actions {
+      flex-wrap: wrap;
+      align-items: flex-start;
+   }
+
+   .callout__actions {
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      margin-top: 4px;
+   }
+
+   .callout__actions .btn {
+      width: 100%;
+      justify-content: center;
+   }
+
+   /* ImageSlot — stack preview + full-width action buttons so Replace/Re-crop
+      don't spill past the panel edge on narrow screens */
+   .drop {
+      flex-direction: column;
+      align-items: stretch;
+   }
+
+   .drop__info .act {
+      flex-direction: column;
+      align-items: stretch;
+   }
+
+   .drop__info .act .btn {
+      width: 100%;
+      justify-content: center;
+   }
+
+   .agentdock {
+      right: 16px;
+      bottom: 16px;
+   }
+
    .canvas {
-      padding: 18px 16px 96px;
+      padding: 18px 16px 72px;
    }
 
    .grid2 {
@@ -2966,6 +3096,618 @@ body::before {
 
 @media (max-width: 860px) {
    .inboxrun { left: 16px; bottom: 16px; }
+
+   /* Expertise panel — icon-only header actions, wrap title row */
+   .panel--expertise .panel__hd {
+      flex-wrap: wrap;
+      row-gap: 8px;
+      padding: 12px 12px;
+   }
+
+   .panel--expertise .panel__hd h3 {
+      flex: 1 1 auto;
+      min-width: 0;
+   }
+
+   .panel--expertise .panel__hd .sub {
+      order: 3;
+      flex-basis: 100%;
+   }
+
+   .panel--expertise .panel__hd .spacer {
+      display: none;
+   }
+
+   .panel--expertise .panel__actions .btn .btn__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+   }
+
+   .panel--expertise .panel__actions .btn {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+   }
+
+   /* Work history + Projects panels — icon-only header action + title wrap */
+   .panel--work .panel__hd,
+   .panel--projects .panel__hd {
+      flex-wrap: wrap;
+      row-gap: 8px;
+      padding: 12px 12px;
+   }
+
+   .panel--work .panel__hd h3,
+   .panel--projects .panel__hd h3 {
+      flex: 1 1 auto;
+      min-width: 0;
+   }
+
+   .panel--work .panel__hd .sub,
+   .panel--projects .panel__hd .sub {
+      order: 3;
+      flex-basis: 100%;
+   }
+
+   .panel--work .panel__hd .spacer,
+   .panel--projects .panel__hd .spacer {
+      display: none;
+   }
+
+   .panel--work .panel__actions .btn .btn__label,
+   .panel--projects .panel__actions .btn .btn__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+   }
+
+   .panel--work .panel__actions .btn,
+   .panel--projects .panel__actions .btn {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+   }
+
+   /* Expanded list bodies — single-column fields on narrow screens */
+   .panel--expertise .item__bd .row,
+   .panel--work .item__bd .row,
+   .panel--projects .item__bd .row,
+   .panel--commands .item__bd .row {
+      flex-direction: column;
+      gap: 0;
+   }
+
+   /* Projects — full-width fields, wrap labels, no clipped tag headers */
+   .panel--projects .item__bd .field {
+      min-width: 0;
+   }
+
+   .panel--projects .item__bd .field > label {
+      flex-wrap: wrap;
+   }
+
+   .panel--projects .item__bd .tags {
+      width: 100%;
+      min-width: 0;
+   }
+
+   /* Expertise / Work / Projects list items — stacked card header on narrow screens */
+   .item__hd--card {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto;
+      grid-template-rows: auto auto;
+      gap: 3px 10px;
+      align-items: start;
+      padding: 10px 10px 10px 4px;
+   }
+
+   .item__hd--card .item__grip {
+      grid-column: 1;
+      grid-row: 1 / -1;
+      align-self: center;
+      padding: 2px;
+      margin: 0;
+   }
+
+   .item__hd--card .item__num {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: start;
+   }
+
+   .item__hd--card .miniico,
+   .item__hd--card .minithumb {
+      grid-column: 2;
+      grid-row: 2;
+      width: 32px;
+      height: 32px;
+   }
+
+   .item__hd--card .minithumb {
+      height: 32px;
+      object-fit: cover;
+   }
+
+   /* Work / Projects entries have no MOD badge — centre icon in the left stack */
+   .item__hd--card:not(:has(.item__num)) .miniico,
+   .item__hd--card:not(:has(.item__num)) .minithumb {
+      grid-row: 1 / -1;
+      align-self: center;
+   }
+
+   .item__hd--card .item__text {
+      grid-column: 3;
+      grid-row: 1 / -1;
+      align-self: center;
+   }
+
+   .item__hd--card .spacer {
+      display: none;
+   }
+
+   .item__hd--card .iconbtn {
+      grid-column: 4;
+      grid-row: 1;
+      align-self: start;
+      width: 28px;
+      height: 28px;
+   }
+
+   .item__hd--card .chev {
+      grid-column: 5;
+      grid-row: 1;
+      align-self: start;
+   }
+
+   /* Slash commands panel — icon-only header action + title wrap */
+   .panel--commands .panel__hd {
+      flex-wrap: wrap;
+      row-gap: 8px;
+      padding: 12px 12px;
+   }
+
+   .panel--commands .panel__hd h3 {
+      flex: 1 1 auto;
+      min-width: 0;
+   }
+
+   .panel--commands .panel__hd .sub {
+      order: 3;
+      flex-basis: 100%;
+   }
+
+   .panel--commands .panel__hd .spacer {
+      display: none;
+   }
+
+   .panel--commands .panel__actions .btn .btn__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+   }
+
+   .panel--commands .panel__actions .btn {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+   }
+
+   /* Command cards — full-width fields, delete top-right */
+   .panel--commands .item__bd {
+      position: relative;
+      padding-right: 48px;
+   }
+
+   .panel--commands .item__bd .field {
+      min-width: 0;
+      width: 100%;
+   }
+
+   .panel--commands .item__bd .field--del {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      flex: none;
+      margin: 0;
+   }
+
+   .panel--commands .item__bd .field--del > label {
+      display: none;
+   }
+
+   /* Social links panel — icon-only header action + title wrap */
+   .panel--social .panel__hd {
+      flex-wrap: wrap;
+      row-gap: 8px;
+      padding: 12px 12px;
+   }
+
+   .panel--social .panel__hd h3 {
+      flex: 1 1 auto;
+      min-width: 0;
+   }
+
+   .panel--social .panel__hd .sub {
+      order: 3;
+      flex-basis: 100%;
+   }
+
+   .panel--social .panel__hd .spacer {
+      display: none;
+   }
+
+   .panel--social .panel__actions .btn .btn__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+   }
+
+   .panel--social .panel__actions .btn {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+   }
+
+   /* Analytics — recent activity: stack title/sub, scrollable filters, icon refresh */
+   .panel--activity .panel__hd {
+      flex-wrap: wrap;
+      row-gap: 8px;
+      padding: 12px 12px;
+   }
+
+   .panel--activity .panel__hd h3 {
+      flex: 1 1 100%;
+      min-width: 0;
+      order: 1;
+   }
+
+   .panel--activity .panel__hd .sub {
+      flex: 1 1 100%;
+      order: 2;
+   }
+
+   .panel--activity .panel__hd .spacer {
+      display: none;
+   }
+
+   .panel--activity .panel__actions {
+      flex: 1 1 100%;
+      order: 3;
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      gap: 8px;
+      min-width: 0;
+   }
+
+   .panel--activity .panel__actions .seg {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: calc(100% - 44px);
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+   }
+
+   .panel--activity .panel__actions .seg::-webkit-scrollbar {
+      display: none;
+   }
+
+   .panel--activity .panel__actions .seg button {
+      flex-shrink: 0;
+   }
+
+   .panel--activity .panel__actions .btn .btn__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+   }
+
+   .panel--activity .panel__actions .btn {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+      flex-shrink: 0;
+   }
+
+   /* Function logs — card rows + toolbar wrap */
+   .logs__bar > .logs__live {
+      grid-column: 1;
+      grid-row: 1;
+   }
+
+   .logs__bar {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      grid-template-rows: auto auto;
+      gap: 6px 8px;
+      align-items: center;
+   }
+
+   .logs__bar > .spacer {
+      display: none;
+   }
+
+   .logs__bar > .helptext {
+      grid-column: 2 / -1;
+      grid-row: 1;
+      min-width: 0;
+   }
+
+   .logs__bar > .seg {
+      grid-column: 1 / 3;
+      grid-row: 2;
+      min-width: 0;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+   }
+
+   .logs__bar > .seg::-webkit-scrollbar {
+      display: none;
+   }
+
+   .logs__bar > .seg button {
+      flex-shrink: 0;
+   }
+
+   .logs__bar > .composer__tool {
+      grid-row: 2;
+      flex-shrink: 0;
+   }
+
+   .logline {
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      grid-template-rows: auto auto;
+      gap: 4px 8px;
+      align-items: center;
+      padding: 8px 12px;
+   }
+
+   .logline__time {
+      grid-column: 1;
+      grid-row: 1;
+   }
+
+   .logline__sev {
+      grid-column: 2;
+      grid-row: 1;
+   }
+
+   .logline__tag {
+      grid-column: 3;
+      grid-row: 1;
+      min-width: 0;
+   }
+
+   .logline__msg {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      align-self: start;
+   }
+
+   /* Contact social links — stacked row on narrow screens */
+   .socirow {
+      display: grid;
+      grid-template-columns: auto 1fr 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 8px 10px;
+      align-items: center;
+      padding: 10px 10px 10px 4px;
+   }
+
+   .socirow > .item__grip {
+      grid-column: 1;
+      grid-row: 1 / -1;
+      align-self: center;
+   }
+
+   .socirow > .miniico {
+      display: none;
+   }
+
+   .socirow__label {
+      grid-column: 2;
+      grid-row: 1;
+      width: auto;
+      min-width: 0;
+   }
+
+   .socirow__sel {
+      grid-column: 3;
+      grid-row: 1;
+      width: auto;
+      min-width: 0;
+   }
+
+   .socirow > .iconbtn {
+      grid-column: 4;
+      grid-row: 1;
+      align-self: start;
+   }
+
+   .socirow__href {
+      grid-column: 2 / -1;
+      grid-row: 2;
+      width: 100%;
+   }
+
+   /* LLM Providers — stack model dropdown + icon-only refresh/test */
+   .modelrow {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+   }
+
+   .modelrow .sel {
+      width: 100%;
+      flex: none;
+   }
+
+   .modelrow__actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+   }
+
+   .modelrow__actions .btn .btn__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+   }
+
+   .modelrow__actions .btn {
+      padding: 8px;
+      min-width: 38px;
+      justify-content: center;
+      flex: 0 0 auto;
+   }
+
+   /* Review / Inbox — panel header + stacked question cards */
+   .panel--inbox .panel__hd {
+      flex-wrap: wrap;
+      row-gap: 8px;
+      padding: 12px 12px;
+   }
+
+   .panel--inbox .panel__hd h3 {
+      flex: 1 1 auto;
+      min-width: 0;
+   }
+
+   .panel--inbox .panel__hd .sub {
+      order: 3;
+      flex-basis: 100%;
+   }
+
+   .panel--inbox .panel__hd .spacer {
+      display: none;
+   }
+
+   .panel--inbox .panel__actions {
+      flex-wrap: wrap;
+      gap: 8px;
+   }
+
+   .panel--inbox .panel__actions .btn:not(:first-child) .btn__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+   }
+
+   .panel--inbox .panel__actions .btn:not(:first-child) {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+   }
+
+   .panel--inbox .item__hd--inbox {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 6px 10px;
+      align-items: start;
+      padding: 10px 10px 10px 4px;
+   }
+
+   .panel--inbox .item__hd--inbox .miniico {
+      grid-column: 1;
+      grid-row: 1 / -1;
+      align-self: start;
+   }
+
+   .panel--inbox .item__hd--inbox .item__text {
+      grid-column: 2;
+      grid-row: 1 / -1;
+      min-width: 0;
+   }
+
+   .panel--inbox .item__hd--inbox .spacer {
+      display: none;
+   }
+
+   .panel--inbox .item__hd--inbox .item__actions {
+      grid-column: 3;
+      grid-row: 1;
+      align-self: start;
+   }
+
+   .panel--inbox .item__sub {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+   }
+
+   .panel--inbox .verdicttag {
+      margin-left: 0;
+      white-space: normal;
+      line-height: 1.35;
+   }
+
+   .panel--inbox .verdicttag__full {
+      display: none;
+   }
+
+   .panel--inbox .verdicttag__short {
+      display: inline;
+   }
+
+   .panel--inbox .inboxsug__actions {
+      flex-direction: column;
+      align-items: stretch;
+   }
+
+   .panel--inbox .inboxsug__actions .btn {
+      width: 100%;
+      justify-content: center;
+   }
 }
 
 /* Inline refiner (✨) */
@@ -3025,14 +3767,50 @@ body::before {
    cursor: not-allowed;
 }
 
-.refine__spark--busy {
-   animation: refinepulse 1s ease-in-out infinite;
+.refine__spin {
+   width: 14px;
+   height: 14px;
+   border-radius: 50%;
+   border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+   border-top-color: var(--accent);
+   animation: inboxspin .8s linear infinite;
+   flex: 0 0 auto;
 }
 
-@keyframes refinepulse {
-   50% {
-      opacity: .4;
-   }
+.refine__spark--busy {
+   opacity: 1;
+   background: color-mix(in srgb, var(--accent) 12%, transparent);
+   cursor: wait;
+}
+
+.refine__status {
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+   margin-top: 6px;
+   font-size: 12px;
+   color: var(--fg-mute);
+}
+
+.refine-entry__hd {
+   margin-bottom: 4px;
+}
+
+.refine--entry .refine__wrap .ta {
+   padding-bottom: 46px;
+}
+
+.refine__proposal-block + .refine__proposal-block {
+   margin-top: 10px;
+}
+
+.refine__proposal-lbl {
+   font-size: 11px;
+   font-family: var(--font-mono);
+   letter-spacing: .06em;
+   text-transform: uppercase;
+   color: var(--fg-mute);
+   margin-bottom: 4px;
 }
 
 /* Custom uploaded SVG icons (Expertise → Add Icon) */
@@ -3225,6 +4003,10 @@ body::before {
    letter-spacing: .02em;
 }
 
+.verdicttag__short {
+   display: none;
+}
+
 .verdicttag--new_question {
    background: color-mix(in srgb, var(--accent) 18%, transparent);
    color: var(--accent);
@@ -3277,6 +4059,13 @@ body::before {
    flex-wrap: wrap;
    gap: 8px;
    margin-top: 8px;
+}
+
+.item__actions {
+   display: flex;
+   align-items: center;
+   gap: 6px;
+   flex-shrink: 0;
 }
 
 .refine__lbl {
@@ -3420,11 +4209,10 @@ body::before {
 @media (max-width: 640px) {
    .agentdock {
       right: 12px;
-      bottom: 76px;
    }
 
    .agentdock__panel {
       width: calc(100vw - 24px);
-      height: min(70vh, calc(100vh - 140px));
+      height: min(70vh, calc(100vh - 100px));
    }
 }
