@@ -4,7 +4,10 @@
       "target": "amritdash",
       "public": "dist/site",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+      "rewrites": [{ "source": "**", "destination": "/index.html" }],
+      "headers": [
+        { "source": "**/*.@(js|css|html)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+      ]
     },
     {
       "target": "amritos-admin",
@@ -12,7 +15,8 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [{ "source": "**", "destination": "/index.html" }],
       "headers": [
-        { "source": "**", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }
+        { "source": "**", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] },
+        { "source": "**/*.@(js|css|html)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
       ]
     }
   ],
