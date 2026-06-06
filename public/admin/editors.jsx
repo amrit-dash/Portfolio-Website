@@ -514,11 +514,9 @@ function VibeButton({ vibe, active, onClick }) {
 function AppearanceEditor({ content, setAt }) {
   const { PageHead, Panel, Field, Select, Segmented, Swatches, ToggleRow, AdminIcon } = window.ADMIN_UI;
   const c = content.cosmetics;
-  // Apply a vibe: write the whole bundle so the switch is deterministic, then
-  // tag the active vibe id. setAt is a functional update, so the calls compose.
+  // Apply a vibe in one write so partial autosaves / remote echoes cannot clobber it.
   const applyVibe = (v) => {
-    Object.entries(v.cos).forEach(([k, val]) => setAt('cosmetics.' + k, val));
-    setAt('cosmetics.vibe', v.id);
+    setAt('cosmetics', { ...c, ...v.cos, vibe: v.id });
   };
   return (
     <div className="canvas--narrow">
