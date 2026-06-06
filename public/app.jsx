@@ -39,9 +39,9 @@ function logEvent(type, meta) {
   } catch (e) { /* never let analytics break the UX */ }
 }
 
-/* Cross-origin `download` on <a> is ignored (Firebase Storage). Storage GET lacks
-   CORS headers so fetch() fails — use the Storage SDK getBytes for those URLs,
-   same-origin fetch for bundled /assets/ paths, then blob-save locally. */
+/* Cross-origin `download` on <a> is ignored (Firebase Storage). Fetch the PDF
+   bytes (bucket CORS must allow GET — see storage.cors.json) and blob-save so
+   the file lands in Downloads instead of navigating to the Storage URL. */
 async function downloadCv(url, filename) {
   const name = filename || 'Amrit-Dash-CV.pdf';
   const saveBlob = (blob) => {
@@ -55,21 +55,11 @@ async function downloadCv(url, filename) {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
   };
-  const isStorage = /firebasestorage\.googleapis\.com/i.test(url);
-  const isRemote = /^https?:\/\//i.test(url);
+  const fetchUrl = /^https?:\/\//i.test(url) ? url : new URL(url, location.href).href;
   try {
-    let blob;
-    if (isStorage && window.fb && window.fb.storage) {
-      const ref = window.fb.storage.refFromURL(url);
-      const bytes = await ref.getBytes(20 * 1024 * 1024);
-      blob = new Blob([bytes], { type: 'application/pdf' });
-    } else {
-      const fetchUrl = isRemote ? url : new URL(url, location.href).href;
-      const res = await fetch(fetchUrl);
-      if (!res.ok) throw new Error('fetch failed');
-      blob = await res.blob();
-    }
-    saveBlob(blob);
+    const res = await fetch(fetchUrl, { mode: 'cors' });
+    if (!res.ok) throw new Error('fetch failed');
+    saveBlob(await res.blob());
     return { ok: true };
   } catch (e) {
     console.warn('[downloadCv]', e);
