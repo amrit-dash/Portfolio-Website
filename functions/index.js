@@ -573,8 +573,9 @@ exports.refine = onRequest({ invoker: 'public' }, async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
   if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
 
-  const { text, label, context } = req.body || {};
-  if (!text || typeof text !== 'string') return res.status(400).json({ error: 'no-text' });
+  const { text, fields, label, context } = req.body || {};
+  const multi = fields && typeof fields === 'object' && !Array.isArray(fields);
+  if (!multi && (!text || typeof text !== 'string')) return res.status(400).json({ error: 'no-text' });
 
   const settings = await getSettings();
   const cap = await checkDailyCap(db, FieldValue, settings);
@@ -588,13 +589,32 @@ exports.refine = onRequest({ invoker: 'public' }, async (req, res) => {
   const model = cfg.refinerModel || pcfg.model;
   if (!provider || !key || !model) return res.status(400).json({ error: 'no-config', message: 'Agent provider/key/model not configured.' });
 
-  const systemPrompt = [
-    'You are an inline copy editor for a portfolio admin console.',
-    'Rewrite ONLY the provided field text so it is tighter, clearer, and on-voice.',
-    'Match the existing tone. Do not add new facts. Keep roughly the same length unless it is clearly bloated.',
-    'Return ONLY the rewritten text — no preamble, no quotes, no markdown, no explanation.',
-  ].join(' ');
-  const userMsg = `Field: ${label || '(unlabeled)'}\n${context ? 'Context: ' + context + '\n' : ''}\nText to rewrite:\n${String(text).slice(0, 4000)}`;
+  const stripWrappingQuotes = (s) => {
+    const t = String(s || '').trim();
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) return t.slice(1, -1).trim();
+    return t;
+  };
+
+  const systemPrompt = multi
+    ? [
+      'You are an inline copy editor for a portfolio admin console.',
+      'Rewrite ONLY the provided fields so they are tighter, clearer, and on-voice.',
+      'Match the existing tone. Do not add new facts. Keep roughly the same length unless clearly bloated.',
+      'Return ONLY a JSON object with the same keys and rewritten string values.',
+      'Do not wrap values in double quotes beyond normal JSON syntax. No preamble, no markdown fences, no explanation.',
+    ].join(' ')
+    : [
+      'You are an inline copy editor for a portfolio admin console.',
+      'Rewrite ONLY the provided field text so it is tighter, clearer, and on-voice.',
+      'Match the existing tone. Do not add new facts. Keep roughly the same length unless it is clearly bloated.',
+      'Return ONLY the rewritten text — no preamble, no markdown, no explanation.',
+      'Do not wrap the output in double quotes.',
+    ].join(' ');
+
+  const fieldLines = multi
+    ? Object.entries(fields).map(([k, v]) => `${k}: ${String(v == null ? '' : v).slice(0, 2000)}`).join('\n')
+    : String(text).slice(0, 4000);
+  const userMsg = `Field: ${label || '(unlabeled)'}\n${context ? 'Context: ' + context + '\n' : ''}\n${multi ? 'Fields to rewrite:\n' : 'Text to rewrite:\n'}${fieldLines}`;
 
   try {
     const gen = await agentProviders.generate(providerId, {
@@ -604,13 +624,33 @@ exports.refine = onRequest({ invoker: 'public' }, async (req, res) => {
       messages: [{ role: 'user', text: userMsg, toolCalls: [], toolResults: [] }],
       tools: [],
       temperature: 0.6,
-      maxTokens: 700,
+      maxTokens: multi ? 900 : 700,
     });
-    const proposal = (gen.text || '').trim();
-    if (!proposal) {
+    const raw = (gen.text || '').trim();
+    if (!raw) {
       alog('WARNING', 'agent:refine', { provider: providerId, model, ok: false, summary: 'empty rewrite for ' + (label || 'field') });
       return res.status(200).json({ error: 'empty', message: 'The model returned no text.' });
     }
+
+    let proposal;
+    if (multi) {
+      const parsed = extractJson(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        alog('WARNING', 'agent:refine', { provider: providerId, model, ok: false, summary: 'invalid multi-field JSON for ' + (label || 'field') });
+        return res.status(200).json({ error: 'bad-format', message: 'The model did not return valid JSON for the fields.' });
+      }
+      proposal = {};
+      for (const k of Object.keys(fields)) {
+        if (typeof parsed[k] === 'string') proposal[k] = stripWrappingQuotes(parsed[k]);
+      }
+      if (!Object.keys(proposal).length) {
+        return res.status(200).json({ error: 'empty', message: 'The model returned no rewritten fields.' });
+      }
+    } else {
+      proposal = stripWrappingQuotes(raw);
+      if (!proposal) return res.status(200).json({ error: 'empty', message: 'The model returned no text.' });
+    }
+
     alog('INFO', 'agent:refine', { provider: providerId, model, ok: true, summary: 'refined ' + (label || 'field') });
     return res.status(200).json({ proposal, provider: providerId, model });
   } catch (e) {
@@ -623,8 +663,9 @@ exports.refine = onRequest({ invoker: 'public' }, async (req, res) => {
 /*  /logs — owner-only, read-only function-log feed       */
 /*  Reads from Cloud Logging (the compute SA already has   */
 /*  logging.logEntries.list via roles/editor). Nothing is  */
-/*  stored — last hour by default, or only-newer via       */
-/*  sinceMs for live polling. Powers the agent/bot Logs     */
+/*  stored — most recent page by default, only-newer via    */
+/*  sinceMs for live polling, older via beforeMs. Powers    */
+/*  the agent/bot Logs                                        */
 /*  views and the Analytics "Function logs" tally.          */
 /* ===================================================== */
 // UI source → the Cloud Run service(s) whose logs it surfaces.
