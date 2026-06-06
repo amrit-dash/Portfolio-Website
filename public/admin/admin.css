@@ -3117,8 +3117,98 @@ body::before {
 .agentreview {
    display: flex;
    flex-wrap: wrap;
+   align-items: center;
    gap: 6px;
    margin-top: 8px;
+}
+
+.agentreview__page {
+   font-size: 12px;
+   text-transform: capitalize;
+}
+
+.agentdiff {
+   margin-top: 10px;
+   padding-top: 10px;
+   border-top: 1px solid var(--line);
+   display: flex;
+   flex-direction: column;
+   gap: 12px;
+   max-height: 320px;
+   overflow-y: auto;
+}
+
+.agentdiff__section {
+   display: flex;
+   flex-direction: column;
+   gap: 6px;
+}
+
+.agentdiff__path code {
+   font-family: var(--font-mono);
+   font-size: 11px;
+   color: var(--accent);
+}
+
+.agentdiff__pair {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   gap: 8px;
+}
+
+.agentdiff--stacked .agentdiff__pair {
+   grid-template-columns: 1fr;
+}
+
+.agentdiff__col {
+   border-radius: 6px;
+   border: 1px solid var(--line-2);
+   overflow: hidden;
+   min-width: 0;
+}
+
+.agentdiff__label {
+   display: block;
+   font-size: 10px;
+   font-weight: 600;
+   letter-spacing: .04em;
+   text-transform: uppercase;
+   padding: 4px 8px;
+   font-family: var(--font-mono);
+}
+
+.agentdiff__col--old .agentdiff__label {
+   background: color-mix(in srgb, var(--danger) 14%, transparent);
+   color: var(--danger);
+}
+
+.agentdiff__col--new .agentdiff__label {
+   background: color-mix(in srgb, var(--ok) 14%, transparent);
+   color: var(--ok);
+}
+
+.agentdiff__val {
+   margin: 0;
+   padding: 8px;
+   font-family: var(--font-mono);
+   font-size: 11px;
+   line-height: 1.45;
+   white-space: pre-wrap;
+   word-break: break-word;
+   max-height: 140px;
+   overflow-y: auto;
+}
+
+.agentdiff__col--old .agentdiff__val {
+   color: color-mix(in srgb, var(--fg) 72%, var(--danger));
+   background: color-mix(in srgb, var(--danger) 6%, var(--bg-elev));
+   text-decoration: line-through;
+   text-decoration-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+.agentdiff__col--new .agentdiff__val {
+   color: color-mix(in srgb, var(--fg) 88%, var(--ok));
+   background: color-mix(in srgb, var(--ok) 6%, var(--bg-elev));
 }
 
 /* Agent "context getting long" nudge — sits between the thread and composer. */

@@ -247,7 +247,28 @@ function useAgentChat() {
   return agentChat;
 }
 
-/* Map a changed dot-path to the admin route that edits it, for "Review ↗". */
+/* Serialize a path value for the inline diff panel. */
+function formatDiffValue(val) {
+  if (val == null || val === '') return '(empty)';
+  if (typeof val === 'object') {
+    if (val._truncated) return `(too large to display — ${val._bytes || '?'} bytes; audit only)`;
+    try { return JSON.stringify(val, null, 2); } catch (e) { return String(val); }
+  }
+  return String(val);
+}
+
+/* Collapse long model echoes of rewritten copy when the diff panel carries the truth. */
+function assistantBubbleText(msg) {
+  const text = (msg.text || '').trim();
+  const hasChanges = !!(msg.changedPaths && msg.changedPaths.length);
+  if (!hasChanges || !text) return text;
+  if (text.length <= 160 && !text.includes('\n\n') && !/^>\s/m.test(text)) return text;
+  const first = text.split('\n').map((l) => l.trim()).find(Boolean) || '';
+  if (first.length <= 120 && !/^>\s/.test(first)) return first;
+  return 'Changes applied to your draft — see the diff below.';
+}
+
+/* Map a changed dot-path to the admin route that edits it. */
 function pathToRoute(path) {
   const p = String(path || '');
   if (p.startsWith('hero')) return 'hero';
@@ -345,9 +366,10 @@ function Thinking() {
 }
 
 /* ---------- one turn's message bubble ---------- */
-function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview }) {
+function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact }) {
   const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
+  const [diffOpen, setDiffOpen] = useState(false);
 
   if (msg.role === 'user') {
     const atts = msg.attachments || [];
@@ -370,6 +392,9 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview }) {
   const routes = [...new Set((msg.changedPaths || []).map(pathToRoute).filter(Boolean))];
   const reverted = msg.revertedPaths || {};
   const hasChanges = !!(msg.changedPaths && msg.changedPaths.length);
+
+  const displayText = assistantBubbleText(msg);
+  const diffEntries = msg.perPathUndo || (msg.changedPaths || []).map((p) => ({ path: p }));
 
   const revertOne = async (pu, i) => {
     if (!('before' in pu) || (pu.before && pu.before._truncated)) return;
@@ -394,16 +419,12 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview }) {
       } catch (e) { /* offline */ }
     }
   };
-  const viewChanges = () => {
-    if (routes.length && go) go(routes[0]);
-  };
-
   return (
     <div className="agentmsg agentmsg--bot">
       <div className="agentmsg__body">
         {msg.pending ? <Thinking />
           : msg.error ? <span className="login__err">⚠ {msg.error}</span>
-            : <span className="agentmsg__reveal">{mdInline ? mdInline(msg.text) : msg.text}</span>}
+            : <span className="agentmsg__reveal">{mdInline ? mdInline(displayText) : displayText}</span>}
         {msg.bounded && <div className="helptext" style={{ marginTop: 4 }}>⚠ stopped at the tool-iteration limit.</div>}
       </div>
 
@@ -442,12 +463,42 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview }) {
             ))}
           </ul>
           <div className="agentreview">
-            {routes.length > 0 && (
-              <Btn sm kind="ghost" icon="link" onClick={viewChanges}>View changes ↗</Btn>
-            )}
-            {routes.map((r) => <Btn key={r} sm kind="ghost" onClick={() => go && go(r)}>{r} ↗</Btn>)}
+            <Btn
+              sm
+              kind="ghost"
+              icon={diffOpen ? 'chevron-up' : 'chevron-down'}
+              onClick={() => setDiffOpen((o) => !o)}
+            >
+              {diffOpen ? 'Hide changes' : 'View changes'}
+            </Btn>
+            {routes.map((r) => (
+              <button key={r} type="button" className="linkbtn agentreview__page" onClick={() => go && go(r)}>{r}</button>
+            ))}
             <Btn sm kind="ghost" icon="eye" onClick={() => openPreview && openPreview('draft')}>Preview ↗</Btn>
           </div>
+          {diffOpen && (
+            <div className={'agentdiff' + (compact ? ' agentdiff--stacked' : '')}>
+              {diffEntries.map((pu, i) => (
+                <div key={pu.path || i} className="agentdiff__section">
+                  <div className="agentdiff__path"><code>{pu.path}</code></div>
+                  {'before' in pu || 'after' in pu ? (
+                    <div className="agentdiff__pair">
+                      <div className="agentdiff__col agentdiff__col--old">
+                        <span className="agentdiff__label">Before</span>
+                        <pre className="agentdiff__val">{formatDiffValue(pu.before)}</pre>
+                      </div>
+                      <div className="agentdiff__col agentdiff__col--new">
+                        <span className="agentdiff__label">After</span>
+                        <pre className="agentdiff__val">{formatDiffValue(pu.after)}</pre>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="helptext">Diff unavailable for this path.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {msg.undone && <div className="helptext" style={{ marginTop: 6 }}>↩ turn undone.</div>}
@@ -577,6 +628,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
             canUndoTurn={i === undoIdx}
             go={go}
             openPreview={openPreview}
+            compact={compact}
           />
         ))}
       </div>
