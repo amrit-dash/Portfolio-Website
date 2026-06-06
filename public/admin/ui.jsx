@@ -38,6 +38,7 @@ function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
     case 'plus': return (<svg {...p}><path d="M12 5v14M5 12h14"/></svg>);
     case 'trash': return (<svg {...p}><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>);
     case 'grip': return (<svg {...p}><circle cx="9" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>);
+    case 'gripH': return (<svg {...p}><circle cx="5" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="2" fill="currentColor" stroke="none"/></svg>);
     case 'chev': return (<svg {...p}><path d="M9 6l6 6-6 6"/></svg>);
     case 'image': return (<svg {...p}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.6"/><path d="M21 16l-5-4-7 6"/></svg>);
     case 'upload': return (<svg {...p}><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v3a1 1 0 001 1h12a1 1 0 001-1v-3"/></svg>);
@@ -50,6 +51,8 @@ function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
     case 'check': return (<svg {...p}><path d="M5 12l5 5L20 6"/></svg>);
     case 'x': return (<svg {...p}><path d="M6 6l12 12M18 6L6 18"/></svg>);
     case 'logout': return (<svg {...p}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>);
+    // 'go-live' — broadcast signal; used for Publish (promote draft → live site).
+    case 'go-live': return (<svg {...p}><circle cx="12" cy="18" r="2" fill="currentColor" stroke="none"/><path d="M8.5 14.5a5.5 5.5 0 017 0"/><path d="M6 12a9 9 0 0112 0"/><path d="M3.5 9.5a14.5 14.5 0 0117 0"/></svg>);
     case 'rocket': return (<svg {...p}><path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.8a2 2 0 00-3 .8z"/><path d="M9 13l-2-2c1-4 4-7 11-8-1 7-4 10-8 11z"/><circle cx="15" cy="9" r="1.4"/></svg>);
     case 'save': return (<svg {...p}><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>);
     case 'link': return (<svg {...p}><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1.5-1.5"/></svg>);
@@ -148,9 +151,9 @@ function mdInline(text) {
   return out;
 }
 
-function Panel({ title, sub, actions, children, tight }) {
+function Panel({ title, sub, actions, children, tight, className }) {
   return (
-    <div className="panel">
+    <div className={'panel' + (className ? ' ' + className : '')}>
       {(title || actions) && (
         <div className="panel__hd">
           {title && <h3>{title}</h3>}
@@ -188,9 +191,26 @@ function Field({ label, hint, req, children }) {
   );
 }
 
+/* Coerce any stored value to a safe string for controlled text inputs. Objects
+   (e.g. a stray SyntheticEvent saved via an overridden onChange) become ''. */
+function inputStr(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && !Number.isNaN(value)) return String(value);
+  return '';
+}
+
 function Input({ value, onChange, placeholder, ...rest }) {
-  const v = value == null ? '' : (typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '');
-  return <input className="inp" value={v} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} {...rest} />;
+  const v = inputStr(value);
+  return (
+    <input
+      className="inp"
+      {...rest}
+      value={v}
+      placeholder={placeholder}
+      onChange={(e) => { if (onChange) onChange(e.target.value); }}
+    />
+  );
 }
 
 /* Delete button that sits inside a `.row` and lines up with sibling input
@@ -252,12 +272,21 @@ function SecretInput({ value, onChange, placeholder, name }) {
 }
 
 function TextArea({ value, onChange, placeholder, rows = 3, mono, ...rest }) {
-  return <textarea className={'ta' + (mono ? ' mono' : '')} rows={rows} value={value || ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} {...rest} />;
+  return (
+    <textarea
+      className={'ta' + (mono ? ' mono' : '')}
+      {...rest}
+      rows={rows}
+      value={inputStr(value)}
+      placeholder={placeholder}
+      onChange={(e) => { if (onChange) onChange(e.target.value); }}
+    />
+  );
 }
 
 function Select({ value, onChange, options }) {
   return (
-    <select className="sel" value={value} onChange={(e) => onChange(e.target.value)}>
+    <select className="sel" value={value == null ? '' : String(value)} onChange={(e) => { if (onChange) onChange(e.target.value); }}>
       {options.map((o) => {
         const v = typeof o === 'object' ? o.value : o;
         const l = typeof o === 'object' ? o.label : o;
@@ -364,15 +393,16 @@ function Reorderable({ items, getKey, onReorder, renderItem }) {
 }
 
 /* Collapsible item shell with grip + delete */
-function ListItem({ gripProps, num, thumb, icon, title, sub, open, onToggle, onDelete, children, headRight }) {
+function ListItem({ gripProps, num, thumb, icon, title, sub, open, onToggle, onDelete, children, headRight, layout }) {
+  const hdClass = 'item__hd' + (onToggle ? ' clickable' : '') + (layout === 'card' ? ' item__hd--card' : '');
   return (
     <>
-      <div className={'item__hd' + (onToggle ? ' clickable' : '')} onClick={onToggle}>
+      <div className={hdClass} onClick={onToggle}>
         <span className="item__grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
         {num != null && <span className="item__num">{num}</span>}
         {thumb && <img className="minithumb" src={window.assetUrl(thumb)} alt="" />}
         {icon && <span className="miniico">{icon}</span>}
-        <div style={{ minWidth: 0 }}>
+        <div className="item__text">
           <div className="item__title">{title}</div>
           {sub && <div className="item__sub">{sub}</div>}
         </div>
@@ -428,6 +458,6 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 
 window.ADMIN_UI = {
   AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
-  Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes,
+  Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes, inputStr,
   storageReady, uploadToStorage, mdInline,
 };
