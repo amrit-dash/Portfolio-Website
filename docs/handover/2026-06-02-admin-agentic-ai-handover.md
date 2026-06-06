@@ -90,6 +90,12 @@ correlation for all 3 wire formats, image MIME-sniff/path-pin/size-cap).
 3. Keys: `config/agent` is owner-only; resolved server-side; stripped before the
    loop; redacted in audit; `publish` strips bot keys from the published copy.
 
+## Tool expansion (in progress)
+
+The v1 registry in `functions/agent/tools.js` ships 17 core tools (+ 2 deprecated inbox helpers).
+A broader catalog (ops, analytics, insights, bot behavior, inbox triage v2) is landing in parallel —
+see the full intended inventory in [AGENTS.md](../../AGENTS.md).
+
 ## Deferred / follow-ups
 
 - **Live provider verification** with real keys (provider response quirks; the

@@ -1,11 +1,12 @@
 # amrit.os — Production Migration Plan
 
-Status: **proposed** · Branch: `amrit-os` · Target: existing `*.web.app` on Firebase (Blaze)
+Status: **in progress** (Phases 0–5 largely shipped; agent layer live) · Branch: `amrit-os` · Target: existing `*.web.app` on Firebase (Blaze)
 
-This plan takes the current static, localStorage-backed build to a unified Firebase
-production system: a live-editable CMS, a secure multi-provider AI bot, and a real
-analytics suite — all on one Firebase project, all within free-tier quotas with a
-billing cap as backstop.
+This plan describes the migration from a static, localStorage-cached build to a unified Firebase
+production system: a live-editable CMS, a secure multi-provider AI bot, an owner-only agent,
+and analytics — all on one Firebase project, within free-tier quotas with a billing cap as backstop.
+
+> **Current state:** Firestore draft/published, dual hosting sites, Auth, Storage, bot proxy, analytics, and the admin agent (`functions/agent/*`) are implemented. See [AGENTS.md](AGENTS.md) for the live architecture and tool inventory.
 
 ---
 

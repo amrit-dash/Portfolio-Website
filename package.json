@@ -2,7 +2,7 @@
   "name": "amrit-os-portfolio",
   "version": "1.0.0",
   "private": true,
-  "description": "amrit.os — retro-OS portfolio with a localStorage-backed admin console",
+  "description": "amrit.os — retro-OS portfolio with Firebase-backed admin console and AI agent",
   "scripts": {
     "help": "node scripts/help.mjs",
     "dev": "npx --yes serve public -l 3000",

@@ -172,6 +172,8 @@ untouched), `config/settings` (limits), `bot_questions` (inbox), Storage `public
 
 ## Tool Catalog (hybrid)
 
+> **Superseded inventory:** The canonical, up-to-date tool list (including P0–P3 expansion and deprecated tools) lives in [AGENTS.md](../../AGENTS.md). Below is the original v1 catalog.
+
 **Generic core** (server-validated):
 - `readContent({path})` — return a slice of `content/draft` (no mutation). Bounds context.
 - `setContentPath({path, value})` — set a leaf/object. Server **validates** the path against the schema + enum allowlist and the **blocklist**; **array-aware** (index paths preserve arrays).
