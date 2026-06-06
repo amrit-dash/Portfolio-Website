@@ -59,6 +59,31 @@ function logEvent(type, meta) {
   } catch (e) { /* never let analytics break the UX */ }
 }
 
+/* Cross-origin `download` on <a> is ignored (e.g. Firebase Storage). Fetch the
+   bytes and trigger a same-origin blob save so the PDF lands in Downloads. */
+async function downloadCv(url, filename) {
+  const name = filename || 'Amrit-Dash-CV.pdf';
+  const trigger = (href) => {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = name;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    if (!res.ok) throw new Error('fetch failed');
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    trigger(blobUrl);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+  } catch (e) {
+    trigger(url);
+  }
+}
+
 /* =====================================================
    ICONS — consistent inline SVGs for expertise + UI
    ===================================================== */
@@ -384,7 +409,32 @@ function BootSequence({ onDone }) {
    MENU BAR
    ===================================================== */
 
-function MenuBar({ theme, onToggleTheme, active }) {
+function CvThemeTip({ theme, nonce, onDismiss }) {
+  const [fading, setFading] = useState(false);
+  const dismiss = useCallback(() => {
+    setFading(true);
+    setTimeout(onDismiss, 380);
+  }, [onDismiss]);
+
+  useEffect(() => {
+    if (!nonce) return undefined;
+    setFading(false);
+    const t = setTimeout(dismiss, 6500);
+    return () => clearTimeout(t);
+  }, [nonce, dismiss]);
+
+  if (!nonce) return null;
+  const msg = theme === 'dark'
+    ? 'Want to download the CV in light mode?'
+    : 'Want to download the CV in dark mode?';
+  return (
+    <div className={'cv-theme-tip' + (fading ? ' cv-theme-tip--out' : '')} role="status">
+      <p>{msg}</p>
+      <button type="button" className="cv-theme-tip__close" onClick={dismiss} aria-label="Dismiss">×</button>
+    </div>);
+}
+
+function MenuBar({ theme, onToggleTheme, active, cvThemeTipNonce, onCvThemeTipDismiss }) {
   const now = useTime();
   const t = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const d = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
@@ -421,9 +471,12 @@ function MenuBar({ theme, onToggleTheme, active }) {
           }}>
           <span className="dot" /> amrit-bot</button>
         <span className="menubar__clock">{d}  ·  {t}</span>
-        <button className="icon-btn" onClick={onToggleTheme} title={'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode'} aria-label="Toggle theme" data-comment-anchor="ccd391eba6-button-231-9">
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={14} />
-        </button>
+        <div className="menubar__theme-wrap">
+          <CvThemeTip theme={theme} nonce={cvThemeTipNonce} onDismiss={onCvThemeTipDismiss} />
+          <button className="icon-btn" onClick={onToggleTheme} title={'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode'} aria-label="Toggle theme" data-comment-anchor="ccd391eba6-button-231-9">
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={14} />
+          </button>
+        </div>
       </div>
     </header>);
 
@@ -823,11 +876,16 @@ function Hero({ botIcon, botIconColor }) {
    ABOUT WINDOW
    ===================================================== */
 
-function AboutWindow({ cvUrl, cvVariant }) {
+function AboutWindow({ cvUrl, cvVariant, cvFileName, onCvDownloaded }) {
   const a = useSiteContent().about || {};
   const meta = Array.isArray(a.meta) ? a.meta : [];
   const impact = Array.isArray(a.impact) ? a.impact : [];
-  const onCvDownload = () => logEvent('cv:download', cvVariant);
+  const onCvClick = (e) => {
+    e.preventDefault();
+    logEvent('cv:download', cvVariant);
+    if (onCvDownloaded) onCvDownloaded();
+    downloadCv(cvUrl, cvFileName);
+  };
   return (
     <section id="about" className="section">
       <div className="section__label" data-reveal data-reveal-type="left">/ABOUT.ME</div>
@@ -855,7 +913,7 @@ function AboutWindow({ cvUrl, cvVariant }) {
                 {impact.map((m, i) => <li key={i}><b>{m.label}</b> &mdash; <span dangerouslySetInnerHTML={rt(m.html)} /></li>)}
               </ul>
               <div className="hero__cta-row" data-reveal data-reveal-type="up" data-reveal-delay="3" style={{ marginTop: '24px', justifyContent: 'flex-end' }}>
-                <a href={cvUrl} onClick={onCvDownload} target="_blank" rel="noreferrer" download className="btn btn--primary">Download CV</a>
+                <button type="button" onClick={onCvClick} className="btn btn--primary">Download CV</button>
                 <a href="https://about.me/amritdash" target="_blank" rel="noreferrer" className="btn">About.me <span className="btn__arrow">↗</span></a>
               </div>
             </div>
@@ -1489,8 +1547,14 @@ function App() {
   // Sources from content.media so admin uploads replace the link without code changes.
   const media = (liveContent && liveContent.media) || {};
   const cvVariant = theme === 'dark' ? 'dark' : 'light';
-  const cvUrl = (cvVariant === 'dark' ? (media.cvDark && media.cvDark.url) : (media.cvLight && media.cvLight.url))
+  const cvMedia = cvVariant === 'dark' ? media.cvDark : media.cvLight;
+  const cvUrl = (cvMedia && cvMedia.url)
     || (theme === 'dark' ? 'assets/Amrit Dash - CV 2025 (Dark).pdf' : 'assets/Amrit Dash - CV 2025.pdf');
+  const cvFileName = (cvMedia && cvMedia.name) || 'Amrit-Dash-CV.pdf';
+
+  const [cvThemeTipNonce, setCvThemeTipNonce] = useState(0);
+  const showCvThemeTip = useCallback(() => setCvThemeTipNonce((n) => n + 1), []);
+  const dismissCvThemeTip = useCallback(() => setCvThemeTipNonce(0), []);
 
   const { TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio, TweakSelect, TweakSlider } = window;
 
@@ -1501,10 +1565,12 @@ function App() {
         <MenuBar
           theme={theme}
           active={navActive}
+          cvThemeTipNonce={cvThemeTipNonce}
+          onCvThemeTipDismiss={dismissCvThemeTip}
           onToggleTheme={() => chooseTheme(theme === 'dark' ? 'light' : 'dark')} />
 
         <Hero botIcon={t.botIcon} botIconColor={t.botIconColor} />
-        <AboutWindow cvUrl={cvUrl} cvVariant={cvVariant} />
+        <AboutWindow cvUrl={cvUrl} cvVariant={cvVariant} cvFileName={cvFileName} onCvDownloaded={showCvThemeTip} />
         <ExpertiseWindow />
         <ExperienceFolder />
         <ProjectsDesktop />
