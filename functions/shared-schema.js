@@ -43,8 +43,9 @@
 
      config/agent shape:
        { active: 'gemini',
+         refinerActive: 'gemini',
          byProvider: { gemini: { apiKey, model }, openai: { apiKey, model }, … },
-         refinerModel?: string }                                                   */
+         refinerModel?: string (legacy override — prefer refinerActive provider model) } */
 
   /* Which wire format each provider speaks. Drives native adapter selection on
      the server AND the model-picker grouping on the client. */
@@ -60,6 +61,7 @@
 
   const AGENT_CONFIG_DEFAULTS = {
     active: 'gemini',
+    refinerActive: 'gemini',
     byProvider: {
       gemini: { model: 'gemini-2.5-flash' },
     },
@@ -103,6 +105,33 @@
       { id: 'moonshotai/kimi-k2-instruct', label: 'Kimi K2', free: true },
     ],
   };
+
+  /* Known vision-capable models per provider (exact ids). Admin UI shows the vision
+     tag when the selected model is listed here; custom/fetched models fall through
+     to supportsVision heuristics or a successful Test vision probe. */
+  const VISION_MODELS_BY_PROVIDER = {
+    gemini: [
+      'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash',
+      'gemini-1.5-pro', 'gemini-1.5-flash',
+    ],
+    anthropic: [
+      'claude-sonnet-4-5', 'claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest',
+      'claude-3-opus-latest',
+    ],
+    openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4-turbo', 'gpt-4.1'],
+    openrouter: [
+      'google/gemini-2.0-flash-exp:free', 'anthropic/claude-3.5-sonnet',
+      'google/gemini-flash-1.5',
+    ],
+    mistral: ['mistral-large-latest', 'mistral-small-latest', 'pixtral-large-latest'],
+    grok: ['grok-4', 'grok-3', 'grok-3-mini'],
+    groq: ['moonshotai/kimi-k2-instruct'],
+  };
+
+  function modelInVisionMap(providerId, model) {
+    const list = Reflect.get(VISION_MODELS_BY_PROVIDER, providerId) || [];
+    return list.includes(model);
+  }
 
   /* Sanitize an uploaded SVG before it's stored in content + rendered inline.
      Owner-only upload, but we still strip the obvious script/handler vectors and
@@ -291,21 +320,19 @@
     const m = String(model || '').toLowerCase();
     if (!id || !m) return false;
 
+    if (modelInVisionMap(id, model)) return true;
+
     /* Groq chat models are text-only; llama-4 scout is the lone vision exception when listed. */
     if (id === 'groq') return /llama-4.*scout/i.test(m);
 
     if (id === 'openrouter') {
-      if (/gemini|gpt-4|gpt-4o|gpt-4\.1|claude|llava|pixtral|qwen.*vl|vision|moondream|phi-3.*vision/i.test(m)) return true;
-      /* Kimi K2 / K2.6 on OpenRouter accept image_url parts (verify with Test vision). */
-      if (/kimi[-/]|moonshotai\/kimi/i.test(m)) return true;
-      if (/llama-?3\.|meta-llama\/llama|deepseek(?!.*vl)/i.test(m)) return false;
+      /* Prefer VISION_MODELS_BY_PROVIDER; heuristics only for names that clearly imply vision. */
+      if (/gemini|gpt-4o|gpt-4\.1|gpt-4(?!\.1)|claude-3|claude-sonnet|llava|pixtral|qwen.*vl|vision|moondream|phi-3.*vision/i.test(m)) return true;
+      if (/llama-?3\.|meta-llama\/llama|deepseek(?!.*vl)|kimi|moonshotai\/kimi/i.test(m)) return false;
       const curated = (AGENT_TOOL_MODELS.openrouter || []).find((x) => x.id === model);
-      if (curated) return /gemini|claude|kimi/i.test(curated.id);
+      if (curated) return /gemini|claude/i.test(curated.id);
       return false;
     }
-
-    const curated = Reflect.get(AGENT_TOOL_MODELS, id) || [];
-    if (curated.some((x) => x.id === model)) return true;
 
     if (id === 'gemini') return /gemini/i.test(m);
     if (id === 'openai') return /gpt-4|gpt-4o|gpt-4\.1|o[134]/i.test(m);
@@ -328,6 +355,8 @@
     PROVIDER_KIND,
     AGENT_CONFIG_DEFAULTS,
     AGENT_TOOL_MODELS,
+    VISION_MODELS_BY_PROVIDER,
+    modelInVisionMap,
     normalizeImpactEntry,
     validateImpactWrite,
     coerceImpactArray,
