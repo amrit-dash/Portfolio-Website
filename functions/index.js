@@ -697,18 +697,16 @@ exports.logs = onRequest({ invoker: 'public' }, async (req, res) => {
   const services = LOG_SOURCES[source];
   const errorsOnly = !!body.errorsOnly;
   const limit = Math.min(Math.max(Number(body.limit) || 100, 1), 300);
-  // Live polling passes the newest ts it has (sinceMs) to fetch only newer
-  // entries; "load older" passes beforeMs to page backwards; first load defaults
-  // to the last hour. Only one is honoured (sinceMs wins).
+  // Live polling passes sinceMs for newer-only; "load older" passes beforeMs to
+  // page backwards; first load has no time window — just the newest page.
   const sinceMs = Number(body.sinceMs) || 0;
   const beforeMs = Number(body.beforeMs) || 0;
-  let timeClause;
-  if (sinceMs) timeClause = `timestamp>"${new Date(sinceMs).toISOString()}"`;
-  else if (beforeMs) timeClause = `timestamp<"${new Date(beforeMs).toISOString()}"`;
-  else timeClause = `timestamp>="${new Date(Date.now() - 3600_000).toISOString()}"`;
+  let timeClause = '';
+  if (sinceMs) timeClause = ` AND timestamp>"${new Date(sinceMs).toISOString()}"`;
+  else if (beforeMs) timeClause = ` AND timestamp<"${new Date(beforeMs).toISOString()}"`;
 
   const svcFilter = services.map((s) => `resource.labels.service_name="${s}"`).join(' OR ');
-  let filter = `resource.type="cloud_run_revision" AND (${svcFilter}) AND ${timeClause}`;
+  let filter = `resource.type="cloud_run_revision" AND (${svcFilter})${timeClause}`;
   if (errorsOnly) filter += ' AND severity>=WARNING';
 
   try {
