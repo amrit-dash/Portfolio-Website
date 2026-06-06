@@ -78,7 +78,15 @@ function buildOutline(content) {
     if (Array.isArray(val)) {
       outline[key] = { type: 'array', length: val.length, ids: val.slice(0, 20).map((item, i) => (item && item.id) || String(i)) };
     } else if (val && typeof val === 'object') {
-      outline[key] = { type: 'object', keys: Object.keys(val).slice(0, 30) };
+      const entry = { type: 'object', keys: Object.keys(val).slice(0, 30) };
+      if (key === 'about' && Array.isArray(val.impact)) {
+        entry.impact = val.impact.slice(0, 20).map((item, i) => ({
+          index: i,
+          id: item && item.id,
+          label: item && item.label,
+        }));
+      }
+      outline[key] = entry;
     } else {
       outline[key] = { type: typeof val };
     }
@@ -123,6 +131,8 @@ class DraftSession {
     try {
       const keys = normalizePath(path);
       let v = value;
+      /* about.impact: root path merges a single {label,id,html} object by label/id;
+         indexed paths (about.impact.N or .N.html) preserve siblings via setAtPath. */
       if (keys[0] === 'about' && keys[1] === 'impact' && keys.length === 2) {
         v = coerceImpactArray(value, getAtPath(this.content, 'about.impact'));
       }

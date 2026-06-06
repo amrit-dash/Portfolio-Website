@@ -17,7 +17,7 @@ const multimodal = require('./multimodal');
 const GENERIC_TOOLS = [
   {
     name: 'readContent',
-    description: 'Read a slice of the portfolio draft by dot-path (e.g. hero, about.meta, projects.0). Use to inspect before editing.',
+    description: 'Read a slice of the portfolio draft by dot-path (e.g. hero, about.meta, projects.0, about.impact). Always read before scoped edits — use it to resolve array index and label/id when the user names a single entry.',
     parameters: {
       type: 'object',
       properties: { path: { type: 'string', description: 'Dot-path into content/draft' } },
@@ -27,11 +27,23 @@ const GENERIC_TOOLS = [
   },
   {
     name: 'setContentPath',
-    description: 'Set a value at a dot-path in the portfolio draft. Blocked paths include bot.providers*, bot.behavior*, config.*.',
+    description: [
+      'Set a value at a dot-path in the portfolio draft. Blocked paths include bot.providers*, bot.behavior*, config.*.',
+      'Scope: edit only what the user asked for. Prefer the narrowest path; never replace a whole array when one entry changed.',
+      'Impact timeline (about.impact) — each entry is {id, label, html}. Partial updates (preserve siblings):',
+      '  • Leaf field: path about.impact.1.html, value "<p>New copy</p>" (index from readContent).',
+      '  • One entry, multi-field: path about.impact.1, value {"label":"Then","html":"<p>…</p>"} (merges into that index).',
+      '  • Match by label: path about.impact, value {"label":"Then","html":"<p>…</p>"} (server merges by label/id, keeps other entries).',
+      'Avoid: path about.impact with a full array or a single entry object when the user only wanted one timeline row rewritten — that drops or overwrites siblings.',
+      'Same pattern for other arrays: projects.2.title, experience.0.html, or collection root with one {id,…} object for merge-by-id.',
+    ].join(' '),
     parameters: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Dot-path to set' },
+        path: {
+          type: 'string',
+          description: 'Dot-path to set. For one array item use index segments (about.impact.1.html) or merge-by-label at collection root (about.impact).',
+        },
         value: { type: 'string', description: 'Value to write. For objects/arrays pass a JSON string; it is parsed server-side.' },
       },
       required: ['path', 'value'],
