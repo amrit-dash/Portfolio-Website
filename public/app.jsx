@@ -751,7 +751,10 @@ function AmritBotConsole({ botIcon, botIconColor }) {
       <div className="console__body" ref={bodyRef} data-comment-anchor="9ae4af3e04-div-552-7">
         {thread.map((m, i) =>
           m.from === 'bot' ?
-            <BotMsg key={i}>{mdInline(m.body)}</BotMsg> :
+            // Slash-commands store React elements (StatsCard, LinksCard, …) as
+            // body; only string bodies (LLM/Q&A replies) go through the inline
+            // markdown renderer — otherwise String(element) prints "[object Object]".
+            <BotMsg key={i}>{typeof m.body === 'string' ? mdInline(m.body) : m.body}</BotMsg> :
             <UserMsg key={i}>{m.body}</UserMsg>
         )}
         {thinking && <BotMsg typing />}
