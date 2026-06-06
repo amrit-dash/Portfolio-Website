@@ -56,15 +56,17 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
   const maxProj = Math.max(1, ...analytics.topProjects.map((p) => p.opens));
   return (
     <div>
-      <PageHead eyebrow="/DASHBOARD" title="Overview">Live snapshot of the portfolio — real event counts captured from the live site since the last reset.</PageHead>
+      <PageHead eyebrow="/DASHBOARD" title="Overview">Live snapshot of the portfolio — stats, traffic and recent activity update in real time from the live site.</PageHead>
 
       {dirty && (
-        <div className="callout" style={{ borderLeftColor: 'var(--warn)' }}>
+        <div className="callout callout--actions" style={{ borderLeftColor: 'var(--warn)' }}>
           <AdminIcon name="info" size={16} />
-          <div style={{ flex: 1 }}><b>You have unpublished changes.</b> They're saved to your draft but not live yet. Preview, then publish to push them to the site.</div>
-          <Btn sm kind="ghost" icon="reset" onClick={onDiscard}>Discard</Btn>
-          <Btn sm icon="eye" onClick={onPreview}>Preview</Btn>
-          <Btn sm kind="primary" icon="rocket" onClick={onPublish}>Publish</Btn>
+          <div className="callout__body"><b>You have unpublished changes.</b> They're saved to your draft but not live yet. Preview, then publish to push them to the site.</div>
+          <div className="callout__actions">
+            <Btn sm kind="ghost" icon="reset" onClick={onDiscard}>Discard</Btn>
+            <Btn sm icon="eye" onClick={onPreview}>Preview</Btn>
+            <Btn sm kind="primary" icon="go-live" onClick={onPublish}>Publish</Btn>
+          </div>
         </div>
       )}
 
@@ -83,7 +85,7 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
       </div>
 
       <div className="grid2">
-        <Panel title="Traffic" sub="last 14 days">
+        <Panel title="Traffic" sub="live · last 14 days">
           {hasData ? (
             <div className="spark">
               {analytics.history.map((v, i) => <div key={i} className="bar" style={{ height: Math.max(2, v / max * 100) + '%' }} title={v + ' views'} />)}
@@ -92,7 +94,7 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
             <p className="helptext" style={{ margin: 0 }}>Waiting for visits. Reload the live site to seed a data point.</p>
           )}
         </Panel>
-        <Panel title="Most-opened projects">
+        <Panel title="Most-opened projects" sub="live">
           {analytics.topProjects.length === 0 ? (
             <p className="helptext" style={{ margin: 0 }}>No project opens yet.</p>
           ) : (
@@ -110,7 +112,7 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
       </div>
 
       <div className="grid2">
-        <Panel title="Recent activity" sub="latest 5" actions={<Btn sm kind="ghost" onClick={() => go('analytics')}>View all →</Btn>}>
+        <Panel title="Recent activity" sub="live · latest 5" actions={<Btn sm kind="ghost" onClick={() => go('analytics')}>View all →</Btn>}>
           {analytics.activity.length === 0 ? (
             <p className="helptext" style={{ margin: 0 }}>No activity captured yet.</p>
           ) : (
@@ -121,7 +123,7 @@ function Overview({ content, analytics, dirty, publishedAt, onPublish, onPreview
             </ul>
           )}
         </Panel>
-        <Panel title="Content summary">
+        <Panel title="Content summary" sub="live draft">
           <div className="bars">
             {[['expertise', 'Expertise modules', 'expertise'], ['work', 'Work entries', 'experience'], ['projects', 'Projects', 'projects'], ['contact', 'Social links', 'contact.socials'], ['bot', 'Bot Q&A pairs', 'bot.qa']].map(([icon, label, path]) => {
               const arr = path.split('.').reduce((o, k) => (o && k !== '__proto__' && k !== 'constructor' && k !== 'prototype' ? Reflect.get(o, k) : null), content);
@@ -207,6 +209,12 @@ function AnalyticsPage({ analytics, onReset }) {
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 90) a.loadMoreEvents && a.loadMoreEvents();
   };
 
+  // Fresh feed on every visit — drop scroll-appended pages; the live head listener
+  // (useAnalytics) keeps the top current while signed in.
+  useAEffect(() => {
+    if (a.resetActivityPagination) a.resetActivityPagination();
+  }, []);
+
   const Bars = ({ rows, label, empty, sub }) => {
     const max = Math.max(1, ...rows.map((r) => r[1]));
     return (
@@ -272,12 +280,13 @@ function AnalyticsPage({ analytics, onReset }) {
       )}
 
       <Panel
+        className="panel--activity"
         title="Recent activity"
-        sub={filteredActivity.length + (actFilter === 'all' ? ' loaded' : ' matching') + (a.eventsDone ? '' : ' · scroll for more')}
+        sub={filteredActivity.length + (actFilter === 'all' ? ' loaded' : ' matching') + (a.eventsDone ? '' : ' · scroll for more') + ' · live'}
         actions={
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div className="panel__actions">
             <Segmented value={actFilter} options={ACT_FILTERS} onChange={(v) => setActFilter(v)} />
-            <Btn sm kind="ghost" icon="reset" onClick={() => a.refreshEvents && a.refreshEvents()} title="Reload latest events">Refresh</Btn>
+            <Btn sm kind="ghost" icon="reset" onClick={() => a.refreshEvents && a.refreshEvents()} title="Reload latest events"><span className="btn__label">Refresh</span></Btn>
           </div>
         }>
         {filteredActivity.length === 0 ? <p className="helptext" style={{ margin: 0 }}>{a.eventsLoading ? 'Loading…' : 'No matching activity.'}</p> : (
@@ -294,9 +303,9 @@ function AnalyticsPage({ analytics, onReset }) {
         )}
       </Panel>
 
-      <Panel title="Function logs" sub="agent + bot + functions · last hour, live">
+      <Panel title="Function logs" sub="agent + bot + functions · newest first, live">
         <p className="helptext" style={{ marginTop: 0, marginBottom: 12 }}>
-          Read-only feed from Cloud Logging — every function's recent successes, errors and notifications, with timestamp, origin and source.
+          Read-only feed from Cloud Logging — every function's successes, errors and notifications, newest first. Cached locally for instant reopen; scroll for older lines.
         </p>
         {window.ADMIN_LOGS && window.ADMIN_LOGS.LogsView
           ? <window.ADMIN_LOGS.LogsView source="all" height={420} />
@@ -323,7 +332,7 @@ function SyncPage({ publishedAt, dirty, onPublish, onReset, onPreview }) {
         <div className="divider" />
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
-          <Btn kind="primary" icon="rocket" onClick={onPublish}>Publish to site</Btn>
+          <Btn kind="primary" icon="go-live" onClick={onPublish}>Publish to site</Btn>
           <span className="spacer" style={{ flex: 1 }} />
           <Btn kind="danger" icon="reset" disabled={!dirty} onClick={onReset}>Discard draft changes</Btn>
         </div>
@@ -696,7 +705,7 @@ function AdminApp() {
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + (dirty ? '' : ' saved')}><span className="dot" />{dirty ? 'Draft · unpublished changes' : 'All changes published'}</span>}
           <span className="topbar__hide-sm"><Btn icon="eye" onClick={() => openPreview('draft')}>Preview</Btn></span>
-          <Btn kind="primary" icon="rocket" onClick={doPublish} disabled={!dirty}>Publish</Btn>
+          <Btn kind="primary" icon="go-live" onClick={doPublish} disabled={!dirty}>Publish</Btn>
         </div>
         <div className="canvas">{renderRoute()}</div>
       </div>

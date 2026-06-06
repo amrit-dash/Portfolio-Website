@@ -225,12 +225,43 @@ const Store = {
     if (!this.fsReady()) return null;
     return window.fb.db.doc('stats/global').onSnapshot((s) => cb(s.exists ? s.data() : {}), (e) => console.warn('[stats]', e && e.message));
   },
-  // One page of the recent-events feed via a CURSOR (.get(), not a live
-  // listener) so the console never holds an open 150-doc subscription that
-  // re-reads on every new event. Pass the prior page's `cursor` (a doc snapshot)
-  // to fetch the next slice. Returns { rows, cursor, done } — `done` is true once
-  // a short page comes back (no more to load). This is the read-cost fix: the
-  // Analytics page now reads 20 docs up front and the rest only on scroll.
+  // Live head of the recent-events feed — capped at `n` docs so Overview + Analytics
+  // stay current without subscribing to the full retention window.
+  fsEventsListen(n, cb) {
+    const size = n || 20;
+    if (!this.fsReady()) return () => {};
+    return window.fb.db.collection('events').orderBy('at', 'desc').limit(size)
+      .onSnapshot((snap) => {
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        cb(rows, snap.docs.length ? snap.docs[snap.docs.length - 1] : null);
+      }, (e) => console.warn('[events-live]', e && e.message));
+  },
+  // Live per-day buckets for the last `days` calendar dates (traffic + project bars).
+  fsDailyListen(days, cb) {
+    if (!this.fsReady()) return () => {};
+    const ids = Store.dailyStatIds(days);
+    if (!ids.length) return () => {};
+    const FieldPath = window.firebase && window.firebase.firestore && window.firebase.firestore.FieldPath;
+    if (!FieldPath) return () => {};
+    return window.fb.db.collection('stats_daily').where(FieldPath.documentId(), 'in', ids)
+      .onSnapshot((snap) => {
+        const byId = {};
+        snap.docs.forEach((d) => { byId[d.id] = { id: d.id, ...d.data() }; });
+        cb(ids.map((id) => byId[id] || { id }));
+      }, (e) => console.warn('[daily-live]', e && e.message));
+  },
+  dailyStatIds(days) {
+    const ids = [];
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const dt = new Date(now);
+      dt.setDate(now.getDate() - i);
+      ids.push(dt.toISOString().slice(0, 10));
+    }
+    return ids;
+  },
+  // Older pages of the feed (scroll-driven). The live head is fsEventsListen; this
+  // only runs on explicit scroll so we never hold a 150-doc subscription.
   async fsEventsPage(after, n) {
     const size = n || 20;
     if (!this.fsReady()) return { rows: [], cursor: null, done: true };
@@ -239,7 +270,7 @@ const Store = {
       if (after) q = q.startAfter(after);
       const snap = await q.get();
       return {
-        rows: snap.docs.map((d) => d.data()),
+        rows: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
         cursor: snap.docs.length ? snap.docs[snap.docs.length - 1] : (after || null),
         done: snap.docs.length < size,
       };
@@ -247,12 +278,10 @@ const Store = {
   },
   async fsDailyRange(days) {
     if (!this.fsReady()) return [];
-    const ids = [];
-    const now = new Date();
-    for (let i = 0; i < days; i++) { const dt = new Date(now); dt.setDate(now.getDate() - i); ids.push(dt.toISOString().slice(0, 10)); }
+    const ids = Store.dailyStatIds(days);
     const docs = await Promise.all(ids.map((id) =>
       window.fb.db.doc('stats_daily/' + id).get().then((s) => (s.exists ? { id, ...s.data() } : { id })).catch(() => ({ id }))));
-    return docs.reverse(); // chronological
+    return docs;
   },
   async fsBotQuestions(n) {
     if (!this.fsReady()) return [];
@@ -458,9 +487,10 @@ const Store = {
   inboxProcess(ids) {
     return this._agentFetch('/inboxProcess', { ids });
   },
-  // Inline field refiner — single-shot rewrite.
-  refineText({ text, label, context }) {
-    return this._agentFetch('/refine', { text, label, context });
+  // Inline field refiner — single-shot rewrite. Pass `text` for one field, or
+  // `fields: { label, html, ... }` for a multi-field proposal.
+  refineText({ text, fields, label, context }) {
+    return this._agentFetch('/refine', { text, fields, label, context });
   },
   // Read-only function-log feed from Cloud Logging (nothing stored). `source`:
   // 'agent' | 'bot' | 'all'. `sinceMs` fetches only newer entries for live polls.
@@ -703,57 +733,88 @@ function useContent() {
 }
 
 /* ---------- Analytics hook (real-time, Firestore-backed) ----------
-   Subscribes to the global counters + recent-events feed and loads the per-day
-   buckets for the last 30 days. Re-attaches when the owner signs in. Returns a
-   shape compatible with the existing Overview plus richer data for the
-   dedicated Analytics page. */
-const EVENTS_PAGE = 20; // recent-activity slice fetched per load (cost-bounded)
+   Live snapshot listeners on stats/global, events (head), and stats_daily keep
+   Overview + Analytics current while signed in. Scroll pagination on Analytics
+   appends older event pages via one-shot .get() reads. Re-attaches on sign-in. */
+const EVENTS_PAGE = 20; // live head size + each scroll page (cost-bounded)
 
 function useAnalytics() {
   const [counters, setCounters] = React.useState(null);
-  const [recent, setRecent] = React.useState([]);
+  const [liveEvents, setLiveEvents] = React.useState([]);
+  const [olderEvents, setOlderEvents] = React.useState([]);
   const [daily, setDaily] = React.useState([]);
-  const cursorRef = React.useRef(null);
-  const loadingRef = React.useRef(false);           // guards against overlapping scroll loads
+  const [timeTick, setTimeTick] = React.useState(0); // re-render relative timestamps
+  const liveTailSnapRef = React.useRef(null);        // oldest doc in the live head
+  const olderTailSnapRef = React.useRef(null);       // cursor after scroll pages
+  const loadingRef = React.useRef(false);            // guards against overlapping scroll loads
   const [eventsDone, setEventsDone] = React.useState(false);
   const [eventsLoading, setEventsLoading] = React.useState(false);
 
-  // Fetch the FIRST page (reset). Used on sign-in and on manual refresh — the
-  // only times we re-read the feed from the server.
-  const refreshEvents = React.useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true; setEventsLoading(true);
-    cursorRef.current = null; setEventsDone(false);
-    const { rows, cursor, done } = await Store.fsEventsPage(null, EVENTS_PAGE);
-    cursorRef.current = cursor; setRecent(rows); setEventsDone(done);
-    loadingRef.current = false; setEventsLoading(false);
-  }, []);
+  const recent = React.useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const ev of liveEvents.concat(olderEvents)) {
+      const k = ev.id || String(ev.at && ev.at.seconds) + ev.type;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(ev);
+    }
+    return out;
+  }, [liveEvents, olderEvents]);
+
+  // Drop scroll-appended pages; the live head listener keeps the top current.
+  const resetActivityPagination = React.useCallback(() => {
+    setOlderEvents([]);
+    olderTailSnapRef.current = null;
+    setEventsDone(liveEvents.length < EVENTS_PAGE);
+  }, [liveEvents.length]);
+
+  // Manual refresh — same as resetting pagination (live head is already subscribed).
+  const refreshEvents = React.useCallback(() => { resetActivityPagination(); }, [resetActivityPagination]);
 
   // Append the NEXT page (scroll-driven). No-op once the feed is exhausted.
   const loadMoreEvents = React.useCallback(async () => {
     if (loadingRef.current || eventsDone) return;
+    const cursor = olderTailSnapRef.current || liveTailSnapRef.current;
+    if (!cursor && !liveEvents.length) return;
     loadingRef.current = true; setEventsLoading(true);
-    const { rows, cursor, done } = await Store.fsEventsPage(cursorRef.current, EVENTS_PAGE);
-    cursorRef.current = cursor; setRecent((prev) => prev.concat(rows)); setEventsDone(done);
+    const { rows, cursor: nextCursor, done } = await Store.fsEventsPage(cursor, EVENTS_PAGE);
+    setOlderEvents((prev) => prev.concat(rows));
+    olderTailSnapRef.current = nextCursor;
+    setEventsDone(done);
     loadingRef.current = false; setEventsLoading(false);
-  }, [eventsDone]);
+  }, [eventsDone, liveEvents.length]);
 
   React.useEffect(() => {
     if (!window.fb || !window.fb.auth) return;
-    let u1 = null;
-    const unsubAuth = window.fb.auth.onAuthStateChanged(async (u) => {
-      if (u1) u1(); u1 = null;
+    let u1 = null; let u2 = null; let u3 = null; let tickId = null;
+    const unsubAuth = window.fb.auth.onAuthStateChanged((u) => {
+      if (u1) { u1(); u1 = null; }
+      if (u2) { u2(); u2 = null; }
+      if (u3) { u3(); u3 = null; }
+      if (tickId) { clearInterval(tickId); tickId = null; }
       if (u) {
-        u1 = Store.fsStatsListen(setCounters);     // single doc — cheap to keep live
-        await refreshEvents();                     // first 20 events; rest load on scroll
-        try { setDaily(await Store.fsDailyRange(30)); } catch (e) {}
+        u1 = Store.fsStatsListen(setCounters);
+        u2 = Store.fsEventsListen(EVENTS_PAGE, (rows, oldestSnap) => {
+          setLiveEvents(rows);
+          liveTailSnapRef.current = oldestSnap;
+          setEventsLoading(false);
+          if (!olderTailSnapRef.current) setEventsDone(rows.length < EVENTS_PAGE);
+        });
+        u3 = Store.fsDailyListen(30, setDaily);
+        tickId = setInterval(() => setTimeTick((t) => t + 1), 30000);
       } else {
-        setCounters(null); setRecent([]); setDaily([]);
-        cursorRef.current = null; setEventsDone(false);
+        setCounters(null); setLiveEvents([]); setOlderEvents([]); setDaily([]);
+        liveTailSnapRef.current = null; olderTailSnapRef.current = null;
+        setEventsDone(false);
       }
     });
-    return () => { if (u1) u1(); unsubAuth(); };
-  }, [refreshEvents]);
+    return () => {
+      if (u1) u1(); if (u2) u2(); if (u3) u3();
+      if (tickId) clearInterval(tickId);
+      unsubAuth();
+    };
+  }, []);
 
   const refreshDaily = React.useCallback(async () => {
     try { setDaily(await Store.fsDailyRange(30)); } catch (e) {}
@@ -771,19 +832,22 @@ function useAnalytics() {
   });
   const topProjects = Object.entries(projAgg).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, opens]) => ({ name, opens }));
   const evMs = (ev) => (ev.at && ev.at.toMillis ? ev.at.toMillis() : (ev.at && ev.at.seconds ? ev.at.seconds * 1000 : Date.now()));
-  const activity = recent.map((ev) => {
-    const meta = ev.meta || {};
-    let what = ev.type;
-    if (ev.type === 'view') what = 'Page view';
-    else if (ev.type === 'cv:download') what = 'CV downloaded' + (meta.variant ? ' (' + meta.variant + ')' : '');
-    else if (ev.type === 'bot:chat') what = 'amrit-bot chat' + (meta.command ? ' · /' + meta.command : '');
-    else if (ev.type === 'project:open') what = 'Opened · ' + (meta.title || meta.id || 'project');
-    else if (ev.type === 'social:click') what = 'Social · ' + (meta.label || '');
-    else if (ev.type === 'link:click') what = 'Link · ' + (meta.label || meta.href || '');
-    else if (ev.type === 'cta:click') what = 'CTA · ' + (meta.label || '');
-    const where = [ev.city, ev.country].filter(Boolean).join(', ') || (ev.source || 'visitor');
-    return { when: fmtRelative(Date.now() - evMs(ev)), what, who: where, type: ev.type, city: ev.city || null, region: ev.region || null, country: ev.country || null };
-  });
+  const activity = React.useMemo(() => {
+    void timeTick; // tick every 30s so "Nm ago" stays fresh without new events
+    return recent.map((ev) => {
+      const meta = ev.meta || {};
+      let what = ev.type;
+      if (ev.type === 'view') what = 'Page view';
+      else if (ev.type === 'cv:download') what = 'CV downloaded' + (meta.variant ? ' (' + meta.variant + ')' : '');
+      else if (ev.type === 'bot:chat') what = 'amrit-bot chat' + (meta.command ? ' · /' + meta.command : '');
+      else if (ev.type === 'project:open') what = 'Opened · ' + (meta.title || meta.id || 'project');
+      else if (ev.type === 'social:click') what = 'Social · ' + (meta.label || '');
+      else if (ev.type === 'link:click') what = 'Link · ' + (meta.label || meta.href || '');
+      else if (ev.type === 'cta:click') what = 'CTA · ' + (meta.label || '');
+      const where = [ev.city, ev.country].filter(Boolean).join(', ') || (ev.source || 'visitor');
+      return { when: fmtRelative(Date.now() - evMs(ev)), what, who: where, type: ev.type, city: ev.city || null, region: ev.region || null, country: ev.country || null };
+    });
+  }, [recent, timeTick]);
   const totalEvents = ['views', 'cvDownloads', 'botChats', 'projectOpens', 'socialClicks', 'linkClicks', 'ctaClicks']
     .reduce((s, k) => s + (Reflect.get(c, k) || 0), 0);
 
@@ -792,7 +856,7 @@ function useAnalytics() {
     pageViews: c.views || 0, cvDownloads: c.cvDownloads || 0, botChats: c.botChats || 0, projectOpens: c.projectOpens || 0,
     socialClicks: c.socialClicks || 0, linkClicks: c.linkClicks || 0, ctaClicks: c.ctaClicks || 0,
     history, topProjects, activity, totalEvents, daily, recent, counters: c, refreshDaily,
-    loadMoreEvents, refreshEvents, eventsDone, eventsLoading,
+    loadMoreEvents, refreshEvents, resetActivityPagination, eventsDone, eventsLoading,
   };
 }
 
