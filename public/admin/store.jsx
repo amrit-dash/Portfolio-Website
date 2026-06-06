@@ -26,6 +26,9 @@ const LS = {
   draftUpdatedAt:'amritos.draftUpdatedAt',
 };
 
+/* Runtime vision probe result — keyed to provider+model; overrides static supportsVision. */
+const VISION_TEST_KEY = 'amritos.visionTest';
+
 /* ---------- Default content (seed) ----------
    Data-driven sections (expertise / experience / projects / socials) are
    seeded from the live site's data.jsx via window.PORTFOLIO_DATA so the
@@ -546,10 +549,48 @@ const Store = {
     }
     return data != null ? data : { error: 'bad-response', message: 'Empty/invalid response from ' + path };
   },
-  agentTurn({ message, attachments, currentRoute, chatId }) {
+  readVisionTest() {
+    try {
+      const raw = sessionStorage.getItem(VISION_TEST_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  },
+  saveVisionTest({ providerId, model, ok }) {
+    const entry = {
+      providerId: String(providerId || ''),
+      model: String(model || ''),
+      ok: !!ok,
+      at: Date.now(),
+    };
+    try { sessionStorage.setItem(VISION_TEST_KEY, JSON.stringify(entry)); } catch (e) { /* quota */ }
+    return entry;
+  },
+  clearVisionTest() {
+    try { sessionStorage.removeItem(VISION_TEST_KEY); } catch (e) { /* ignore */ }
+  },
+  visionTestPassed(providerId, model) {
+    const hit = this.readVisionTest();
+    if (!hit || !hit.ok) return false;
+    return hit.providerId === String(providerId || '') && hit.model === String(model || '');
+  },
+  agentSupportsVision(cfg) {
+    const SCHEMA = window.SHARED_SCHEMA || {};
+    if (!cfg) return false;
+    const id = cfg.active || 'gemini';
+    const model = (cfg.byProvider && cfg.byProvider[id] && cfg.byProvider[id].model) || '';
+    if (SCHEMA.supportsVision && SCHEMA.supportsVision(id, model)) return true;
+    return this.visionTestPassed(id, model);
+  },
+  async agentTurn({ message, attachments, currentRoute, chatId }) {
     const payload = { message, currentRoute, chatId: chatId || 'default' };
     if (attachments && attachments.length) {
       payload.attachments = attachments.map((a) => ({ mime: a.mime, data: a.data }));
+      try {
+        const cfg = await this.fsLoadAgentConfig();
+        const id = (cfg && cfg.active) || 'gemini';
+        const model = (cfg && cfg.byProvider && cfg.byProvider[id] && cfg.byProvider[id].model) || '';
+        if (this.visionTestPassed(id, model)) payload.visionVerified = true;
+      } catch (e) { /* ignore */ }
     }
     return this._agentFetch('/agent', payload);
   },
@@ -578,6 +619,9 @@ const Store = {
   // `key`/`model` are optional overrides so a just-typed (unsaved) key can be tested.
   testModel({ scope, provider, model, key }) {
     return this._agentFetch('/testModel', { scope: scope || 'agent', provider, model, key });
+  },
+  testVision({ scope, provider, model, key }) {
+    return this._agentFetch('/testVision', { scope: scope || 'agent', provider, model, key });
   },
   // Chat history + clear (owner-only Firestore reads).
   async fsLoadAgentMessages(chatId, n) {

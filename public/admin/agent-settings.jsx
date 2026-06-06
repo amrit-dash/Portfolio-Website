@@ -52,6 +52,8 @@ function AgentSettingsPage({ modal }) {
   const [modelErr, setModelErr] = useState({});
   const [testing, setTesting] = useState(null);   // providerId being tested
   const [testRes, setTestRes] = useState({});      // providerId -> { ok, text }
+  const [testingVision, setTestingVision] = useState(null);
+  const [visionRes, setVisionRes] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +67,7 @@ function AgentSettingsPage({ modal }) {
 
   const pcfg = (id) => (cfg.byProvider && Reflect.get(cfg.byProvider, id)) || {};
   const setLocal = (id, key, val) => {
+    if (key === 'model') Store.clearVisionTest();
     setCfg((c) => {
       const by = { ...(c.byProvider || {}) };
       by[id] = { ...(Reflect.get(by, id) || {}), [key]: val };
@@ -72,7 +75,7 @@ function AgentSettingsPage({ modal }) {
     });
     setDirty(true); setSaveState('idle');
   };
-  const setActive = (id) => { setCfg((c) => ({ ...c, active: id })); setDirty(true); setSaveState('idle'); };
+  const setActive = (id) => { Store.clearVisionTest(); setCfg((c) => ({ ...c, active: id })); setDirty(true); setSaveState('idle'); };
   const setRefiner = (v) => { setCfg((c) => ({ ...c, refinerModel: v })); setDirty(true); setSaveState('idle'); };
 
   const fetchModels = async (id) => {
@@ -98,6 +101,27 @@ function AgentSettingsPage({ modal }) {
     setTesting(null);
     const ok = res && res.ok;
     setTestRes((r) => ({ ...r, [id]: { ok, text: ok ? (res.reply || 'ok') + (res.ms ? ` (${res.ms}ms)` : '') : (res && (res.message || res.error)) || 'failed' } }));
+  };
+
+  const providerHasVision = (id, modelId) => {
+    const model = modelId || '';
+    if (SCHEMA.supportsVision && SCHEMA.supportsVision(id, model)) return true;
+    return Store.visionTestPassed(id, model);
+  };
+
+  const testVision = async (id) => {
+    setTestingVision(id); setVisionRes((r) => ({ ...r, [id]: null }));
+    const c = pcfg(id);
+    const model = c.model || '';
+    const res = await Store.testVision({ scope: 'agent', provider: id, model, key: c.apiKey || '' });
+    setTestingVision(null);
+    const ok = res && res.ok;
+    if (ok) Store.saveVisionTest({ providerId: id, model, ok: true });
+    else Store.clearVisionTest();
+    const text = ok
+      ? `vision ok${res.reply ? ': ' + res.reply : ''}${res.ms ? ` (${res.ms}ms)` : ''}`
+      : (res && (res.message || res.error || res.reply)) || 'failed';
+    setVisionRes((r) => ({ ...r, [id]: { ok, text } }));
   };
 
   const save = async () => {
@@ -154,7 +178,7 @@ function AgentSettingsPage({ modal }) {
                 <div style={{ minWidth: 0 }}>
                   <div className="provrow__nm">
                     {p.label}{p.tag && <span className="tag">{p.tag}</span>}
-                    {SCHEMA.supportsVision && SCHEMA.supportsVision(p.id, c.model || curatedDefault) && (
+                    {providerHasVision(p.id, c.model || curatedDefault) && (
                       <span className="tag" title="Supports image attachments in agent chat">vision</span>
                     )}
                     {active && <span className="tag tag--accent">DEFAULT</span>}
@@ -177,12 +201,18 @@ function AgentSettingsPage({ modal }) {
                     <div className="modelrow__actions">
                       <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id} title="Refresh model list from provider"><span className="btn__label">{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</span></Btn>
                       <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !c.apiKey || !c.model} title="Send a hello to this model — result also logged in Agent logs"><span className="btn__label">{testing === p.id ? 'Testing…' : 'Test model'}</span></Btn>
+                      <Btn icon="image" kind="ghost" onClick={() => testVision(p.id)} disabled={testingVision === p.id || testing === p.id || !c.apiKey || !c.model} title="Send a tiny test image — enables attach when static vision table is unsure"><span className="btn__label">{testingVision === p.id ? 'Testing…' : 'Test vision'}</span></Btn>
                     </div>
                   </div>
                   {Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
                   {Reflect.get(testRes, p.id) && (
                     <div className="helptext" style={{ marginTop: 6, color: Reflect.get(testRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
                       {Reflect.get(testRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(testRes, p.id).text}
+                    </div>
+                  )}
+                  {Reflect.get(visionRes, p.id) && (
+                    <div className="helptext" style={{ marginTop: 6, color: Reflect.get(visionRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
+                      {Reflect.get(visionRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(visionRes, p.id).text}
                     </div>
                   )}
                 </Field>

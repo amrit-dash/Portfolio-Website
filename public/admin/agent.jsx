@@ -61,14 +61,6 @@ async function prepareImageAttachment(file) {
   return { mime, data, bytes: blob.size, preview: URL.createObjectURL(blob) };
 }
 
-function agentSupportsVision(cfg) {
-  const SCHEMA = window.SHARED_SCHEMA || {};
-  if (!SCHEMA.supportsVision || !cfg) return false;
-  const id = cfg.active || 'gemini';
-  const model = (cfg.byProvider && cfg.byProvider[id] && cfg.byProvider[id].model) || '';
-  return SCHEMA.supportsVision(id, model);
-}
-
 /* Flatten server turnMeta + local undo/revert state onto a UI message. */
 function applyTurnMeta(msg, cache) {
   if (!msg || msg.role !== 'assistant') return msg;
@@ -579,7 +571,9 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
   const fileInput = useRef(null);
 
   const refreshVision = () => {
-    Store.fsLoadAgentConfig().then((cfg) => setVisionOk(agentSupportsVision(cfg))).catch(() => setVisionOk(false));
+    Store.fsLoadAgentConfig()
+      .then((cfg) => setVisionOk(Store.agentSupportsVision(cfg)))
+      .catch(() => setVisionOk(false));
   };
 
   useEffect(() => { refreshVision(); }, []);
@@ -700,6 +694,12 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
       )}
 
       <form className="composer" onSubmit={submit}>
+        {!visionOk && (
+          <div className="composer__vision-warn" role="status">
+            <AdminIcon name="info" size={14} />
+            <span>This model does not support images — switch to a vision-capable model in settings, or run <b>Test vision</b> there.</span>
+          </div>
+        )}
         {!!attachments.length && (
           <div className="composer__attachments">
             {attachments.map((a) => (
@@ -712,7 +712,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
             ))}
           </div>
         )}
-        {attachErr && <div className="helptext" style={{ padding: '0 12px 6px', color: '#e0a341' }}>⚠ {attachErr}</div>}
+        {attachErr && <div className="composer__vision-err">⚠ {attachErr}</div>}
         <textarea
           className="composer__input"
           rows={compact ? 2 : 3}
