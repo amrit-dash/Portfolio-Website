@@ -31,7 +31,7 @@
     experience: { path: 'experience', idField: 'id' },
     'about.meta': { path: 'about.meta' },
     'about.impact': { path: 'about.impact' },
-    'cards.items': { path: 'cards.items' },
+    cards: { path: 'cards', idField: 'id' },
     'contact.socials': { path: 'contact.socials' },
     'bot.qa': { path: 'bot.qa' },
     'bot.commands': { path: 'bot.commands', idField: 'id' },
@@ -222,6 +222,22 @@
     };
   }
 
+  /* Reject label-keyed maps at about.impact root (e.g. { "Now": { html } }). */
+  function validateImpactWrite(value) {
+    if (value == null || Array.isArray(value) || typeof value !== 'object') return null;
+    const keys = Object.keys(value);
+    if (keys.length === 0) {
+      return { error: 'invalid-impact-shape', message: 'about.impact must be an array or entry object' };
+    }
+    if (keys.every((k) => /^\d+$/.test(k))) return null;
+    const entryFields = new Set(['id', 'label', 'html']);
+    if (keys.every((k) => entryFields.has(k))) return null;
+    return {
+      error: 'invalid-impact-shape',
+      message: 'about.impact expects an array or {id,label,html}; label-keyed maps like {"Now":{...}} are not supported',
+    };
+  }
+
   /* Coerce agent/corrupt writes back to an impact array. A single entry object
      merges into fallback by id or case-insensitive label (e.g. "In Between"). */
   function coerceImpactArray(value, fallback) {
@@ -276,6 +292,7 @@
     AGENT_CONFIG_DEFAULTS,
     AGENT_TOOL_MODELS,
     normalizeImpactEntry,
+    validateImpactWrite,
     coerceImpactArray,
     renumberExpertise,
     getVibe,
