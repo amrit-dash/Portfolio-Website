@@ -21,8 +21,8 @@ function makeUserMessage(text, attachments) {
   };
 }
 
-function makeAssistantMessage(text, toolCalls) {
-  return {
+function makeAssistantMessage(text, toolCalls, turnMeta) {
+  const msg = {
     role: 'assistant',
     text: String(text || ''),
     toolCalls: Array.isArray(toolCalls) ? toolCalls : [],
@@ -30,6 +30,8 @@ function makeAssistantMessage(text, toolCalls) {
     attachments: null,
     ts: Date.now(),
   };
+  if (turnMeta && typeof turnMeta === 'object') msg.turnMeta = turnMeta;
+  return msg;
 }
 
 function makeToolResultMessage(toolResults) {
@@ -52,12 +54,13 @@ function fromFirestore(doc) {
     toolCalls: Array.isArray(doc.toolCalls) ? doc.toolCalls : [],
     toolResults: Array.isArray(doc.toolResults) ? doc.toolResults : [],
     attachments: doc.attachments || null,
+    turnMeta: doc.turnMeta && typeof doc.turnMeta === 'object' ? doc.turnMeta : null,
     ts: doc.ts || (doc.createdAt && doc.createdAt.toMillis ? doc.createdAt.toMillis() : Date.now()),
   };
 }
 
 function toFirestore(msg) {
-  return {
+  const out = {
     role: msg.role,
     text: msg.text || '',
     toolCalls: msg.toolCalls || [],
@@ -65,6 +68,8 @@ function toFirestore(msg) {
     attachments: msg.attachments || null,
     ts: msg.ts || Date.now(),
   };
+  if (msg.turnMeta && typeof msg.turnMeta === 'object') out.turnMeta = msg.turnMeta;
+  return out;
 }
 
 module.exports = {

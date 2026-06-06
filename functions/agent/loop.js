@@ -186,15 +186,6 @@ async function runAgentTurn({
   // (The intermediate per-iteration assistant/tool messages stay in-memory; we
   //  store the user message, the assistant reply, and a flattened tool log so a
   //  reload reconstructs a coherent thread.)
-  const newMessages = [
-    makeUserMessage(message),
-    makeAssistantMessage(reply, toolLog.map((t) => ({ id: newId('tc'), name: t.name, args: t.args }))),
-  ];
-  if (toolLog.length) {
-    newMessages.push(makeToolResultMessage(toolLog.map((t, i) => ({ id: 'tr_' + i, name: t.name, result: t.result }))));
-  }
-  await persistMessages(db, FieldValue, cid, providerId, newMessages);
-
   const perPathUndo = session.perPathRevertData();
   const auditId = await persistAudit(db, FieldValue, {
     chatId: cid,
@@ -205,6 +196,27 @@ async function runAgentTurn({
     changedPaths: session.changedPaths,
     perPathUndo,
   });
+  const turnMeta = {
+    turnId,
+    auditId,
+    changedPaths: session.changedPaths,
+    perPathUndo,
+    provider: providerId,
+    model,
+    bounded: iter >= MAX_TOOL_ITERS,
+  };
+  const newMessages = [
+    makeUserMessage(message),
+    makeAssistantMessage(
+      reply,
+      toolLog.map((t) => ({ id: newId('tc'), name: t.name, args: t.args })),
+      turnMeta,
+    ),
+  ];
+  if (toolLog.length) {
+    newMessages.push(makeToolResultMessage(toolLog.map((t, i) => ({ id: 'tr_' + i, name: t.name, result: t.result }))));
+  }
+  await persistMessages(db, FieldValue, cid, providerId, newMessages);
 
   return {
     status: 200,

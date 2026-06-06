@@ -11,6 +11,102 @@
    ===================================================== */
 const { useState, useEffect, useRef } = React;
 
+const AGENT_UI_CACHE_KEY = 'amritos.agentTurnMeta';
+
+/* Flatten server turnMeta + local undo/revert state onto a UI message. */
+function applyTurnMeta(msg, cache) {
+  if (!msg || msg.role !== 'assistant') return msg;
+  const tm = msg.turnMeta || (msg.turnId && cache && cache[msg.turnId]) || null;
+  if (!tm) return msg;
+  const cached = (msg.turnId && cache && cache[msg.turnId]) || {};
+  const out = {
+    ...msg,
+    turnId: tm.turnId || msg.turnId,
+    auditId: tm.auditId || msg.auditId,
+    changedPaths: tm.changedPaths || msg.changedPaths || [],
+    perPathUndo: tm.perPathUndo || msg.perPathUndo || [],
+    provider: tm.provider || msg.provider,
+    model: tm.model || msg.model,
+    bounded: tm.bounded != null ? tm.bounded : msg.bounded,
+    undone: cached.undone != null ? cached.undone : msg.undone,
+    revertedPaths: cached.revertedPaths || msg.revertedPaths || {},
+  };
+  delete out.turnMeta;
+  return out;
+}
+
+function readTurnMetaCache() {
+  try { return JSON.parse(localStorage.getItem(AGENT_UI_CACHE_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
+function buildUiFromRaw(raw) {
+  const ui = [];
+  for (let i = 0; i < (raw || []).length; i++) {
+    const m = raw[i];
+    if (m.role === 'user' && (m.text || '').trim()) {
+      ui.push({ role: 'user', text: m.text, restored: true, ts: m.ts });
+      continue;
+    }
+    if (m.role === 'assistant' && ((m.text || '').trim() || (m.toolCalls || []).length)) {
+      const next = raw[i + 1];
+      const toolResults = next && next.role === 'tool' && Array.isArray(next.toolResults) ? next.toolResults : [];
+      const toolCalls = (m.toolCalls || []).map((tc, j) => ({
+        name: tc.name,
+        args: tc.args,
+        result: (toolResults[j] && toolResults[j].result)
+          || (toolResults.find((tr) => tr.name === tc.name) || {}).result,
+      }));
+      ui.push({
+        role: 'assistant',
+        text: m.text || '',
+        restored: true,
+        ts: m.ts,
+        turnMeta: m.turnMeta || null,
+        toolCalls: toolCalls.length ? toolCalls : undefined,
+      });
+      if (next && next.role === 'tool') i++;
+    }
+  }
+  return ui;
+}
+
+/* Match legacy assistant turns (no turnMeta) to audit docs by chronological order. */
+async function enrichWithAudits(ui, chatId) {
+  const need = ui.filter((m) => m.role === 'assistant' && m.toolCalls && m.toolCalls.length && !(m.turnMeta && m.turnMeta.changedPaths && m.turnMeta.changedPaths.length));
+  if (!need.length) return ui;
+  try {
+    const audits = await window.ADMIN_STORE.Store.fsLoadAgentAudits(chatId || 'default', 80);
+    audits.reverse();
+    let ai = 0;
+    return ui.map((m) => {
+      if (m.role !== 'assistant' || !(m.toolCalls && m.toolCalls.length) || (m.turnMeta && m.turnMeta.changedPaths && m.turnMeta.changedPaths.length)) return m;
+      const audit = audits[ai++];
+      if (!audit) return m;
+      return {
+        ...m,
+        turnMeta: {
+          turnId: audit.turnId,
+          auditId: audit.id,
+          changedPaths: audit.changedPaths || [],
+          perPathUndo: audit.perPathUndo || [],
+          provider: audit.provider,
+          model: audit.model,
+        },
+      };
+    });
+  } catch (e) { return ui; }
+}
+
+/* Index of the latest assistant turn that still has undoable draft changes. */
+function latestUndoableIndex(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role === 'assistant' && m.changedPaths && m.changedPaths.length && !m.undone) return i;
+  }
+  return -1;
+}
+
 /* ---------- shared chat store (page + dock see the same conversation) ---------- */
 const agentChat = {
   messages: [],
@@ -20,12 +116,39 @@ const agentChat = {
   patchLast(patch) {
     if (!this.messages.length) return;
     const i = this.messages.length - 1;
-    this.messages = this.messages.slice(0, i).concat([{ ...this.messages[i], ...patch }]);
+    this.patchMessage(i, patch);
+  },
+  patchMessage(index, patch) {
+    if (index < 0 || index >= this.messages.length) return;
+    this.messages = this.messages.slice(0, index).concat([{ ...this.messages[index], ...patch }]).concat(this.messages.slice(index + 1));
     this.emit();
   },
   setSending(b) { this.sending = b; this.emit(); },
-  reset() { this.messages = []; this.hydrated = true; this.emit(); },
-  emit() { this.listeners.forEach((l) => l()); },
+  reset() {
+    this.messages = [];
+    this.hydrated = true;
+    try { localStorage.removeItem(AGENT_UI_CACHE_KEY); } catch (e) { /* quota */ }
+    this.emit();
+  },
+  _persistUi() {
+    const meta = {};
+    this.messages.forEach((m) => {
+      if (!m.turnId) return;
+      if (!(m.changedPaths && m.changedPaths.length) && !m.undone) return;
+      meta[m.turnId] = {
+        changedPaths: m.changedPaths || [],
+        perPathUndo: m.perPathUndo || [],
+        auditId: m.auditId,
+        undone: !!m.undone,
+        revertedPaths: m.revertedPaths || {},
+        provider: m.provider,
+        model: m.model,
+        bounded: m.bounded,
+      };
+    });
+    try { localStorage.setItem(AGENT_UI_CACHE_KEY, JSON.stringify(meta)); } catch (e) { /* quota */ }
+  },
+  emit() { this._persistUi(); this.listeners.forEach((l) => l()); },
 
   // Restore the persisted conversation once per session so a reload doesn't look
   // like a blank chat. The server keeps the canonical history (agent_chats/
@@ -34,35 +157,18 @@ const agentChat = {
   // it won't repopulate.
   hydrated: false,
   async hydrate() {
-    if (this.hydrated || this.messages.length) return;
+    if (this.hydrated) return;
     this.hydrated = true;
+    // Never clobber an in-flight or live session (fixes race where async load
+    // overwrote turn action state after the user clicked or sent a message).
+    if (this.messages.length) return;
     try {
       const raw = await window.ADMIN_STORE.Store.fsLoadAgentMessages('default', 100);
-      const ui = [];
-      for (let i = 0; i < (raw || []).length; i++) {
-        const m = raw[i];
-        if (m.role === 'user' && (m.text || '').trim()) {
-          ui.push({ role: 'user', text: m.text, restored: true });
-          continue;
-        }
-        if (m.role === 'assistant' && ((m.text || '').trim() || (m.toolCalls || []).length)) {
-          const next = raw[i + 1];
-          const toolResults = next && next.role === 'tool' && Array.isArray(next.toolResults) ? next.toolResults : [];
-          const toolCalls = (m.toolCalls || []).map((tc, j) => ({
-            name: tc.name,
-            args: tc.args,
-            result: (toolResults[j] && toolResults[j].result)
-              || (toolResults.find((tr) => tr.name === tc.name) || {}).result,
-          }));
-          ui.push({
-            role: 'assistant',
-            text: m.text || '',
-            restored: true,
-            toolCalls: toolCalls.length ? toolCalls : undefined,
-          });
-          if (next && next.role === 'tool') i++;
-        }
-      }
+      if (this.messages.length) return;
+      let ui = buildUiFromRaw(raw);
+      ui = await enrichWithAudits(ui, 'default');
+      const cache = readTurnMetaCache();
+      ui = ui.map((m) => applyTurnMeta(m, cache));
       if (ui.length) { this.messages = ui; this.emit(); }
     } catch (e) { /* offline / no history */ }
   },
@@ -172,25 +278,43 @@ function Thinking() {
 }
 
 /* ---------- one turn's message bubble ---------- */
-function MessageBubble({ msg, go, openPreview }) {
+function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview }) {
   const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
-  const [reverted, setReverted] = useState({});
 
   if (msg.role === 'user') {
     return <div className="agentmsg agentmsg--user"><div className="agentmsg__body">{msg.text}</div></div>;
   }
 
-
   const routes = [...new Set((msg.changedPaths || []).map(pathToRoute).filter(Boolean))];
+  const reverted = msg.revertedPaths || {};
+  const hasChanges = !!(msg.changedPaths && msg.changedPaths.length);
 
   const revertOne = async (pu, i) => {
+    if (!('before' in pu) || (pu.before && pu.before._truncated)) return;
     const r = await Store.agentRevertPath(pu.path, pu.before);
-    if (r && r.ok) setReverted((s) => ({ ...s, [i]: true }));
+    if (r && r.ok) {
+      agentChat.patchMessage(msgIndex, {
+        revertedPaths: { ...reverted, [i]: true },
+      });
+      try {
+        const remote = await Store.fsLoadDraft();
+        if (remote) await Store.adoptRemoteDraft(remote);
+      } catch (e) { /* offline */ }
+    }
   };
   const undoTurn = async () => {
     const r = await Store.agentUndo('default');
-    if (r && r.ok) agentChat.patchLast({ undone: true });
+    if (r && r.ok) {
+      agentChat.patchMessage(msgIndex, { undone: true });
+      try {
+        const remote = await Store.fsLoadDraft();
+        if (remote) await Store.adoptRemoteDraft(remote);
+      } catch (e) { /* offline */ }
+    }
+  };
+  const viewChanges = () => {
+    if (routes.length && go) go(routes[0]);
   };
 
   return (
@@ -212,28 +336,36 @@ function MessageBubble({ msg, go, openPreview }) {
         </div>
       )}
 
-      {!!(msg.changedPaths && msg.changedPaths.length) && !msg.undone && (
-        <div className="agentchanges">
+      {hasChanges && !msg.undone && (
+        <div className="agentchanges" onMouseDown={(e) => e.stopPropagation()}>
           <div className="agentchanges__hd">
             {msg.changedPaths.length} change{msg.changedPaths.length === 1 ? '' : 's'} · applied to draft
             <span className="spacer" style={{ flex: 1 }} />
-            <Btn sm kind="ghost" icon="reset" onClick={undoTurn}>Undo turn</Btn>
+            {canUndoTurn && (
+              <Btn sm kind="ghost" icon="reset" onClick={undoTurn}>Undo turn</Btn>
+            )}
           </div>
           <ul className="agentchanges__list">
             {(msg.perPathUndo || msg.changedPaths.map((p) => ({ path: p }))).map((pu, i) => (
               <li key={i}>
                 <code>{pu.path}</code>
-                {'before' in pu && (
+                {'before' in pu && !pu.before?._truncated && (
                   reverted[i]
                     ? <span className="helptext"> reverted ✓</span>
-                    : <button className="linkbtn" onClick={() => revertOne(pu, i)}>revert</button>
+                    : <button type="button" className="linkbtn" onClick={() => revertOne(pu, i)}>revert</button>
+                )}
+                {'before' in pu && pu.before && pu.before._truncated && (
+                  <span className="helptext" title="Before-value too large to restore from audit"> · audit only</span>
                 )}
               </li>
             ))}
           </ul>
           <div className="agentreview">
-            {routes.map((r) => <Btn key={r} sm kind="ghost" onClick={() => go && go(r)}>Review {r} ↗</Btn>)}
-            <Btn sm kind="ghost" icon="eye" onClick={() => openPreview && openPreview('draft')}>Live preview ↗</Btn>
+            {routes.length > 0 && (
+              <Btn sm kind="ghost" icon="link" onClick={viewChanges}>View changes ↗</Btn>
+            )}
+            {routes.map((r) => <Btn key={r} sm kind="ghost" onClick={() => go && go(r)}>{r} ↗</Btn>)}
+            <Btn sm kind="ghost" icon="eye" onClick={() => openPreview && openPreview('draft')}>Preview ↗</Btn>
           </div>
         </div>
       )}
@@ -268,6 +400,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
   }, [chat.messages.length, chat.sending]);
 
   const overContext = agentContextChars(chat.messages) > AGENT_CONTEXT_WARN;
+  const undoIdx = latestUndoableIndex(chat.messages);
 
   const submit = (e) => {
     if (e) e.preventDefault();
@@ -285,7 +418,16 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
               “add two Q&amp;A pairs about my stack”. I write to the <b>draft</b>; you review and publish.</p>
           </div>
         )}
-        {chat.messages.map((m, i) => <MessageBubble key={i} msg={m} go={go} openPreview={openPreview} />)}
+        {chat.messages.map((m, i) => (
+          <MessageBubble
+            key={m.turnId || ('msg_' + i + '_' + (m.ts || 0))}
+            msg={m}
+            msgIndex={i}
+            canUndoTurn={i === undoIdx}
+            go={go}
+            openPreview={openPreview}
+          />
+        ))}
       </div>
 
       {overContext && (
