@@ -283,6 +283,35 @@
   function validateCollection(name) { return Reflect.get(COLLECTIONS, name) || null; }
   function providerKind(id) { return Reflect.get(PROVIDER_KIND, id) || null; }
 
+  /* Whether the active provider+model can accept image attachments in chat.
+     Groq curated models = false. OpenRouter = model-name heuristics.
+     Gemini/OpenAI/Anthropic/Mistral/Grok = true for curated tool models. */
+  function supportsVision(providerId, model) {
+    const id = String(providerId || '').toLowerCase();
+    const m = String(model || '').toLowerCase();
+    if (!id || !m) return false;
+
+    if (id === 'groq') return false;
+
+    if (id === 'openrouter') {
+      if (/gemini|gpt-4|gpt-4o|gpt-4\.1|claude|llava|pixtral|qwen.*vl|vision|moondream|phi-3.*vision/i.test(m)) return true;
+      if (/llama-?3\.|meta-llama\/llama|deepseek(?!.*vl)/i.test(m)) return false;
+      const curated = (AGENT_TOOL_MODELS.openrouter || []).find((x) => x.id === model);
+      if (curated) return /gemini|claude/i.test(curated.id);
+      return false;
+    }
+
+    const curated = Reflect.get(AGENT_TOOL_MODELS, id) || [];
+    if (curated.some((x) => x.id === model)) return true;
+
+    if (id === 'gemini') return /gemini/i.test(m);
+    if (id === 'openai') return /gpt-4|gpt-4o|gpt-4\.1|o[134]/i.test(m);
+    if (id === 'anthropic') return /claude/i.test(m);
+    if (id === 'mistral') return /pixtral|mistral-(large|small)/i.test(m);
+    if (id === 'grok') return /grok/i.test(m);
+    return false;
+  }
+
   const exportsObj = {
     EXPERTISE_ICONS,
     SOCIAL_ICONS,
@@ -300,6 +329,7 @@
     validateSocialIcon,
     validateCollection,
     providerKind,
+    supportsVision,
     sanitizeSvg,
     isCustomIcon,
     svgColors,
