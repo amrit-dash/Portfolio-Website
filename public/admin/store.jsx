@@ -85,11 +85,16 @@ function mergeContentSnapshot(raw) {
   if (!raw) return null;
   return normalizeContent(deepMerge(buildDefaultContent(), raw));
 }
+/* Canonical snapshot for draft↔published compare — keys stripped, defaults merged. */
+function contentForCompare(content) {
+  const snap = mergeContentSnapshot(content);
+  if (!snap) return null;
+  return Store.stripKeys(snap);
+}
 /* Compare draft vs published without LLM apiKey noise — published is key-stripped. */
 function contentCompareFingerprint(content) {
-  const snap = mergeContentSnapshot(content);
-  if (!snap) return '{}';
-  return JSON.stringify(Store.stripKeys(snap));
+  const snap = contentForCompare(content);
+  return snap ? JSON.stringify(snap) : '{}';
 }
 
 function normalizeContent(content) {
@@ -772,14 +777,15 @@ function useContent() {
         const nextProv = next.bot && next.bot.providers;
         if (curBy && nextProv) {
           const by = { ...(nextProv.byProvider || {}) };
-          for (const id of Object.keys(curBy)) {
+          // Only re-attach draft apiKeys — published snapshot is key-stripped and
+          // is the source of truth for every other bot field (model, active, etc.).
+          for (const id of Object.keys(by)) {
             if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
             const curP = Reflect.get(curBy, id);
             const nextP = Reflect.get(by, id) || {};
             Reflect.set(by, id, {
               ...nextP,
-              apiKey: (curP && typeof curP.apiKey === 'string') ? curP.apiKey : (nextP.apiKey || ''),
-              model: (curP && typeof curP.model === 'string' && curP.model) ? curP.model : (nextP.model || ''),
+              apiKey: (curP && typeof curP.apiKey === 'string') ? curP.apiKey : '',
             });
           }
           nextProv.byProvider = by;
