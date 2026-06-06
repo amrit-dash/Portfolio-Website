@@ -96,6 +96,11 @@ function contentCompareFingerprint(content) {
   const snap = contentForCompare(content);
   return snap ? JSON.stringify(snap) : '{}';
 }
+/* Canonical JSON for echo de-dupe — always normalized + merged, never raw editor state. */
+function contentStateJson(content) {
+  const snap = mergeContentSnapshot(content);
+  return snap ? JSON.stringify(snap) : '';
+}
 
 function normalizeContent(content) {
   if (!content || typeof content !== 'object') return content;
@@ -643,10 +648,10 @@ function useContent() {
         const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
         Store.saveDraft(merged);
         setContent(merged);
-        lastJsonRef.current = JSON.stringify(merged);
+        lastJsonRef.current = contentStateJson(merged);
       } else {
         // No remote draft yet — seed it from whatever we have locally.
-        setContent((cur) => { Store.fsSaveDraft(cur); lastJsonRef.current = JSON.stringify(cur); return cur; });
+        setContent((cur) => { Store.fsSaveDraft(cur); lastJsonRef.current = contentStateJson(cur); return cur; });
       }
       setSynced(true);
     });
@@ -667,8 +672,8 @@ function useContent() {
     if (agentBusyRef.current) return;
     if (draftTimer.current) clearTimeout(draftTimer.current);
     // Record our own latest content so the live listener treats the resulting
-    // snapshot as an echo, not a remote change.
-    lastJsonRef.current = JSON.stringify(next);
+    // snapshot as an echo, not a remote change (must match listener normalization).
+    lastJsonRef.current = contentStateJson(next);
     draftTimer.current = setTimeout(() => { Store.fsSaveDraft(next); }, 1000);
   }, []);
 
@@ -678,7 +683,7 @@ function useContent() {
   const adoptRemoteDraft = React.useCallback((remote) => {
     if (!remote) return;
     const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
-    const json = JSON.stringify(merged);
+    const json = contentStateJson(merged);
     if (json === lastJsonRef.current) return; // our own echo
     lastJsonRef.current = json;
     Store.saveDraft(merged);
@@ -698,7 +703,7 @@ function useContent() {
       if (!u) return;
       unsub = Store.fsDraftListen(({ content: remote }) => {
         if (!remote) return;
-        const json = JSON.stringify(normalizeContent(deepMerge(buildDefaultContent(), remote)));
+        const json = contentStateJson(remote);
         if (json === lastJsonRef.current) return; // echo of our own write
         // Defer adoption while a field is focused so we never replace the value
         // under the cursor; the flush interval below picks it up on blur/idle.
@@ -745,18 +750,25 @@ function useContent() {
     setContent(next); Store.saveDraft(next); setDirty(true); scheduleDraftSync(next);
   }, [scheduleDraftSync]);
 
-  const publish = React.useCallback(() => {
+  const publish = React.useCallback(async () => {
+    let snap = null;
     setContent((cur) => {
-      const snap = mergeContentSnapshot(cur);
-      Store.publish(cur);
-      Store.fsPublish(cur);
-      if (snap) setPublishedSnapshot(snap);
-      return cur;
+      snap = mergeContentSnapshot(cur);
+      Store.publish(snap);
+      lastJsonRef.current = contentStateJson(snap);
+      return snap;
     });
+    if (!snap) return;
+    setPublishedSnapshot(snap);
     const ts = new Date().toISOString();
     Store.write('amritos.publishedAt', ts);
     setPublishedAt(ts);
     setDirty(false);
+    try {
+      await Store.fsPublish(snap);
+      const pub = await Store.loadPublishedSnapshot();
+      if (pub) setPublishedSnapshot(pub);
+    } catch (e) { /* local publish already applied */ }
   }, []);
 
   const reset = React.useCallback(() => {
@@ -792,7 +804,7 @@ function useContent() {
         }
       } catch (e) { /* keep published as-is */ }
       const merged = mergeContentSnapshot(next);
-      lastJsonRef.current = JSON.stringify(merged);
+      lastJsonRef.current = contentStateJson(merged);
       Store.saveDraft(merged);
       Store.fsSaveDraft(merged);
       return merged;
@@ -802,7 +814,39 @@ function useContent() {
     setPublishedSnapshot(base);
     return true;
   }, []);
-  const discardDraft = syncDraftFromPublished;
+
+  /* Revert draft to the in-memory published snapshot (discard unpublished edits). */
+  const discardDraft = React.useCallback(() => {
+    if (!publishedSnapshot) return false;
+    setContent((cur) => {
+      const next = clone(publishedSnapshot);
+      try {
+        const curBy = cur && cur.bot && cur.bot.providers && cur.bot.providers.byProvider;
+        const nextProv = next.bot && next.bot.providers;
+        if (curBy && nextProv) {
+          const by = { ...(nextProv.byProvider || {}) };
+          for (const id of Object.keys(by)) {
+            if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+            const curP = Reflect.get(curBy, id);
+            const nextP = Reflect.get(by, id) || {};
+            Reflect.set(by, id, {
+              ...nextP,
+              apiKey: (curP && typeof curP.apiKey === 'string') ? curP.apiKey : '',
+            });
+          }
+          nextProv.byProvider = by;
+        }
+      } catch (e) { /* keep published as-is */ }
+      const merged = mergeContentSnapshot(next);
+      lastJsonRef.current = contentStateJson(merged);
+      Store.saveDraft(merged);
+      Store.fsSaveDraft(merged);
+      return merged;
+    });
+    Store.clearPreview();
+    setDirty(false);
+    return true;
+  }, [publishedSnapshot]);
 
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
