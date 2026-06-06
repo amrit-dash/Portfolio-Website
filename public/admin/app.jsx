@@ -422,8 +422,8 @@ function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDif
    iframe announces 'amritos:preview-ready', we reply with the draft (or the
    published snapshot), and we re-push on every edit — so theme/accent/font/copy
    changes show live and never revert to the last published copy. */
-function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent, showSyncFromLive, onSyncFromPublished }) {
-  const { AdminIcon } = window.ADMIN_UI;
+function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent, showSyncFromLive, onSyncFromPublished, canDiscard, onDiscard }) {
+  const { AdminIcon, Btn } = window.ADMIN_UI;
   const [device, setDevice] = useAState('desktop');
   const [nonce, setNonce] = useAState(0);
   const frameRef = useARef(null);
@@ -471,6 +471,9 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
             <button data-on={device === 'desktop'} onClick={() => setDevice('desktop')} title="Desktop"><AdminIcon name="desktop" size={15} /></button>
             <button data-on={device === 'mobile'} onClick={() => setDevice('mobile')} title="Mobile"><AdminIcon name="mobile" size={15} /></button>
           </div>
+          {canDiscard && (
+            <Btn sm kind="ghost" icon="reset" onClick={onDiscard} title="Discard unpublished edits and revert draft to last published snapshot">Discard draft</Btn>
+          )}
           {showSyncFromLive && (
             <button className="btn btn--sm btn--danger" onClick={onSyncFromPublished} title="Replace draft with the live published snapshot"><AdminIcon name="sync" size={13} />Sync from live</button>
           )}
@@ -707,6 +710,7 @@ function AdminApp() {
     if (!confirm('Discard all unpublished changes and revert the draft to the last published snapshot?')) return;
     if (discardDraft()) {
       window.ADMIN_STORE.Store.clearPreview();
+      if (preview) setPreviewMode('published');
       setFlash('Draft changes discarded ✓');
       setTimeout(() => setFlash(null), 2600);
     }
@@ -750,12 +754,16 @@ function AdminApp() {
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + ((hasUnpublishedEdits || draftDiffersFromPublished) ? '' : ' saved')}><span className="dot" />{hasUnpublishedEdits ? 'Draft · unpublished changes' : (draftDiffersFromPublished ? 'Draft · out of sync with live' : 'All changes published')}</span>}
           <span className="topbar__hide-sm"><Btn icon="eye" onClick={() => openPreview('draft')}>Preview</Btn></span>
+          {hasUnpublishedEdits && publishedSnapshot && (
+            <span className="topbar__hide-sm"><Btn kind="ghost" icon="reset" onClick={doDiscard} title="Discard unpublished edits">Discard</Btn></span>
+          )}
           <Btn kind="primary" icon="publish" onClick={doPublish} disabled={!hasUnpublishedEdits}>Publish</Btn>
         </div>
         <div className="canvas">{renderRoute()}</div>
       </div>
       <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
-        content={content} publishedContent={publishedSnapshot || window.ADMIN_STORE.Store.loadPublished()} showSyncFromLive={showSyncFromLive} onSyncFromPublished={doSyncFromPublished} />
+        content={content} publishedContent={publishedSnapshot || window.ADMIN_STORE.Store.loadPublished()} showSyncFromLive={showSyncFromLive} onSyncFromPublished={doSyncFromPublished}
+        canDiscard={hasUnpublishedEdits && !!publishedSnapshot} onDiscard={doDiscard} />
       <window.ADMIN_AGENT.AgentDock route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
       {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} />}
     </div>
