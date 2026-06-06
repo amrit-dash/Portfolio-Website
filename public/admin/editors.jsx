@@ -131,12 +131,17 @@ function HeroEditor({ content, setAt }) {
 }
 
 /* ============ ABOUT ============ */
+function newImpactId() {
+  return 'imp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
 function AboutEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon, Reorderable, inputStr } = window.ADMIN_UI;
   const { ImageSlot } = window.ADMIN_CROP;
   const a = content.about;
   const setMeta = (i, key, val) => setAt('about.meta', a.meta.map((m, j) => j === i ? { ...m, [key]: val } : m));
-  const setImpact = (i, key, val) => setAt('about.impact', a.impact.map((m, j) => j === i ? { ...m, [key]: val } : m));
+  const setImpact = (i, key, val) => setAt('about.impact', a.impact.map((m, j) => j === i ? { ...m, [key]: inputStr(val) } : m));
+  const setImpactEntry = (i, patch) => setAt('about.impact', a.impact.map((m, j) => j === i ? { ...m, label: inputStr(patch.label), html: inputStr(patch.html) } : m));
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/ABOUT.ME" title="About section">Your photo, the readme-style bio and the Now / Then / Before timeline.</PageHead>
@@ -161,19 +166,29 @@ function AboutEditor({ content, setAt }) {
         <Field label="Heading" hint="<em> for italic accent"><TextArea rows={2} value={a.heading} onChange={(v) => setAt('about.heading', v)} /></Field>
         <Field label="Intro paragraph" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="About intro paragraph" context="The intro paragraph under the About heading." rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} /></Field>
       </Panel>
-      <Panel title="Impact timeline" sub={`${a.impact.length} entries`}>
-        {a.impact.map((m, i) => (
-          <div className="item" key={i}>
-            <div className="item__bd" style={{ borderTop: 0, paddingTop: 14 }}>
-              <div className="row">
-                <Field label="Label"><Input value={m.label} onChange={(v) => setImpact(i, 'label', v)} /></Field>
-                <DelBtn onClick={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))} />
+      <Panel title="Impact timeline" sub={`${a.impact.length} entries · drag to reorder`}>
+        <Reorderable items={a.impact} getKey={(m) => m.id || m.label}
+          onReorder={(next) => setAt('about.impact', next)}
+          renderItem={(m, i, { gripProps }) => (
+            <div className="item__reorder">
+              <span className="item__reorder-grip" {...gripProps} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
+              <div className="item__reorder-body">
+                <div className="row refine-entry__hd">
+                  <span className="spacer" />
+                  <DelBtn onClick={() => setAt('about.impact', a.impact.filter((_, j) => j !== i))} />
+                </div>
+                <window.ADMIN_REFINER.RefineImpactEntry
+                  label={m.label}
+                  html={m.html}
+                  onLabelChange={(v) => setImpact(i, 'label', v)}
+                  onHtmlChange={(v) => setImpact(i, 'html', v)}
+                  onAccept={(p) => setImpactEntry(i, p)}
+                  context="A short label and description pair in the About impact timeline (Now / Then / Before)."
+                />
               </div>
-              <Field label="Description" hint="<em> for accent · ✨ to refine"><window.ADMIN_REFINER.RefineField label="Impact timeline entry" context="A short description line in the About impact timeline." rows={2} value={m.html} onChange={(v) => setImpact(i, 'html', v)} /></Field>
             </div>
-          </div>
-        ))}
-        <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.impact', [...a.impact, { label: '', html: '' }])}>Add timeline entry</Btn>
+          )} />
+        <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.impact', [...a.impact, { id: newImpactId(), label: '', html: '' }])}>Add timeline entry</Btn>
       </Panel>
     </div>
   );
@@ -304,16 +319,16 @@ function ExpertiseEditor({ content, setAt }) {
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/EXPERTISE.SYS" title="Expertise modules">The clickable skill grid. Drag to reorder — numbers (MOD_01…) renumber automatically. Each module can filter projects on the site.</PageHead>
-      <Panel title="Installed modules" sub={`${list.length} modules`} actions={<>
+      <Panel className="panel--expertise" title="Installed modules" sub={`${list.length} modules`} actions={<div className="panel__actions">
         <input ref={fileRef} type="file" accept="image/svg+xml,.svg" style={{ display: 'none' }}
           onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; onAddIcon(f); }} />
-        <button className="btn btn--sm btn--tall" type="button" onClick={() => fileRef.current && fileRef.current.click()}><AdminIcon name="upload" size={13} />Add Icon</button>
-        <button className="btn btn--sm btn--tall btn--primary" type="button" onClick={add}><AdminIcon name="plus" size={13} />Add module</button>
-      </>}>
+        <button className="btn btn--sm btn--tall" type="button" title="Add Icon" onClick={() => fileRef.current && fileRef.current.click()}><AdminIcon name="upload" size={13} /><span className="btn__label">Add Icon</span></button>
+        <button className="btn btn--sm btn--tall btn--primary" type="button" title="Add module" onClick={add}><AdminIcon name="plus" size={13} /><span className="btn__label">Add module</span></button>
+      </div>}>
         <Reorderable items={list} getKey={(_, i) => i}
           onReorder={(next) => setAt('expertise', renumber(next))}
           renderItem={(e, i, { gripProps }) => (
-            <ListItem gripProps={gripProps} num={'MOD_' + (e.num || String(i + 1).padStart(2, '0'))}
+            <ListItem layout="card" gripProps={gripProps} num={'MOD_' + (e.num || String(i + 1).padStart(2, '0'))}
               icon={<SkillIcon name={e.icon} icons={customIcons} size={16} />}
               title={e.title} sub={e.sub} open={open === i}
               onToggle={() => setOpen(open === i ? null : i)}
@@ -389,7 +404,7 @@ function CardsEditor({ content, setAt }) {
 
 /* ============ CONTACT ============ */
 function ContactEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, Input, TextArea, Btn, AdminIcon, Reorderable } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, Input, TextArea, AdminIcon, Reorderable, inputStr } = window.ADMIN_UI;
   const c = content.contact;
   const setSocial = (i, key, val) => setAt('contact.socials', c.socials.map((s, j) => j === i ? { ...s, [key]: val } : s));
   return (
@@ -405,8 +420,13 @@ function ContactEditor({ content, setAt }) {
           <Field label="Phone"><Input value={c.phone} onChange={(v) => setAt('contact.phone', v)} /></Field>
         </div>
       </Panel>
-      <Panel title="Social links" sub={`${c.socials.length} links`}
-        actions={<Btn sm icon="plus" kind="primary" onClick={() => setAt('contact.socials', [...c.socials, { label: '', icon: 'web', href: '' }])}>Add link</Btn>}>
+      <Panel className="panel--social" title="Social links" sub={`${c.socials.length} links`}
+        actions={<div className="panel__actions">
+          <button className="btn btn--sm btn--primary" type="button" title="Add link"
+            onClick={() => setAt('contact.socials', [...c.socials, { label: '', icon: 'web', href: '' }])}>
+            <AdminIcon name="plus" size={13} /><span className="btn__label">Add link</span>
+          </button>
+        </div>}>
         {/* Inline row: grip · icon · label · icon dropdown · full-width URL · delete.
             The old title/sub column duplicated these fields and wrapped long URLs
             into an unreadable stack, so it's dropped in favour of one clean row. */}
@@ -415,11 +435,11 @@ function ContactEditor({ content, setAt }) {
             <div className="socirow">
               <span className="item__grip" {...gripProps} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
               <span className="miniico"><AdminIcon name={SOCIAL_ICONS.includes(s.icon) ? s.icon : 'web'} size={16} /></span>
-              <input className="inp socirow__label" value={s.label} placeholder="Label" onChange={(e) => setSocial(i, 'label', e.target.value)} />
+              <input className="inp socirow__label" value={inputStr(s.label)} placeholder="Label" onChange={(e) => setSocial(i, 'label', e.target.value)} />
               <select className="sel socirow__sel" value={s.icon} onChange={(e) => setSocial(i, 'icon', e.target.value)}>
                 {SOCIAL_ICONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
               </select>
-              <input className="inp socirow__href" value={s.href} placeholder="https://" onChange={(e) => setSocial(i, 'href', e.target.value)} />
+              <input className="inp socirow__href" value={inputStr(s.href)} placeholder="https://" onChange={(e) => setSocial(i, 'href', e.target.value)} />
               <span className="iconbtn iconbtn--danger" onClick={() => setAt('contact.socials', c.socials.filter((_, j) => j !== i))} title="Delete"><AdminIcon name="trash" size={14} /></span>
             </div>
           )} />

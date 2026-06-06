@@ -76,7 +76,7 @@ function WorkItemBody({ e, onChange }) {
 }
 
 function WorkEditor({ content, setAt }) {
-  const { PageHead, Panel, Btn, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const { PageHead, Panel, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
   const list = content.experience;
   const [open, setOpen] = useStateWP(0);
   const update = (i, next) => setAt('experience', list.map((e, j) => j === i ? next : e));
@@ -85,10 +85,12 @@ function WorkEditor({ content, setAt }) {
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/WORK.HISTORY" title="Work history">Each company is a tab in the work folder. Expand one to edit titles, dates, bullets, multi-tag tech stacks and optional sub-roles. Drag to reorder.</PageHead>
-      <Panel title="Experience entries" sub={`${list.length} companies`} actions={<Btn sm icon="plus" kind="primary" onClick={add}>Add company</Btn>}>
+      <Panel className="panel--work" title="Experience entries" sub={`${list.length} companies`} actions={<div className="panel__actions">
+        <button className="btn btn--sm btn--tall btn--primary" type="button" title="Add company" onClick={add}><AdminIcon name="plus" size={13} /><span className="btn__label">Add company</span></button>
+      </div>}>
         <Reorderable items={list} getKey={(e, i) => e.id || i} onReorder={(next) => setAt('experience', next)}
           renderItem={(e, i, { gripProps }) => (
-            <ListItem gripProps={gripProps} icon={<AdminIcon name="work" size={15} />}
+            <ListItem layout="card" gripProps={gripProps} icon={<AdminIcon name="work" size={15} />}
               title={<span>{e.company}{e.current && <span style={{ color: 'var(--ok)', fontFamily: 'var(--font-mono)', fontSize: 10, marginLeft: 8 }}>● current</span>}</span>}
               sub={`${e.role} · ${e.date}${e.roles ? ' · ' + e.roles.length + ' sub-roles' : ''}`}
               open={open === i} onToggle={() => setOpen(open === i ? null : i)}
@@ -152,7 +154,7 @@ function ProjectBody({ p, expertise, onChange }) {
 }
 
 function ProjectsEditor({ content, setAt }) {
-  const { PageHead, Panel, Btn, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
+  const { PageHead, Panel, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
   const list = content.projects;
   const [open, setOpen] = useStateWP(null);
   const update = (i, next) => setAt('projects', list.map((p, j) => j === i ? next : p));
@@ -161,10 +163,12 @@ function ProjectsEditor({ content, setAt }) {
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/PROJECTS.DIR" title="Projects">Each project is a folder on the desktop. Upload a folder thumbnail and a larger gallery image (both crop to the exact front-end size), set tags, links and which expertise modules filter to it. Drag to reorder.</PageHead>
-      <Panel title="Project folders" sub={`${list.length} items`} actions={<Btn sm icon="plus" kind="primary" onClick={add}>Add project</Btn>}>
+      <Panel className="panel--projects" title="Project folders" sub={`${list.length} items`} actions={<div className="panel__actions">
+        <button className="btn btn--sm btn--tall btn--primary" type="button" title="Add project" onClick={add}><AdminIcon name="plus" size={13} /><span className="btn__label">Add project</span></button>
+      </div>}>
         <Reorderable items={list} getKey={(p, i) => p.id || i} onReorder={(next) => setAt('projects', next)}
           renderItem={(p, i, { gripProps }) => (
-            <ListItem gripProps={gripProps}
+            <ListItem layout="card" gripProps={gripProps}
               thumb={p.image || undefined}
               icon={!p.image ? <AdminIcon name="projects" size={15} /> : undefined}
               title={p.title} sub={`${p.cat || '—'}  ${p.type || ''}`}
