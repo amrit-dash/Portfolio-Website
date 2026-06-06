@@ -583,7 +583,26 @@ const Store = {
     if (!this.fsReady()) return [];
     try {
       const s = await window.fb.db.collection(`agent_chats/${chatId || 'default'}/messages`).orderBy('ts', 'asc').limit(n || 200).get();
-      return s.docs.map((d) => d.data());
+      const roleOrder = { user: 0, assistant: 1, tool: 2 };
+      const createdAtMs = (doc) => {
+        const c = doc && doc.createdAt;
+        if (!c) return 0;
+        if (typeof c.toMillis === 'function') return c.toMillis();
+        if (typeof c === 'number') return c;
+        return 0;
+      };
+      return s.docs.map((d) => ({ ...d.data(), createdAt: d.data().createdAt })).sort((a, b) => {
+        const ta = Number(a.ts) || 0;
+        const tb = Number(b.ts) || 0;
+        if (ta !== tb) return ta - tb;
+        const ca = createdAtMs(a);
+        const cb = createdAtMs(b);
+        if (ca !== cb) return ca - cb;
+        const sa = Number(a.seq);
+        const sb = Number(b.seq);
+        if (Number.isFinite(sa) && Number.isFinite(sb) && sa !== sb) return sa - sb;
+        return (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9);
+      });
     } catch (e) { return []; }
   },
   async fsClearAgentChat(chatId) {

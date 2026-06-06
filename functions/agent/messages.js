@@ -79,7 +79,44 @@ function toFirestore(msg) {
     ts: msg.ts || Date.now(),
   };
   if (msg.turnMeta && typeof msg.turnMeta === 'object') out.turnMeta = msg.turnMeta;
+  if (Number.isFinite(msg.seq)) out.seq = msg.seq;
   return out;
+}
+
+function createdAtMs(doc) {
+  const c = doc && doc.createdAt;
+  if (!c) return 0;
+  if (typeof c.toMillis === 'function') return c.toMillis();
+  if (typeof c === 'number') return c;
+  return 0;
+}
+
+/* Stable chronological order: ts, then createdAt, then role (user → assistant → tool). */
+function sortCanonicalMessages(msgs) {
+  const roleOrder = { user: 0, assistant: 1, tool: 2 };
+  return [...(msgs || [])].sort((a, b) => {
+    const ta = Number(a.ts) || 0;
+    const tb = Number(b.ts) || 0;
+    if (ta !== tb) return ta - tb;
+    const ca = createdAtMs(a);
+    const cb = createdAtMs(b);
+    if (ca !== cb) return ca - cb;
+    const sa = Number(a.seq);
+    const sb = Number(b.seq);
+    if (Number.isFinite(sa) && Number.isFinite(sb) && sa !== sb) return sa - sb;
+    return (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9);
+  });
+}
+
+/* Each persist batch stamps monotonic ts (+ role order) so Firestore orderBy('ts')
+   never shuffles user / assistant / tool within a turn. */
+function stampPersistOrder(messages) {
+  const base = Date.now();
+  (messages || []).forEach((msg, i) => {
+    msg.ts = base + i;
+    msg.seq = i;
+  });
+  return messages;
 }
 
 module.exports = {
@@ -90,4 +127,7 @@ module.exports = {
   fromFirestore,
   toFirestore,
   attachmentsMeta,
+  createdAtMs,
+  sortCanonicalMessages,
+  stampPersistOrder,
 };

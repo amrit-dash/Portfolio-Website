@@ -96,32 +96,86 @@ function readTurnMetaCache() {
   catch (e) { return {}; }
 }
 
+function createdAtMs(doc) {
+  const c = doc && doc.createdAt;
+  if (!c) return 0;
+  if (typeof c.toMillis === 'function') return c.toMillis();
+  if (typeof c === 'number') return c;
+  return 0;
+}
+
+/* Match server sortCanonicalMessages — fixes legacy rows that share the same ts. */
+function sortRawMessages(raw) {
+  const roleOrder = { user: 0, assistant: 1, tool: 2 };
+  return [...(raw || [])].sort((a, b) => {
+    const ta = Number(a.ts) || 0;
+    const tb = Number(b.ts) || 0;
+    if (ta !== tb) return ta - tb;
+    const ca = createdAtMs(a);
+    const cb = createdAtMs(b);
+    if (ca !== cb) return ca - cb;
+    const sa = Number(a.seq);
+    const sb = Number(b.seq);
+    if (Number.isFinite(sa) && Number.isFinite(sb) && sa !== sb) return sa - sb;
+    return (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9);
+  });
+}
+
+function assistantUiFromRaw(assistant, toolMsg) {
+  const toolResults = toolMsg && Array.isArray(toolMsg.toolResults) ? toolMsg.toolResults : [];
+  const toolCalls = (assistant.toolCalls || []).map((tc, j) => ({
+    name: tc.name,
+    args: tc.args,
+    result: (toolResults[j] && toolResults[j].result)
+      || (toolResults.find((tr) => tr.name === tc.name) || {}).result,
+  }));
+  return {
+    role: 'assistant',
+    text: assistant.text || '',
+    restored: true,
+    ts: assistant.ts,
+    turnMeta: assistant.turnMeta || null,
+    toolCalls: toolCalls.length ? toolCalls : undefined,
+  };
+}
+
+function hasUserContent(m) {
+  return m && m.role === 'user' && ((m.text || '').trim() || (m.attachments || []).length);
+}
+
+function hasAssistantContent(m) {
+  return m && m.role === 'assistant' && ((m.text || '').trim() || (m.toolCalls || []).length);
+}
+
+/* Group each user message with the assistant/tool rows before the next user —
+   tolerant of Firestore returning a turn's rows out of order (same-ts legacy). */
 function buildUiFromRaw(raw) {
+  const sorted = sortRawMessages(raw);
   const ui = [];
-  for (let i = 0; i < (raw || []).length; i++) {
-    const m = raw[i];
-    if (m.role === 'user' && ((m.text || '').trim() || (m.attachments || []).length)) {
-      ui.push({ role: 'user', text: m.text || '', attachments: m.attachments || null, restored: true, ts: m.ts });
-      continue;
-    }
-    if (m.role === 'assistant' && ((m.text || '').trim() || (m.toolCalls || []).length)) {
-      const next = raw[i + 1];
-      const toolResults = next && next.role === 'tool' && Array.isArray(next.toolResults) ? next.toolResults : [];
-      const toolCalls = (m.toolCalls || []).map((tc, j) => ({
-        name: tc.name,
-        args: tc.args,
-        result: (toolResults[j] && toolResults[j].result)
-          || (toolResults.find((tr) => tr.name === tc.name) || {}).result,
-      }));
+  for (let i = 0; i < sorted.length; i++) {
+    const m = sorted[i];
+    if (hasUserContent(m)) {
       ui.push({
-        role: 'assistant',
+        role: 'user',
         text: m.text || '',
+        attachments: m.attachments || null,
         restored: true,
         ts: m.ts,
-        turnMeta: m.turnMeta || null,
-        toolCalls: toolCalls.length ? toolCalls : undefined,
       });
-      if (next && next.role === 'tool') i++;
+      let assistant = null;
+      let tool = null;
+      for (let j = i + 1; j < sorted.length && sorted[j].role !== 'user'; j++) {
+        if (!assistant && hasAssistantContent(sorted[j])) assistant = sorted[j];
+        if (!tool && sorted[j].role === 'tool') tool = sorted[j];
+      }
+      if (assistant) ui.push(assistantUiFromRaw(assistant, tool));
+      continue;
+    }
+    if (hasAssistantContent(m)) {
+      const next = sorted[i + 1];
+      const tool = next && next.role === 'tool' ? next : null;
+      ui.push(assistantUiFromRaw(m, tool));
+      if (tool) i++;
     }
   }
   return ui;
@@ -223,8 +277,10 @@ const agentChat = {
       if (this.messages.length) return;
       let ui = buildUiFromRaw(raw);
       ui = await enrichWithAudits(ui, 'default');
+      if (this.messages.length) return;
       const cache = readTurnMetaCache();
       ui = ui.map((m) => applyTurnMeta(m, cache));
+      if (this.messages.length) return;
       if (ui.length) { this.messages = ui; this.emit(); }
     } catch (e) { /* offline / no history */ }
   },
@@ -290,12 +346,14 @@ async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
   const hasText = !!(text && text.trim());
   const hasAttach = !!(attachments && attachments.length);
   if ((!hasText && !hasAttach) || agentChat.sending) return;
+  const ts = Date.now();
   agentChat.push({
     role: 'user',
     text: text || '',
     attachments: hasAttach ? attachments.map((a) => ({ mime: a.mime, preview: a.preview })) : null,
+    ts,
   });
-  agentChat.push({ role: 'assistant', text: '', pending: true });
+  agentChat.push({ role: 'assistant', text: '', pending: true, ts: ts + 1 });
   agentChat.setSending(true);
   if (setAgentBusy) setAgentBusy(true);
   try {
@@ -622,7 +680,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
         )}
         {chat.messages.map((m, i) => (
           <MessageBubble
-            key={m.turnId || ('msg_' + i + '_' + (m.ts || 0))}
+            key={m.turnId ? ('turn_' + m.turnId) : ('ui_' + i + '_' + m.role)}
             msg={m}
             msgIndex={i}
             canUndoTurn={i === undoIdx}

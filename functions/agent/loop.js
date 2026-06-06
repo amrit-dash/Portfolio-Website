@@ -17,6 +17,8 @@ const {
   fromFirestore,
   toFirestore,
   newId,
+  sortCanonicalMessages,
+  stampPersistOrder,
 } = require('./messages');
 const providers = require('./providers');
 
@@ -46,7 +48,8 @@ async function loadChatMeta(db, chatId) {
 
 async function loadChatHistory(db, chatId) {
   const snap = await db.collection(`agent_chats/${chatId}/messages`).orderBy('ts', 'asc').limit(100).get();
-  return snap.docs.map((d) => fromFirestore(d.data())).filter(Boolean);
+  const raw = snap.docs.map((d) => fromFirestore({ ...d.data(), createdAt: d.data().createdAt }));
+  return sortCanonicalMessages(raw.filter(Boolean));
 }
 
 /* When the provider changed since the last turn, foreign tool-call structures
@@ -234,6 +237,7 @@ async function runAgentTurn({
   if (toolLog.length) {
     newMessages.push(makeToolResultMessage(toolLog.map((t, i) => ({ id: 'tr_' + i, name: t.name, result: t.result }))));
   }
+  stampPersistOrder(newMessages);
   await persistMessages(db, FieldValue, cid, providerId, newMessages);
 
   return {
