@@ -690,7 +690,12 @@ function AdminApp() {
   };
   const changePreviewMode = (mode) => { setPreviewMode(mode); if (mode === 'draft') previewDraft(); else window.ADMIN_STORE.Store.clearPreview(); };
 
-  const doPublish = () => { publish(); setFlash('Published to site ✓'); setTimeout(() => setFlash(null), 2600); };
+  const doPublish = async () => {
+    if (!dirty) return;
+    await publish();
+    setFlash('Published to site ✓');
+    setTimeout(() => setFlash(null), 2600);
+  };
   const doSyncFromPublished = async () => {
     if (!publishedSnapshot || !draftDiffersFromPublished) return;
     if (!confirm('Replace your entire draft with the live published snapshot? All unpublished edits will be lost. This cannot be undone.')) return;

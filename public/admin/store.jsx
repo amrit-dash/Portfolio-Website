@@ -751,14 +751,25 @@ function useContent() {
   }, [scheduleDraftSync]);
 
   const publish = React.useCallback(async () => {
+    // Cancel any pending debounced draft write — it can land after publish and
+    // revert the draft on Firestore, leaving draft↔published permanently out of sync.
+    if (draftTimer.current) {
+      clearTimeout(draftTimer.current);
+      draftTimer.current = null;
+    }
     let snap = null;
     setContent((cur) => {
       snap = mergeContentSnapshot(cur);
-      Store.publish(snap);
+      Store.saveDraft(snap);
       lastJsonRef.current = contentStateJson(snap);
       return snap;
     });
     if (!snap) return;
+    // Local published cache matches the public Firestore doc (key-stripped).
+    const pubSnap = mergeContentSnapshot(Store.stripKeys(snap));
+    Store.publish(pubSnap);
+    // In-memory published snapshot mirrors the normalized draft so compare stays
+    // fair — do NOT reload from Firestore here; round-trip stripping/merge can drift.
     setPublishedSnapshot(snap);
     const ts = new Date().toISOString();
     Store.write('amritos.publishedAt', ts);
@@ -766,8 +777,6 @@ function useContent() {
     setDirty(false);
     try {
       await Store.fsPublish(snap);
-      const pub = await Store.loadPublishedSnapshot();
-      if (pub) setPublishedSnapshot(pub);
     } catch (e) { /* local publish already applied */ }
   }, []);
 
@@ -780,6 +789,10 @@ function useContent() {
   // overwriting every in-progress edit. Prefers Firestore when signed in.
   // Preserves bot LLM apiKeys — the public published doc is key-stripped.
   const syncDraftFromPublished = React.useCallback(async () => {
+    if (draftTimer.current) {
+      clearTimeout(draftTimer.current);
+      draftTimer.current = null;
+    }
     const base = await Store.loadPublishedSnapshot();
     if (!base) return false;
     setContent((cur) => {
@@ -818,6 +831,10 @@ function useContent() {
   /* Revert draft to the in-memory published snapshot (discard unpublished edits). */
   const discardDraft = React.useCallback(() => {
     if (!publishedSnapshot) return false;
+    if (draftTimer.current) {
+      clearTimeout(draftTimer.current);
+      draftTimer.current = null;
+    }
     setContent((cur) => {
       const next = clone(publishedSnapshot);
       try {
