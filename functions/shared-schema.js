@@ -212,6 +212,51 @@
     return s;
   }
 
+  /* Normalize one impact-timeline row — stable id + string fields. */
+  function normalizeImpactEntry(item, idx) {
+    const row = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+    return {
+      id: typeof row.id === 'string' && row.id ? row.id : ('imp_' + idx),
+      label: typeof row.label === 'string' ? row.label : '',
+      html: typeof row.html === 'string' ? row.html : '',
+    };
+  }
+
+  /* Coerce agent/corrupt writes back to an impact array. A single entry object
+     merges into fallback by id or case-insensitive label (e.g. "In Between"). */
+  function coerceImpactArray(value, fallback) {
+    const heal = (arr) => (Array.isArray(arr) ? arr : []).map((item, idx) => normalizeImpactEntry(item, idx));
+    if (Array.isArray(value)) return heal(value);
+    if (value && typeof value === 'object') {
+      const keys = Object.keys(value);
+      const allNumeric = keys.length > 0 && keys.every((k) => /^\d+$/.test(k));
+      if (allNumeric) {
+        return heal(keys.sort((a, b) => Number(a) - Number(b)).map((k) => value[k]));
+      }
+      const row = value;
+      const base = heal(fallback);
+      const matchId = typeof row.id === 'string' && row.id ? row.id : '';
+      const matchLabel = typeof row.label === 'string' ? row.label : '';
+      const matchIdx = base.findIndex((item) =>
+        (matchId && item.id === matchId)
+        || (matchLabel && item.label && item.label.toLowerCase() === matchLabel.toLowerCase())
+      );
+      if (matchIdx >= 0) {
+        const next = base.slice();
+        next[matchIdx] = normalizeImpactEntry({ ...base[matchIdx], ...row }, matchIdx);
+        return next;
+      }
+      return base.concat([normalizeImpactEntry(row, base.length)]).map((item, idx) => normalizeImpactEntry(item, idx));
+    }
+    if (typeof value === 'string') {
+      const t = value.trim();
+      if (t && /^[[{]/.test(t)) {
+        try { return coerceImpactArray(JSON.parse(t), fallback); } catch (e) { /* fall through */ }
+      }
+    }
+    return heal(fallback);
+  }
+
   function renumberExpertise(arr) {
     if (!Array.isArray(arr)) return arr;
     return arr.map((e, i) => ({ ...e, num: String(i + 1).padStart(2, '0') }));
@@ -230,6 +275,8 @@
     PROVIDER_KIND,
     AGENT_CONFIG_DEFAULTS,
     AGENT_TOOL_MODELS,
+    normalizeImpactEntry,
+    coerceImpactArray,
     renumberExpertise,
     getVibe,
     validateExpertiseIcon,

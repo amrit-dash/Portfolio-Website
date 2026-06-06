@@ -8,6 +8,7 @@
 
 const path = require('path');
 const schema = require(path.join(__dirname, '../shared-schema'));
+const { coerceImpactArray } = schema;
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
@@ -445,7 +446,21 @@ async function executeTool(name, args, ctx) {
   if (name === 'setContentPath') {
     if (!a.path || typeof a.path !== 'string') return { ok: false, error: 'missing-path' };
     if (!('value' in a)) return { ok: false, error: 'missing-value' };
-    const result = session.setPath(a.path, coerceValue(a.value));
+    let val = coerceValue(a.value);
+    const parts = String(a.path).split('.').filter(Boolean);
+    if (parts[0] === 'about' && parts[1] === 'impact') {
+      if (parts.length === 2) {
+        val = coerceImpactArray(val, session.readPath('about.impact'));
+      } else if (parts.length === 3 && /^\d+$/.test(parts[2]) && val && typeof val === 'object' && !Array.isArray(val)) {
+        const idx = Number(parts[2]);
+        const arr = coerceImpactArray(session.readPath('about.impact'), []);
+        while (arr.length <= idx) arr.push({ id: 'imp_' + idx, label: '', html: '' });
+        arr[idx] = { ...arr[idx], ...val };
+        val = arr;
+        a.path = 'about.impact';
+      }
+    }
+    const result = session.setPath(a.path, val);
     return result.ok ? { ok: true, path: result.path } : result;
   }
 

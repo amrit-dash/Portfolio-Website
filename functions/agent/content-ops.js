@@ -9,7 +9,9 @@
    - commit() writes content/draft once per turn behind an updatedAt precondition
      so a stale client whole-doc .set() cannot silently clobber the agent. */
 
+const path = require('path');
 const { isBlocklisted, normalizePath, pathString, UNSAFE_KEY } = require('./guards');
+const { coerceImpactArray } = require(path.join(__dirname, '../shared-schema'));
 
 const SNAPSHOT_RING = 10;
 
@@ -119,7 +121,16 @@ class DraftSession {
       this.pathBefore[p] = deepClone(getAtPath(this.content, path));
     }
     try {
-      this.content = setAtPath(this.content, path, value);
+      const keys = normalizePath(path);
+      let v = value;
+      if (keys[0] === 'about' && keys[1] === 'impact' && keys.length === 2) {
+        v = coerceImpactArray(value, getAtPath(this.content, 'about.impact'));
+      }
+      this.content = setAtPath(this.content, path, v);
+      if (keys[0] === 'about' && keys[1] === 'impact') {
+        const cur = getAtPath(this.content, 'about.impact');
+        this.content = setAtPath(this.content, 'about.impact', coerceImpactArray(cur, cur));
+      }
       if (!this.changedPaths.includes(p)) this.changedPaths.push(p);
       this.dirty = true;
       return { ok: true, path: p };
