@@ -51,8 +51,10 @@ function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
     case 'check': return (<svg {...p}><path d="M5 12l5 5L20 6"/></svg>);
     case 'x': return (<svg {...p}><path d="M6 6l12 12M18 6L6 18"/></svg>);
     case 'logout': return (<svg {...p}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>);
-    // 'globe' — world icon; used for Publish (promote draft → live site).
+    // 'globe' — world icon (general use).
     case 'globe': return (<svg {...p}><circle cx="12" cy="12" r="9"/><path d="M2 12h20"/><path d="M12 3a15 15 0 014 10 15 15 0 01-4 10 15 15 0 01-4-10 15 15 0 014-10z"/></svg>);
+    // 'publish' — arrow from tray (publish-svgrepo); used for Publish (draft → live site).
+    case 'publish': return (<svg {...p}><path d="M2 2h20"/><path d="M12 6v9"/><path d="M7 15l5-6 5 6"/></svg>);
     case 'rocket': return (<svg {...p}><path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.8a2 2 0 00-3 .8z"/><path d="M9 13l-2-2c1-4 4-7 11-8-1 7-4 10-8 11z"/><circle cx="15" cy="9" r="1.4"/></svg>);
     case 'save': return (<svg {...p}><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>);
     case 'link': return (<svg {...p}><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1.5-1.5"/></svg>);

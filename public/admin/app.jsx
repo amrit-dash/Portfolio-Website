@@ -79,7 +79,7 @@ function Overview({ content, analytics, dirty, draftDiffersFromPublished, publis
             )}
             <Btn sm kind="ghost" icon="reset" onClick={onDiscard}>Discard</Btn>
             <Btn sm icon="eye" onClick={onPreview}>Preview</Btn>
-            <Btn sm kind="primary" icon="globe" onClick={onPublish}>Publish</Btn>
+            <Btn sm kind="primary" icon="publish" onClick={onPublish}>Publish</Btn>
           </div>
         </div>
       )}
@@ -352,7 +352,7 @@ function SyncPage({ publishedAt, dirty, draftDiffersFromPublished, publishedSnap
         <div className="divider" />
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
-          <Btn kind="primary" icon="globe" onClick={onPublish} disabled={!dirty}>Publish to site</Btn>
+          <Btn kind="primary" icon="publish" onClick={onPublish} disabled={!dirty}>Publish to site</Btn>
           <span className="spacer" style={{ flex: 1 }} />
           <Btn kind="danger" icon="sync" disabled={!canSync} onClick={onSyncFromPublished}>Sync draft from live site</Btn>
         </div>
@@ -731,7 +731,7 @@ function AdminApp() {
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + ((dirty || draftDiffersFromPublished) ? '' : ' saved')}><span className="dot" />{dirty ? 'Draft · unpublished changes' : (draftDiffersFromPublished ? 'Draft · out of sync with live' : 'All changes published')}</span>}
           <span className="topbar__hide-sm"><Btn icon="eye" onClick={() => openPreview('draft')}>Preview</Btn></span>
-          <Btn kind="primary" icon="globe" onClick={doPublish} disabled={!dirty}>Publish</Btn>
+          <Btn kind="primary" icon="publish" onClick={doPublish} disabled={!dirty}>Publish</Btn>
         </div>
         <div className="canvas">{renderRoute()}</div>
       </div>
