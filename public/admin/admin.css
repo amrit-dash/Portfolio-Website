@@ -3793,13 +3793,17 @@ body::before {
 }
 
 .refine-entry__label-row {
-   align-items: flex-end;
    margin-bottom: 0;
 }
 
 .refine-entry__label-row > .field {
    flex: 1 1 auto;
    min-width: 0;
+}
+
+.refine-entry__label-row > .field--del {
+   flex: 0 0 auto;
+   margin-bottom: 0;
 }
 
 .refine--entry .refine__wrap .ta {
