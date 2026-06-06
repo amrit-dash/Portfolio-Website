@@ -91,15 +91,53 @@ function contentForCompare(content) {
   if (!snap) return null;
   return Store.stripKeys(snap);
 }
-/* Compare draft vs published without LLM apiKey noise — published is key-stripped. */
-function contentCompareFingerprint(content) {
+/* Stable JSON — sorted object keys so Firestore round-trips never false-diff on key order. */
+function stableStringify(value) {
+  return JSON.stringify(value, function (_k, v) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const out = {};
+      for (const key of Object.keys(v).sort()) out[key] = v[key];
+      return out;
+    }
+    return v;
+  });
+}
+/* Sort id-keyed arrays so reordering the same rows does not look like drift. */
+function stabilizeArrays(node) {
+  if (!node || typeof node !== 'object') return node;
+  if (Array.isArray(node)) {
+    if (node.length && node.every((item) => item && typeof item.id === 'string')) {
+      return [...node]
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((item) => stabilizeArrays(item));
+    }
+    return node.map((item) => stabilizeArrays(item));
+  }
+  const out = {};
+  for (const k of Object.keys(node)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    Reflect.set(out, k, stabilizeArrays(Reflect.get(node, k)));
+  }
+  return out;
+}
+/* Visitor-visible fingerprint — merged, normalized, apiKeys stripped. */
+function contentFingerprint(content) {
   const snap = contentForCompare(content);
-  return snap ? JSON.stringify(snap) : '{}';
+  if (!snap) return '{}';
+  return stableStringify(stabilizeArrays(snap));
+}
+function draftMatchesPublished(draft, published) {
+  if (!published) return false;
+  return contentFingerprint(draft) === contentFingerprint(published);
+}
+/* Canonical published snapshot stored locally + compared against draft. */
+function canonicalPublishedFromDraft(draft) {
+  return mergeContentSnapshot(Store.stripKeys(mergeContentSnapshot(draft)));
 }
 /* Canonical JSON for echo de-dupe — always normalized + merged, never raw editor state. */
 function contentStateJson(content) {
   const snap = mergeContentSnapshot(content);
-  return snap ? JSON.stringify(snap) : '';
+  return snap ? stableStringify(snap) : '';
 }
 
 function normalizeContent(content) {
@@ -380,7 +418,9 @@ const Store = {
   },
   async fsSaveDraft(content) {
     if (!this.fsReady()) return;
-    try { await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() }); }
+    const canonical = mergeContentSnapshot(content);
+    if (!canonical) return;
+    try { await window.fb.db.doc('content/draft').set({ content: canonical, updatedAt: window.fb.serverTimestamp() }); }
     catch (e) { console.warn('[store] fsSaveDraft failed', e && e.message); }
   },
   // Deep-clone content with every LLM apiKey blanked — for the PUBLIC published
@@ -645,13 +685,21 @@ function useContent() {
       if (pub) setPublishedSnapshot(pub);
       const remote = await Store.fsLoadDraft();
       if (remote) {
-        const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
+        const merged = mergeContentSnapshot(remote);
         Store.saveDraft(merged);
         setContent(merged);
         lastJsonRef.current = contentStateJson(merged);
+        if (pub && draftMatchesPublished(merged, pub)) {
+          setPublishedSnapshot(pub);
+        }
       } else {
         // No remote draft yet — seed it from whatever we have locally.
-        setContent((cur) => { Store.fsSaveDraft(cur); lastJsonRef.current = contentStateJson(cur); return cur; });
+        setContent((cur) => {
+          const canonical = mergeContentSnapshot(cur);
+          Store.fsSaveDraft(canonical);
+          lastJsonRef.current = contentStateJson(canonical);
+          return canonical;
+        });
       }
       setSynced(true);
     });
@@ -660,7 +708,7 @@ function useContent() {
 
   const draftDiffersFromPublished = React.useMemo(() => {
     if (!publishedSnapshot) return false;
-    return contentCompareFingerprint(content) !== contentCompareFingerprint(publishedSnapshot);
+    return !draftMatchesPublished(content, publishedSnapshot);
   }, [content, publishedSnapshot]);
 
   // Debounced Firestore draft write (1s after the last edit) to avoid a write
@@ -671,10 +719,12 @@ function useContent() {
     // .set() here would clobber the agent's server write (U14 / KD2).
     if (agentBusyRef.current) return;
     if (draftTimer.current) clearTimeout(draftTimer.current);
+    const canonical = mergeContentSnapshot(next);
+    if (!canonical) return;
     // Record our own latest content so the live listener treats the resulting
     // snapshot as an echo, not a remote change (must match listener normalization).
-    lastJsonRef.current = contentStateJson(next);
-    draftTimer.current = setTimeout(() => { Store.fsSaveDraft(next); }, 1000);
+    lastJsonRef.current = contentStateJson(canonical);
+    draftTimer.current = setTimeout(() => { Store.fsSaveDraft(canonical); }, 1000);
   }, []);
 
   // U14 — adopt the agent's server-side draft writes into the open editor, and
@@ -682,13 +732,19 @@ function useContent() {
   // field the owner is actively editing.
   const adoptRemoteDraft = React.useCallback((remote) => {
     if (!remote) return;
-    const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
+    const merged = mergeContentSnapshot(remote);
     const json = contentStateJson(merged);
     if (json === lastJsonRef.current) return; // our own echo
+    // Firestore echoes / key-only diffs must not replace the editor when the
+    // remote payload already matches the live published baseline.
+    if (publishedSnapshot && draftMatchesPublished(merged, publishedSnapshot)) {
+      lastJsonRef.current = json;
+      return;
+    }
     lastJsonRef.current = json;
     Store.saveDraft(merged);
     setContent(merged);
-  }, []);
+  }, [publishedSnapshot]);
 
   React.useEffect(() => {
     Store._draftAdopter = adoptRemoteDraft;
@@ -758,19 +814,20 @@ function useContent() {
       draftTimer.current = null;
     }
     let snap = null;
+    let pubSnap = null;
     setContent((cur) => {
       snap = mergeContentSnapshot(cur);
+      pubSnap = canonicalPublishedFromDraft(snap);
       Store.saveDraft(snap);
       lastJsonRef.current = contentStateJson(snap);
       return snap;
     });
-    if (!snap) return;
+    if (!snap || !pubSnap) return;
     // Local published cache matches the public Firestore doc (key-stripped).
-    const pubSnap = mergeContentSnapshot(Store.stripKeys(snap));
     Store.publish(pubSnap);
-    // In-memory published snapshot mirrors the normalized draft so compare stays
-    // fair — do NOT reload from Firestore here; round-trip stripping/merge can drift.
-    setPublishedSnapshot(snap);
+    // In-memory published baseline is the canonical public snapshot (no apiKeys).
+    // Draft keeps keys for editing; fingerprint compare strips them on both sides.
+    setPublishedSnapshot(pubSnap);
     const ts = new Date().toISOString();
     Store.write('amritos.publishedAt', ts);
     setPublishedAt(ts);
@@ -822,9 +879,9 @@ function useContent() {
       Store.fsSaveDraft(merged);
       return merged;
     });
-    Store.clearPreview();
+      Store.clearPreview();
     setDirty(false);
-    setPublishedSnapshot(base);
+    setPublishedSnapshot(canonicalPublishedFromDraft(base) || base);
     return true;
   }, []);
 
@@ -1014,4 +1071,7 @@ function useAnalytics() {
   };
 }
 
-window.ADMIN_STORE = { Store, buildDefaultContent, useContent, useAnalytics, LLM_PROVIDERS, LS };
+window.ADMIN_STORE = {
+  Store, buildDefaultContent, useContent, useAnalytics, LLM_PROVIDERS, LS,
+  contentFingerprint, draftMatchesPublished, canonicalPublishedFromDraft,
+};
