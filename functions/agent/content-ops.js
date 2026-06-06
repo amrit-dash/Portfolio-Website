@@ -66,25 +66,63 @@ function setAtPath(obj, path, value) {
   return apply(obj, 0);
 }
 
+/* Summarize one array row for the content outline — index + stable id + labels
+   the model can cite when calling readContent / setContentPath. */
+function outlineEntry(item, index, fields) {
+  const row = { index };
+  if (item && typeof item === 'object') {
+    for (const f of fields) {
+      if (item[f] != null && item[f] !== '') row[f] = item[f];
+    }
+  }
+  return row;
+}
+
 /* Compact map of the draft for the system prompt — top-level keys, array
-   lengths + ids, object key lists — so the model can target readContent without
-   us shipping the whole document every turn (keeps per-turn tokens bounded). */
+   lengths + ids/labels, object key lists — so the model can target readContent
+   without us shipping the whole document every turn (keeps per-turn tokens bounded). */
 function buildOutline(content) {
   if (!content || typeof content !== 'object') return {};
   const outline = {};
+  const ARRAY_HINTS = {
+    projects: ['id', 'title', 'cat'],
+    experience: ['id', 'company', 'role', 'short'],
+    expertise: ['id', 'title', 'icon'],
+    cards: ['id', 'title', 'eyebrow'],
+  };
+
   for (const key of Object.keys(content)) {
     if (UNSAFE_KEY(key)) continue;
     const val = content[key];
     if (Array.isArray(val)) {
-      outline[key] = { type: 'array', length: val.length, ids: val.slice(0, 20).map((item, i) => (item && item.id) || String(i)) };
+      const fields = ARRAY_HINTS[key] || ['id'];
+      const entry = {
+        type: 'array',
+        length: val.length,
+        entries: val.slice(0, 20).map((item, i) => outlineEntry(item, i, fields)),
+      };
+      if (!ARRAY_HINTS[key]) {
+        entry.ids = val.slice(0, 20).map((item, i) => (item && item.id) || String(i));
+      }
+      if (key === 'experience') {
+        entry.entries = val.slice(0, 20).map((item, i) => {
+          const row = outlineEntry(item, i, ARRAY_HINTS.experience);
+          if (item && Array.isArray(item.roles)) {
+            row.roles = item.roles.slice(0, 12).map((role, ri) => outlineEntry(role, ri, ['id', 'name', 'date']));
+          }
+          return row;
+        });
+      }
+      outline[key] = entry;
     } else if (val && typeof val === 'object') {
       const entry = { type: 'object', keys: Object.keys(val).slice(0, 30) };
-      if (key === 'about' && Array.isArray(val.impact)) {
-        entry.impact = val.impact.slice(0, 20).map((item, i) => ({
-          index: i,
-          id: item && item.id,
-          label: item && item.label,
-        }));
+      if (key === 'about') {
+        if (Array.isArray(val.impact)) {
+          entry.impact = val.impact.slice(0, 20).map((item, i) => outlineEntry(item, i, ['id', 'label']));
+        }
+        if (Array.isArray(val.meta)) {
+          entry.meta = val.meta.slice(0, 20).map((item, i) => outlineEntry(item, i, ['label', 'value']));
+        }
       }
       outline[key] = entry;
     } else {
@@ -235,6 +273,7 @@ module.exports = {
   deepClone,
   getAtPath,
   setAtPath,
+  outlineEntry,
   buildOutline,
   DraftSession,
   undoLastChange,

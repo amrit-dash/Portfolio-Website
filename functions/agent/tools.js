@@ -17,10 +17,21 @@ const multimodal = require('./multimodal');
 const GENERIC_TOOLS = [
   {
     name: 'readContent',
-    description: 'Read a slice of the portfolio draft by dot-path (e.g. hero, about.meta, projects.0, about.impact). Always read before scoped edits — use it to resolve array index and label/id when the user names a single entry.',
+    description: [
+      'Read a slice of the portfolio draft by dot-path. Always read before scoped edits.',
+      'Use the Content outline (index/id/label) to pick the right path, then readContent for the full slice.',
+      'Examples: hero · about.intro · about.impact · about.impact.1 · about.meta.0.value',
+      'projects · projects.3 · projects.3.title · experience.0 · experience.1.roles.0.bullets',
+      'expertise.2.icon · cards.1.body · bot.qa · cosmetics.theme',
+    ].join(' '),
     parameters: {
       type: 'object',
-      properties: { path: { type: 'string', description: 'Dot-path into content/draft' } },
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Dot-path into content/draft. Arrays use numeric indices (projects.2.title). about.impact entries: {id,label,html}.',
+        },
+      },
       required: ['path'],
     },
     mutates: false,
@@ -28,23 +39,23 @@ const GENERIC_TOOLS = [
   {
     name: 'setContentPath',
     description: [
-      'Set a value at a dot-path in the portfolio draft. Blocked paths include bot.providers*, bot.behavior*, config.*.',
-      'Scope: edit only what the user asked for. Prefer the narrowest path; never replace a whole array when one entry changed.',
-      'Impact timeline (about.impact) — each entry is {id, label, html}. Partial updates (preserve siblings):',
-      '  • Leaf field: path about.impact.1.html, value "<p>New copy</p>" (index from readContent).',
-      '  • One entry, multi-field: path about.impact.1, value {"label":"Then","html":"<p>…</p>"} (merges into that index).',
-      '  • Match by label: path about.impact, value {"label":"Then","html":"<p>…</p>"} (server merges by label/id, keeps other entries).',
-      'Avoid: path about.impact with a full array or a single entry object when the user only wanted one timeline row rewritten — that drops or overwrites siblings.',
-      'Same pattern for other arrays: projects.2.title, experience.0.html, or collection root with one {id,…} object for merge-by-id.',
+      'Set or merge a value at a dot-path in the portfolio draft. Blocked: bot.providers*, bot.behavior*, config.*.',
+      'Scope: edit only what the user asked for. Prefer the narrowest leaf path; never replace a whole array when one entry changed.',
+      'Leaf updates (safest): about.impact.1.html · about.impact.1.label · projects.3.title · projects.3.desc',
+      'experience.0.company · experience.1.roles.2.name · experience.1.roles.0.bullets (pass full bullets array)',
+      'Partial object at an index merges into that row (preserves siblings): about.impact.1 with {"html":"<p>…</p>"}',
+      'projects.2 with {"title":"New name"} · experience.0 with {"desc":"…"} · experience.1.roles.0 with {"name":"BeGig"}',
+      'about.impact root merge-by-label: path about.impact, value {"label":"Then","html":"<p>…</p>"} (matches label/id).',
+      'Avoid replacing a collection root with a full array unless the user explicitly asked to rewrite the whole list.',
     ].join(' '),
     parameters: {
       type: 'object',
       properties: {
         path: {
           type: 'string',
-          description: 'Dot-path to set. For one array item use index segments (about.impact.1.html) or merge-by-label at collection root (about.impact).',
+          description: 'Dot-path. Leaf: collection.N.field. Partial row: collection.N with JSON object (merged). Impact label merge: about.impact.',
         },
-        value: { type: 'string', description: 'Value to write. For objects/arrays pass a JSON string; it is parsed server-side.' },
+        value: { type: 'string', description: 'Value to write. Objects/arrays as compact JSON strings — parsed server-side.' },
       },
       required: ['path', 'value'],
     },
@@ -119,7 +130,7 @@ const STRUCTURED_TOOLS = [
   },
   {
     name: 'generateImage',
-    description: 'Generate an image from a text prompt (Gemini image model), upload it, and attach it as a project thumbnail or gallery image. Use ONLY when the owner explicitly asks to generate/create an image — it costs model spend.',
+    description: 'Generate a raster image from a text prompt (Gemini image model or OpenAI DALL·E when configured), upload to Storage, and attach as a project thumb or gallery image. Costs model spend — use ONLY when the owner explicitly asks to generate/create an image. SVG icons: use setProjectImage with an assets/ path instead.',
     parameters: {
       type: 'object',
       properties: {
@@ -277,6 +288,23 @@ function applyRenumber(meta, arr) {
   return arr;
 }
 
+/* When path ends in a numeric index and value is a plain object, merge into that
+   array slot instead of replacing the whole parent array. */
+function tryMergeIndexedObject(session, pathStr, val) {
+  if (!val || typeof val !== 'object' || Array.isArray(val)) return null;
+  const parts = String(pathStr).split('.').filter(Boolean);
+  if (parts.length < 2 || !/^\d+$/.test(parts[parts.length - 1])) return null;
+  const parentPath = parts.slice(0, -1).join('.');
+  const idx = Number(parts[parts.length - 1]);
+  const parent = session.readPath(parentPath);
+  if (!Array.isArray(parent)) return null;
+  const next = parent.slice();
+  while (next.length <= idx) next.push({});
+  const cur = next[idx];
+  next[idx] = { ...(cur && typeof cur === 'object' && !Array.isArray(cur) ? cur : {}), ...val };
+  return { path: parentPath, value: next };
+}
+
 function validateNewItem(collectionName, item) {
   if (collectionName === 'expertise' && item.icon && !schema.validateExpertiseIcon(item.icon)) {
     return { ok: false, error: 'invalid-expertise-icon', icon: item.icon };
@@ -356,17 +384,32 @@ function execSetCv(a, session) {
 
 async function execGenerateImage(a, session, ctx) {
   if (!a.prompt || typeof a.prompt !== 'string') return { ok: false, error: 'missing-prompt' };
-  if (!ctx.imageKey) return { ok: false, error: 'no-image-key', message: 'Set a Gemini key in Agent settings to generate images.' };
   if (!ctx.admin) return { ok: false, error: 'no-storage' };
-  let buf;
-  try { buf = await multimodal.geminiGenerateImage({ key: ctx.imageKey, model: ctx.imageModel, prompt: a.prompt }); }
-  catch (e) { return { ok: false, error: 'gen-failed', message: e.message }; }
+  let gen;
+  try {
+    gen = await multimodal.generateImage({
+      gemini: ctx.imageGemini,
+      openai: ctx.imageOpenai,
+      prompt: a.prompt,
+      prefer: ctx.imagePrefer,
+    });
+  } catch (e) {
+    return { ok: false, error: 'no-image-key', message: e.message };
+  }
   let up;
-  try { up = await multimodal.uploadImage({ admin: ctx.admin, buffer: buf }); }
+  try { up = await multimodal.uploadImage({ admin: ctx.admin, buffer: gen.buffer }); }
   catch (e) { return { ok: false, error: 'upload-failed', message: e.message }; }
   const set = execSetProjectImage({ id: a.projectId, slot: a.slot, source: up.url }, session);
-  if (!set.ok) return { ok: true, url: up.url, path: up.path, warning: 'generated but not attached: ' + (set.error || '') };
-  return { ok: true, url: up.url, path: up.path, attached: `projects/${a.projectId}/${a.slot}` };
+  if (!set.ok) {
+    return {
+      ok: true, url: up.url, path: up.path, provider: gen.provider, model: gen.model,
+      warning: 'generated but not attached: ' + (set.error || ''),
+    };
+  }
+  return {
+    ok: true, url: up.url, path: up.path, provider: gen.provider, model: gen.model,
+    attached: `projects/${a.projectId}/${a.slot}`,
+  };
 }
 
 async function execSetLimits(a, ctx) {
@@ -467,22 +510,23 @@ async function executeTool(name, args, ctx) {
     if (!a.path || typeof a.path !== 'string') return { ok: false, error: 'missing-path' };
     if (!('value' in a)) return { ok: false, error: 'missing-value' };
     let val = coerceValue(a.value);
-    const parts = String(a.path).split('.').filter(Boolean);
-    if (parts[0] === 'about' && parts[1] === 'impact') {
-      if (parts.length === 2) {
-        const impactErr = validateImpactWrite(val);
-        if (impactErr) return { ok: false, ...impactErr };
-        val = coerceImpactArray(val, session.readPath('about.impact'));
-      } else if (parts.length === 3 && /^\d+$/.test(parts[2]) && val && typeof val === 'object' && !Array.isArray(val)) {
-        const idx = Number(parts[2]);
-        const arr = coerceImpactArray(session.readPath('about.impact'), []);
-        while (arr.length <= idx) arr.push({ id: 'imp_' + idx, label: '', html: '' });
-        arr[idx] = { ...arr[idx], ...val };
-        val = arr;
-        a.path = 'about.impact';
+    let path = a.path;
+    const parts = String(path).split('.').filter(Boolean);
+
+    if (parts[0] === 'about' && parts[1] === 'impact' && parts.length === 2) {
+      const impactErr = validateImpactWrite(val);
+      if (impactErr) return { ok: false, ...impactErr };
+      val = coerceImpactArray(val, session.readPath('about.impact'));
+    } else {
+      const merged = tryMergeIndexedObject(session, path, val);
+      if (merged) {
+        path = merged.path;
+        val = merged.value;
+        if (path === 'about.impact') val = coerceImpactArray(val, session.readPath('about.impact'));
       }
     }
-    const result = session.setPath(a.path, val);
+
+    const result = session.setPath(path, val);
     return result.ok ? { ok: true, path: result.path } : result;
   }
 
