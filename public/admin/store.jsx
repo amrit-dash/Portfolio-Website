@@ -80,10 +80,18 @@ function buildDefaultContent() {
 }
 const DEFAULT_BOT = (PORTFOLIO_DEFAULTS && PORTFOLIO_DEFAULTS.bot) || { providers: { byProvider: {} } };
 
-/* Normalize content shape so a corrupt draft self-heals instead of locking the
-   UI. The only field where corruption has been observed in the wild is
-   `bot.providers.byProvider[*].apiKey/model` — coerce them back to strings, and
-   ensure every provider in the catalog has a slot. */
+/* Normalize + merge a raw stored snapshot for compare/persist. */
+function mergeContentSnapshot(raw) {
+  if (!raw) return null;
+  return normalizeContent(deepMerge(buildDefaultContent(), raw));
+}
+/* Compare draft vs published without LLM apiKey noise — published is key-stripped. */
+function contentCompareFingerprint(content) {
+  const snap = mergeContentSnapshot(content);
+  if (!snap) return '{}';
+  return JSON.stringify(Store.stripKeys(snap));
+}
+
 function normalizeContent(content) {
   if (!content || typeof content !== 'object') return content;
   const bot = content.bot;
@@ -152,6 +160,20 @@ const Store = {
   },
   loadPublished() { return this.read(LS.published); },
   hasPublished() { return !!this.read(LS.published); },
+  /* Prefer Firestore published when signed in — matches what the live site reads. */
+  async loadPublishedSnapshot() {
+    let pub = this.loadPublished();
+    if (this.fsReady()) {
+      try {
+        const remote = await this.fsLoadPublished();
+        if (remote) {
+          pub = remote;
+          this.write(LS.published, remote);
+        }
+      } catch (e) { /* keep local fallback */ }
+    }
+    return mergeContentSnapshot(pub);
+  },
   setPreview(content) { this.write(LS.preview, content); },
   clearPreview() { try { localStorage.removeItem(LS.preview); } catch (e) {} },
   resetDraft() { const def = buildDefaultContent(); this.write(LS.draft, def); return def; },
@@ -521,6 +543,18 @@ const Store = {
       return true;
     } catch (e) { console.warn('[store] fsClearAgentChat failed', e && e.message); return false; }
   },
+  // Recent turn audits — used to rebuild change/undo UI for older chat turns that
+  // predate turnMeta on message docs. Filtered client-side to avoid composite indexes.
+  async fsLoadAgentAudits(chatId, limit) {
+    if (!this.fsReady()) return [];
+    const cid = chatId || 'default';
+    try {
+      const s = await window.fb.db.collection('agent_audit').orderBy('createdAt', 'desc').limit(limit || 80).get();
+      return s.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((a) => (a.chatId || 'default') === cid);
+    } catch (e) { return []; }
+  },
 
   /* ---------- Live draft listener (U14) ----------
      Subscribe to content/draft so the agent's server-side writes appear in the
@@ -561,6 +595,7 @@ function useContent() {
   const [content, setContent] = React.useState(() => Store.loadDraft());
   const [dirty, setDirty] = React.useState(false);
   const [publishedAt, setPublishedAt] = React.useState(() => Store.read('amritos.publishedAt'));
+  const [publishedSnapshot, setPublishedSnapshot] = React.useState(() => mergeContentSnapshot(Store.loadPublished()));
   const [synced, setSynced] = React.useState(false); // true once Firestore draft adopted/seeded
   const [agentBusy, setAgentBusyState] = React.useState(false);
   const draftTimer = React.useRef(null);
@@ -586,11 +621,14 @@ function useContent() {
 
   // When the owner signs in, adopt the Firestore draft (or seed it from the
   // current local content if none exists). After this, Firestore is the source
-  // of truth and localStorage trails as a cache.
+  // of truth and localStorage trails as a cache. Also refresh the published
+  // snapshot so draft-vs-live diff detection matches Firestore.
   React.useEffect(() => {
     if (!window.fb || !window.fb.auth) return;
     const unsub = window.fb.auth.onAuthStateChanged(async (u) => {
       if (!u) { setSynced(false); return; }
+      const pub = await Store.loadPublishedSnapshot();
+      if (pub) setPublishedSnapshot(pub);
       const remote = await Store.fsLoadDraft();
       if (remote) {
         const merged = normalizeContent(deepMerge(buildDefaultContent(), remote));
@@ -605,6 +643,11 @@ function useContent() {
     });
     return () => unsub();
   }, []);
+
+  const draftDiffersFromPublished = React.useMemo(() => {
+    if (!publishedSnapshot) return false;
+    return contentCompareFingerprint(content) !== contentCompareFingerprint(publishedSnapshot);
+  }, [content, publishedSnapshot]);
 
   // Debounced Firestore draft write (1s after the last edit) to avoid a write
   // per keystroke while still keeping the cross-device draft current.
@@ -694,7 +737,13 @@ function useContent() {
   }, [scheduleDraftSync]);
 
   const publish = React.useCallback(() => {
-    setContent((cur) => { Store.publish(cur); Store.fsPublish(cur); return cur; });
+    setContent((cur) => {
+      const snap = mergeContentSnapshot(cur);
+      Store.publish(cur);
+      Store.fsPublish(cur);
+      if (snap) setPublishedSnapshot(snap);
+      return cur;
+    });
     const ts = new Date().toISOString();
     Store.write('amritos.publishedAt', ts);
     setPublishedAt(ts);
@@ -706,21 +755,44 @@ function useContent() {
     setContent(def); setDirty(true); scheduleDraftSync(def);
   }, [scheduleDraftSync]);
 
-  // Discard the draft and revert to the last PUBLISHED version (the live site),
-  // dropping all unpublished edits. Prefers the cloud-published snapshot, falls
-  // back to the local copy, then to defaults. Leaves the draft == published, so
-  // the console returns to a clean (non-dirty) state.
-  const discardDraft = React.useCallback(async () => {
-    let pub = Store.loadPublished();
-    if (!pub) { try { pub = await Store.fsLoadPublished(); } catch (e) {} }
-    const base = normalizeContent(deepMerge(buildDefaultContent(), pub || {}));
-    setContent(base);
-    Store.saveDraft(base);
-    Store.fsSaveDraft(base);
+  // Copy the live PUBLISHED snapshot into draft (localStorage + Firestore),
+  // overwriting every in-progress edit. Prefers Firestore when signed in.
+  // Preserves bot LLM apiKeys — the public published doc is key-stripped.
+  const syncDraftFromPublished = React.useCallback(async () => {
+    const base = await Store.loadPublishedSnapshot();
+    if (!base) return false;
+    setContent((cur) => {
+      const next = clone(base);
+      try {
+        const curBy = cur && cur.bot && cur.bot.providers && cur.bot.providers.byProvider;
+        const nextProv = next.bot && next.bot.providers;
+        if (curBy && nextProv) {
+          const by = { ...(nextProv.byProvider || {}) };
+          for (const id of Object.keys(curBy)) {
+            if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+            const curP = Reflect.get(curBy, id);
+            const nextP = Reflect.get(by, id) || {};
+            Reflect.set(by, id, {
+              ...nextP,
+              apiKey: (curP && typeof curP.apiKey === 'string') ? curP.apiKey : (nextP.apiKey || ''),
+              model: (curP && typeof curP.model === 'string' && curP.model) ? curP.model : (nextP.model || ''),
+            });
+          }
+          nextProv.byProvider = by;
+        }
+      } catch (e) { /* keep published as-is */ }
+      const merged = mergeContentSnapshot(next);
+      lastJsonRef.current = JSON.stringify(merged);
+      Store.saveDraft(merged);
+      Store.fsSaveDraft(merged);
+      return merged;
+    });
     Store.clearPreview();
     setDirty(false);
+    setPublishedSnapshot(base);
     return true;
   }, []);
+  const discardDraft = syncDraftFromPublished;
 
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
@@ -736,7 +808,11 @@ function useContent() {
     });
   }, []);
 
-  return { content, setAt, replace, publish, reset, discardDraft, previewDraft, dirty, publishedAt, setDirty, synced, saveLLMConfig, agentBusy, setAgentBusy, adoptRemoteDraft };
+  return {
+    content, setAt, replace, publish, reset, discardDraft, syncDraftFromPublished, previewDraft,
+    dirty, draftDiffersFromPublished, publishedSnapshot, publishedAt, setDirty, synced,
+    saveLLMConfig, agentBusy, setAgentBusy, adoptRemoteDraft,
+  };
 }
 
 /* ---------- Analytics hook (real-time, Firestore-backed) ----------
