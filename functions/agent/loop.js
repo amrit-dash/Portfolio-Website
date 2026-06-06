@@ -25,13 +25,14 @@ const MAX_TOOL_ITERS = 25;
 const BASE_SYSTEM = [
   'You are the amrit.os admin agent. You edit the portfolio draft via tools only.',
   'Never claim a change was made unless a mutating tool returned ok:true.',
-  'Use readContent to inspect a path before editing it. Prefer setContentPath for leaf updates.',
+  'Content outline lists array entries with index/id/label — use it to target the right row, then readContent before editing.',
+  'Prefer setContentPath leaf paths for nitty-gritty edits: about.impact.1.html, about.impact.1.label, projects.3.title, experience.0.company, experience.1.roles.0.name.',
+  'Partial row merge: setContentPath at collection.N with a JSON object updates only that index (siblings preserved). about.impact also merges by label at the collection root.',
   'Match the user\'s scope exactly: if they name one item (by label, id, or position), edit only that item — never rewrite sibling entries or whole arrays unless they explicitly ask.',
-  'Before a broad write, readContent the target path and confirm you have the right index/label/id; prefer the narrowest path (e.g. about.impact.1.html) over replacing about.impact or an entire collection.',
-  'For array collections (projects, experience, about.impact, …): update one entry via indexed paths (collection.N.field), a partial object at collection.N, or a single-object merge at the collection root with label/id — preserve all other entries.',
   'You cannot change the bot LLM provider, API keys, or behavior toggles — those paths are blocked.',
   'Use publish() only when the owner explicitly asks to ship changes to the live site.',
   'Structured tools (addItem, removeItem, reorder, applyVibePreset, setProjectImage, setCv) handle arrays and presets safely.',
+  'generateImage creates raster art (Gemini or OpenAI DALL·E); setProjectImage places an existing URL or assets/ SVG — do not generate SVGs.',
   'For setContentPath/addItem, pass objects and arrays as compact JSON strings.',
 ].join(' ');
 
@@ -86,10 +87,12 @@ async function runAgentTurn({
   admin,
   agentConfig,
   providerKey,
-  imageKey,
-  imageModel,
+  imageGemini,
+  imageOpenai,
+  imagePrefer,
   providerCatalog,
   message,
+  attachments,
   chatId,
   currentRoute,
   inboxMode,
@@ -123,14 +126,14 @@ async function runAgentTurn({
   const history = sanitizeHistoryForProvider(rawHistory, providerChanged);
 
   const tools = filterToolsForMode(ALL_TOOLS, { inboxMode });
-  const toolCtx = { session, db, FieldValue, chatId: cid, admin, imageKey, imageModel };
+  const toolCtx = { session, db, FieldValue, chatId: cid, admin, imageGemini, imageOpenai, imagePrefer };
   const userText = inboxMode ? wrapVisitorText(message) : String(message || '');
 
   let systemPrompt = BASE_SYSTEM;
   if (inboxMode) systemPrompt += ' ' + INBOX_SYSTEM_GUARD;
   systemPrompt += `\nCurrent admin route: ${currentRoute || '/'}.\nContent outline: ${JSON.stringify(outline)}`;
 
-  const messages = history.concat([makeUserMessage(userText)]);
+  const messages = history.concat([makeUserMessage(userText, attachments)]);
   const toolLog = [];
   let reply = '';
   let iter = 0;
@@ -206,7 +209,7 @@ async function runAgentTurn({
     bounded: iter >= MAX_TOOL_ITERS,
   };
   const newMessages = [
-    makeUserMessage(message),
+    makeUserMessage(message, attachments),
     makeAssistantMessage(
       reply,
       toolLog.map((t) => ({ id: newId('tc'), name: t.name, args: t.args })),

@@ -448,9 +448,10 @@ async function getAgentConfig() {
       active: data.active || sharedSchema.AGENT_CONFIG_DEFAULTS.active,
       byProvider: (data.byProvider && typeof data.byProvider === 'object') ? data.byProvider : {},
       refinerModel: data.refinerModel || null,
+      imageProvider: data.imageProvider || null,
     };
   } catch (e) {
-    return { active: 'gemini', byProvider: {}, refinerModel: null };
+    return { active: 'gemini', byProvider: {}, refinerModel: null, imageProvider: null };
   }
 }
 
@@ -467,9 +468,28 @@ function stripAgentConfigKeys(config) {
   for (const id of Object.keys(src)) {
     if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
     const p = Reflect.get(src, id) || {};
-    by[id] = { model: p.model || null };
+    by[id] = { model: p.model || null, imageModel: p.imageModel || null };
   }
-  return { active: config.active, byProvider: by, refinerModel: config.refinerModel || null };
+  return {
+    active: config.active,
+    byProvider: by,
+    refinerModel: config.refinerModel || null,
+    imageProvider: config.imageProvider || null,
+  };
+}
+
+// Image generation keys — Gemini image model and/or OpenAI DALL·E (text-only providers skipped).
+function resolveImageGenConfig(fullConfig) {
+  const by = (fullConfig && fullConfig.byProvider) || {};
+  const gemini = Reflect.get(by, 'gemini') || {};
+  const openai = Reflect.get(by, 'openai') || {};
+  const geminiKey = gemini.apiKey || null;
+  const openaiKey = openai.apiKey || null;
+  return {
+    imageGemini: geminiKey ? { key: geminiKey, model: gemini.imageModel || null } : null,
+    imageOpenai: openaiKey ? { key: openaiKey, model: openai.imageModel || null } : null,
+    imagePrefer: fullConfig.imageProvider || null,
+  };
 }
 
 /* ===================================================== */
@@ -516,14 +536,44 @@ exports.agent = onRequest({ invoker: 'public', timeoutSeconds: 300, memory: '512
     }
   }
 
-  const { message, currentRoute, inboxMode } = body;
-  if (!message || typeof message !== 'string') return res.status(400).json({ error: 'no-message' });
+  const { message, currentRoute, inboxMode, attachments: rawAttachments } = body;
+  const msgText = typeof message === 'string' ? message : '';
+  if (!msgText.trim() && !(Array.isArray(rawAttachments) && rawAttachments.length)) {
+    return res.status(400).json({ error: 'no-message' });
+  }
 
   const fullConfig = await getAgentConfig();
-  const providerKey = resolveAgentKey(fullConfig, fullConfig.active || 'gemini');
-  const imageKey = resolveAgentKey(fullConfig, 'gemini'); // image generation is Gemini-specific
-  const imageModel = (fullConfig.byProvider && fullConfig.byProvider.gemini && fullConfig.byProvider.gemini.imageModel) || undefined;
+  const providerId = fullConfig.active || 'gemini';
+  const providerKey = resolveAgentKey(fullConfig, providerId);
+  const imageGen = resolveImageGenConfig(fullConfig);
   const settings = await getSettings();
+
+  const multimodal = require('./agent/multimodal');
+  let attachments = null;
+  if (Array.isArray(rawAttachments) && rawAttachments.length) {
+    const pcfg = (fullConfig.byProvider && fullConfig.byProvider[providerId]) || {};
+    const model = pcfg.model || '';
+    if (!sharedSchema.supportsVision(providerId, model)) {
+      return res.status(400).json({
+        error: 'unsupported-vision',
+        message: `${providerId} / ${model || '(no model)'} does not support image attachments. Switch to a vision-capable model.`,
+      });
+    }
+    try {
+      attachments = multimodal.parseAttachments(rawAttachments);
+    } catch (e) {
+      const code = e && e.message;
+      const map = {
+        'invalid-attachments': 'Attachments must be an array.',
+        'too-many-attachments': `At most ${multimodal.ATTACH_MAX_COUNT} images per message.`,
+        'invalid-attachment': 'Invalid image attachment.',
+        'empty-attachment': 'Empty image attachment.',
+        'attachment-too-large': 'Image exceeds the 4 MB limit.',
+        'not-an-image': 'Attachment is not a supported image (JPEG, PNG, GIF, WebP).',
+      };
+      return res.status(400).json({ error: code || 'invalid-attachment', message: map[code] || code });
+    }
+  }
 
   try {
     const result = await runAgentTurn({
@@ -532,10 +582,12 @@ exports.agent = onRequest({ invoker: 'public', timeoutSeconds: 300, memory: '512
       admin,                                            // for Admin-SDK Storage upload (image gen)
       agentConfig: stripAgentConfigKeys(fullConfig),   // model/provider only — no secrets pass deeper
       providerKey,                                      // the one resolved key, used to call the provider
-      imageKey,                                         // Gemini key for image generation (if set)
-      imageModel,
+      imageGemini: imageGen.imageGemini,
+      imageOpenai: imageGen.imageOpenai,
+      imagePrefer: imageGen.imagePrefer,
       providerCatalog: PROVIDERS,
-      message: String(message).slice(0, 8000),
+      message: String(msgText).slice(0, 8000),
+      attachments,
       chatId: chatId || 'default',
       currentRoute: currentRoute || '/',
       inboxMode: !!inboxMode,
@@ -944,4 +996,4 @@ exports.inboxProcess = onRequest({ invoker: 'public', timeoutSeconds: 300, memor
   return res.status(200).json({ suggestions, processed: qDocs.length, provider: providerId, model });
 });
 
-module.exports._agentHelpers = { getAgentConfig, resolveAgentKey, stripAgentConfigKeys, getSettings, db, FieldValue, verifyOwner, PROVIDERS, OWNER_EMAIL, extractJson, normalizeSuggestion };
+module.exports._agentHelpers = { getAgentConfig, resolveAgentKey, resolveImageGenConfig, stripAgentConfigKeys, getSettings, db, FieldValue, verifyOwner, PROVIDERS, OWNER_EMAIL, extractJson, normalizeSuggestion };

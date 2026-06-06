@@ -59,13 +59,22 @@ function fromFirestore(doc) {
   };
 }
 
+/* Persist attachment metadata only — never store base64 blobs in Firestore. */
+function attachmentsMeta(attachments) {
+  if (!attachments || !attachments.length) return null;
+  return attachments.map((a) => ({
+    mime: a.mime || null,
+    bytes: Number(a.bytes) || (a.data ? Buffer.byteLength(String(a.data), 'base64') : 0) || null,
+  }));
+}
+
 function toFirestore(msg) {
   const out = {
     role: msg.role,
     text: msg.text || '',
     toolCalls: msg.toolCalls || [],
     toolResults: msg.toolResults || [],
-    attachments: msg.attachments || null,
+    attachments: attachmentsMeta(msg.attachments),
     ts: msg.ts || Date.now(),
   };
   if (msg.turnMeta && typeof msg.turnMeta === 'object') out.turnMeta = msg.turnMeta;
@@ -79,4 +88,5 @@ module.exports = {
   makeToolResultMessage,
   fromFirestore,
   toFirestore,
+  attachmentsMeta,
 };
