@@ -107,6 +107,19 @@ function normalizeContent(content) {
       bot.providers.active = LLM_PROVIDERS[0].id;
     }
   }
+  // Heal impact-timeline rows — stable ids + string fields (guards against
+  // [object Object] labels from a bad write or legacy draft corruption).
+  const about = content.about;
+  if (about && Array.isArray(about.impact)) {
+    about.impact = about.impact.map((item, idx) => {
+      const row = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+      return {
+        id: typeof row.id === 'string' && row.id ? row.id : ('imp_' + idx + '_' + String(idx)),
+        label: typeof row.label === 'string' ? row.label : '',
+        html: typeof row.html === 'string' ? row.html : '',
+      };
+    });
+  }
   return content;
 }
 
