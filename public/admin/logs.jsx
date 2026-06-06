@@ -2,11 +2,11 @@
 /* =====================================================
    amrit.os ADMIN — read-only function-log feed
    -----------------------------------------------------
-   A reusable view over /logs (Cloud Logging, owner-only). Nothing is stored:
-   it pulls the last hour up front, polls every few seconds for newer entries
-   and appends them live, and lazy-loads older entries on scroll. Used by the
-   Agent "Logs" mode, the AmritBot logs tab, and the Analytics "Function logs"
-   section — driven entirely by the `source` prop ('agent' | 'bot' | 'all').
+   A reusable view over /logs (Cloud Logging, owner-only). Hydrates from a
+   small localStorage cache for instant display, fetches the most recent page
+   from the server (no arbitrary time window), polls for newer entries live,
+   and lazy-loads older entries on scroll. Used by Agent logs, AmritBot logs,
+   and Analytics "Function logs" — driven by `source` ('agent' | 'bot' | 'all').
    ===================================================== */
 const { useState: useLState, useEffect: useLEffect, useRef: useLRef, useCallback: useLCallback } = React;
 
@@ -61,19 +61,19 @@ function LogsView({ source = 'all', height = 460, showSource = false }) {
   const errorsOnly = filter === 'errors';
   const cacheKey = 'amritos.logcache.' + source;
 
-  // Hydrate from the last cached page on mount so navigating to a logs view
-  // shows entries instantly instead of flashing "Loading…" and re-reading from
-  // scratch. The background loadInitial then refreshes against Cloud Logging.
+  // Hydrate from cache on mount / source change so the feed is instant. Always
+  // reset when `source` changes so one tab's entries never bleed into another.
   useLEffect(() => {
+    let rows = [];
     try {
       const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-      if (Array.isArray(cached) && cached.length) {
-        const rows = cached.slice().sort((a, b) => b.ts - a.ts);
-        const seen = new Set(); rows.forEach((r) => seen.add(keyOf(r))); seenRef.current = seen;
-        newestRef.current = rows[0].ts; oldestRef.current = rows[rows.length - 1].ts;
-        setEntries(rows);
-      }
+      if (Array.isArray(cached) && cached.length) rows = cached.slice().sort((a, b) => b.ts - a.ts);
     } catch (e) { /* ignore */ }
+    const seen = new Set(); rows.forEach((r) => seen.add(keyOf(r))); seenRef.current = seen;
+    newestRef.current = rows.length ? rows[0].ts : 0;
+    oldestRef.current = rows.length ? rows[rows.length - 1].ts : 0;
+    setOlderDone(false);
+    setEntries(rows);
   }, [source]);
 
   // Persist the current "all" feed (not a filtered subset) for next time.
@@ -82,7 +82,8 @@ function LogsView({ source = 'all', height = 460, showSource = false }) {
     try { localStorage.setItem(cacheKey, JSON.stringify(entries.slice(0, 120))); } catch (e) { /* quota */ }
   }, [entries, errorsOnly, cacheKey]);
 
-  // Full (re)load: reset state, pull the last hour.
+  // Refresh from server. "All" merges into cache so a quiet last hour never
+  // wipes older cached lines; "Errors" replaces because it is a different query.
   const loadInitial = useLCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true; setLoading(true); setErr('');
@@ -90,12 +91,29 @@ function LogsView({ source = 'all', height = 460, showSource = false }) {
     busyRef.current = false; setLoading(false);
     if (res && res.error) { setErr(res.message || res.error); return; }
     const rows = (res.entries || []).slice().sort((a, b) => b.ts - a.ts);
-    const seen = new Set(); rows.forEach((r) => seen.add(keyOf(r)));
-    seenRef.current = seen;
-    newestRef.current = rows.length ? rows[0].ts : (res.now || Date.now());
-    oldestRef.current = rows.length ? rows[rows.length - 1].ts : (res.now || Date.now());
+
+    if (errorsOnly) {
+      const seen = new Set(); rows.forEach((r) => seen.add(keyOf(r)));
+      seenRef.current = seen;
+      newestRef.current = rows.length ? rows[0].ts : (res.now || Date.now());
+      oldestRef.current = rows.length ? rows[rows.length - 1].ts : (res.now || Date.now());
+      setOlderDone(rows.length < 60);
+      setEntries(rows);
+      return;
+    }
+
+    setEntries((prev) => {
+      const map = new Map();
+      prev.forEach((r) => map.set(keyOf(r), r));
+      rows.forEach((r) => map.set(keyOf(r), r));
+      const all = Array.from(map.values()).sort((a, b) => b.ts - a.ts);
+      const seen = new Set(); all.forEach((r) => seen.add(keyOf(r)));
+      seenRef.current = seen;
+      newestRef.current = all.length ? all[0].ts : (res.now || Date.now());
+      oldestRef.current = all.length ? all[all.length - 1].ts : (res.now || Date.now());
+      return all;
+    });
     setOlderDone(rows.length < 60);
-    setEntries(rows);
   }, [source, errorsOnly]);
 
   // Live poll: only newer-than-newest, prepended.
@@ -154,7 +172,7 @@ function LogsView({ source = 'all', height = 460, showSource = false }) {
         <span className={'logs__live' + (live ? ' on' : '')} title={live ? 'Live — polling for new entries' : 'Paused'}>
           <span className="logs__livedot" />{live ? 'live' : 'paused'}
         </span>
-        <span className="helptext" style={{ marginLeft: 2 }}>last hour · {entries.length} shown</span>
+        <span className="helptext" style={{ marginLeft: 2 }}>newest first · {entries.length} shown</span>
         <span className="spacer" style={{ flex: 1 }} />
         <Segmented value={filter} options={LOG_FILTERS} onChange={setFilter} />
         <button type="button" className="composer__tool" title={live ? 'Pause live updates' : 'Resume live updates'} onClick={() => setLive((v) => !v)}>
@@ -169,7 +187,7 @@ function LogsView({ source = 'all', height = 460, showSource = false }) {
 
       <div className="logs__scroll" style={{ maxHeight: height }} onScroll={onScroll}>
         {entries.length === 0 ? (
-          <div className="logs__empty">{loading ? 'Loading logs…' : 'No log entries in the last hour. Trigger the agent, the bot, or a test to see activity here.'}</div>
+          <div className="logs__empty">{loading ? 'Loading logs…' : 'No log entries yet. Trigger the agent, the bot, or a test to see activity here.'}</div>
         ) : (
           <ul className="logs__list">
             {entries.map((e, i) => (
