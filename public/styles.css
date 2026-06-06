@@ -271,19 +271,19 @@ ul { margin: 0; padding: 0; list-style: none; }
   top: calc(100% + 10px);
   right: 0;
   z-index: 10001;
-  min-width: 210px;
-  max-width: 270px;
-  padding: 10px 30px 10px 12px;
-  background: color-mix(in oklab, var(--bg-elev) 88%, transparent);
-  border: 1px solid var(--line);
+  min-width: 220px;
+  max-width: 280px;
+  padding: 11px 32px 11px 13px;
+  background: color-mix(in oklab, var(--accent) 15%, var(--bg-elev));
+  border: 1.5px solid var(--accent);
   border-radius: 12px 12px 4px 12px;
   font-family: var(--font-mono);
   font-size: 11px;
-  line-height: 1.45;
-  color: var(--fg-dim);
+  line-height: 1.5;
+  color: var(--fg);
   box-shadow:
-    0 10px 28px -10px rgba(0, 0, 0, .5),
-    0 0 0 1px color-mix(in oklab, var(--accent) 14%, transparent);
+    0 12px 32px -10px rgba(0, 0, 0, .55),
+    0 0 18px color-mix(in oklab, var(--accent) 28%, transparent);
   animation: cvTipIn .35s cubic-bezier(.2, .9, .3, 1) both;
   pointer-events: auto;
 }
@@ -294,9 +294,9 @@ ul { margin: 0; padding: 0; list-style: none; }
   right: 9px;
   width: 10px;
   height: 10px;
-  background: color-mix(in oklab, var(--bg-elev) 88%, transparent);
-  border-left: 1px solid var(--line);
-  border-top: 1px solid var(--line);
+  background: color-mix(in oklab, var(--accent) 15%, var(--bg-elev));
+  border-left: 1.5px solid var(--accent);
+  border-top: 1.5px solid var(--accent);
   transform: rotate(45deg);
 }
 .cv-theme-tip--out {
@@ -332,6 +332,12 @@ ul { margin: 0; padding: 0; list-style: none; }
 .cv-theme-tip__close:hover {
   color: var(--accent);
   background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+.cv-download-err {
+  flex: 1 1 100%;
+  font-size: 11px;
+  color: var(--accent-2);
+  text-align: right;
 }
 
 /* ---------- Boot sequence ---------- */
@@ -823,6 +829,30 @@ ul { margin: 0; padding: 0; list-style: none; }
 .bot-msg__bubble em {
   font-style: italic;
   color: var(--fg-mute);
+}
+.bot-msg__bubble strong {
+  font-weight: 600;
+  color: var(--fg);
+}
+.bot-msg__bubble .md-list {
+  margin: 0.35em 0 0.35em 1.15em;
+  padding: 0;
+  list-style: disc;
+}
+.bot-msg__bubble .md-list--ol {
+  list-style: decimal;
+}
+.bot-msg__bubble .md-list li {
+  margin: 0.2em 0;
+}
+.bot-msg__bubble .md-p {
+  margin: 0.35em 0;
+}
+.bot-msg__bubble .md-p:first-child {
+  margin-top: 0;
+}
+.bot-msg__bubble .md-p:last-child {
+  margin-bottom: 0;
 }
 .user-msg__bubble {
   background: var(--accent);

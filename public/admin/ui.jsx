@@ -126,32 +126,8 @@ function PageHead({ eyebrow, title, children, actions }) {
   );
 }
 
-/* Lightweight inline-markdown → React nodes. Models often reply with **bold**,
-   *italic*, `code` and newlines even when asked not to; render them instead of
-   showing the raw asterisks. Safe by construction (builds React elements, never
-   injects HTML). Shared by the agent bubbles + the bot test panel. */
-function mdInline(text) {
-  const src = String(text == null ? '' : text);
-  const lines = src.split('\n');
-  const out = [];
-  lines.forEach((line, li) => {
-    if (li > 0) out.push(React.createElement('br', { key: 'br' + li }));
-    // Tokenize **bold**, *italic*/_italic_, `code`.
-    const re = /(\*\*([^*]+)\*\*|`([^`]+)`|\*([^*]+)\*|_([^_]+)_)/g;
-    let last = 0, m, k = 0;
-    while ((m = re.exec(line)) !== null) {
-      if (m.index > last) out.push(line.slice(last, m.index));
-      const key = li + '-' + (k++);
-      if (m[2] != null) out.push(React.createElement('strong', { key }, m[2]));
-      else if (m[3] != null) out.push(React.createElement('code', { key }, m[3]));
-      else if (m[4] != null) out.push(React.createElement('em', { key }, m[4]));
-      else if (m[5] != null) out.push(React.createElement('em', { key }, m[5]));
-      last = m.index + m[0].length;
-    }
-    if (last < line.length) out.push(line.slice(last));
-  });
-  return out;
-}
+/* Markdown renderer — shared module (md.jsx). Agent bubbles + bot test panel. */
+const mdInline = window.mdInline || ((text) => [String(text == null ? '' : text)]);
 
 function Panel({ title, sub, actions, children, tight, className }) {
   return (

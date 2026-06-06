@@ -17,28 +17,8 @@ const useSiteContent = () => React.useContext(ContentCtx) || CONTENT;
    dangerouslySetInnerHTML is fine because the source is the portfolio owner. */
 const rt = (html) => ({ __html: String(html == null ? '' : html) });
 
-/* Inline markdown → React nodes for bot replies (models emit **bold**, *italic*,
-   `code` and newlines even when told not to). Builds React elements directly, so
-   it never injects HTML from the model. */
-const mdInline = (text) => {
-  const src = String(text == null ? '' : text);
-  const out = [];
-  src.split('\n').forEach((line, li) => {
-    if (li > 0) out.push(React.createElement('br', { key: 'br' + li }));
-    const re = /(\*\*([^*]+)\*\*|`([^`]+)`|\*([^*]+)\*|_([^_]+)_)/g;
-    let last = 0, m, k = 0;
-    while ((m = re.exec(line)) !== null) {
-      if (m.index > last) out.push(line.slice(last, m.index));
-      const key = li + '-' + (k++);
-      if (m[2] != null) out.push(React.createElement('strong', { key }, m[2]));
-      else if (m[3] != null) out.push(React.createElement('code', { key }, m[3]));
-      else out.push(React.createElement('em', { key }, m[4] != null ? m[4] : m[5]));
-      last = m.index + m[0].length;
-    }
-    if (last < line.length) out.push(line.slice(last));
-  });
-  return out;
-};
+/* Bot markdown renderer — shared module (md.jsx): lists, bold, italic, code. */
+const mdInline = window.mdInline || ((text) => [String(text == null ? '' : text)]);
 
 /* =====================================================
    ANALYTICS — fire-and-forget POST to the /track function,
@@ -59,28 +39,41 @@ function logEvent(type, meta) {
   } catch (e) { /* never let analytics break the UX */ }
 }
 
-/* Cross-origin `download` on <a> is ignored (e.g. Firebase Storage). Fetch the
-   bytes and trigger a same-origin blob save so the PDF lands in Downloads. */
+/* Cross-origin `download` on <a> is ignored (Firebase Storage). Storage GET lacks
+   CORS headers so fetch() fails — use the Storage SDK getBytes for those URLs,
+   same-origin fetch for bundled /assets/ paths, then blob-save locally. */
 async function downloadCv(url, filename) {
   const name = filename || 'Amrit-Dash-CV.pdf';
-  const trigger = (href) => {
+  const saveBlob = (blob) => {
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = href;
+    a.href = blobUrl;
     a.download = name;
     a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-  };
-  try {
-    const res = await fetch(url, { mode: 'cors' });
-    if (!res.ok) throw new Error('fetch failed');
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    trigger(blobUrl);
     setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+  };
+  const isStorage = /firebasestorage\.googleapis\.com/i.test(url);
+  const isRemote = /^https?:\/\//i.test(url);
+  try {
+    let blob;
+    if (isStorage && window.fb && window.fb.storage) {
+      const ref = window.fb.storage.refFromURL(url);
+      const bytes = await ref.getBytes(20 * 1024 * 1024);
+      blob = new Blob([bytes], { type: 'application/pdf' });
+    } else {
+      const fetchUrl = isRemote ? url : new URL(url, location.href).href;
+      const res = await fetch(fetchUrl);
+      if (!res.ok) throw new Error('fetch failed');
+      blob = await res.blob();
+    }
+    saveBlob(blob);
+    return { ok: true };
   } catch (e) {
-    trigger(url);
+    console.warn('[downloadCv]', e);
+    return { ok: false };
   }
 }
 
@@ -425,8 +418,8 @@ function CvThemeTip({ theme, nonce, onDismiss }) {
 
   if (!nonce) return null;
   const msg = theme === 'dark'
-    ? 'Want to download the CV in light mode?'
-    : 'Want to download the CV in dark mode?';
+    ? 'Switch mode to download light schema CV.'
+    : 'Switch mode to download dark schema CV.';
   return (
     <div className={'cv-theme-tip' + (fading ? ' cv-theme-tip--out' : '')} role="status">
       <p>{msg}</p>
@@ -880,11 +873,21 @@ function AboutWindow({ cvUrl, cvVariant, cvFileName, onCvDownloaded }) {
   const a = useSiteContent().about || {};
   const meta = Array.isArray(a.meta) ? a.meta : [];
   const impact = Array.isArray(a.impact) ? a.impact : [];
-  const onCvClick = (e) => {
+  const [cvBusy, setCvBusy] = useState(false);
+  const [cvErr, setCvErr] = useState(false);
+  const onCvClick = async (e) => {
     e.preventDefault();
+    if (cvBusy) return;
+    setCvErr(false);
+    setCvBusy(true);
     logEvent('cv:download', cvVariant);
-    if (onCvDownloaded) onCvDownloaded();
-    downloadCv(cvUrl, cvFileName);
+    const result = await downloadCv(cvUrl, cvFileName);
+    setCvBusy(false);
+    if (result.ok) {
+      if (onCvDownloaded) onCvDownloaded();
+    } else {
+      setCvErr(true);
+    }
   };
   return (
     <section id="about" className="section">
@@ -912,8 +915,11 @@ function AboutWindow({ cvUrl, cvVariant, cvFileName, onCvDownloaded }) {
               <ul className="about-impact" data-reveal data-reveal-type="up" data-reveal-delay="2">
                 {impact.map((m, i) => <li key={i}><b>{m.label}</b> &mdash; <span dangerouslySetInnerHTML={rt(m.html)} /></li>)}
               </ul>
-              <div className="hero__cta-row" data-reveal data-reveal-type="up" data-reveal-delay="3" style={{ marginTop: '24px', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={onCvClick} className="btn btn--primary">Download CV</button>
+              <div className="hero__cta-row" data-reveal data-reveal-type="up" data-reveal-delay="3" style={{ marginTop: '24px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <button type="button" onClick={onCvClick} className="btn btn--primary" disabled={cvBusy} aria-busy={cvBusy}>
+                  {cvBusy ? 'Downloading…' : 'Download CV'}
+                </button>
+                {cvErr && <span className="cv-download-err mono" role="alert">Couldn&apos;t download — try again.</span>}
                 <a href="https://about.me/amritdash" target="_blank" rel="noreferrer" className="btn">About.me <span className="btn__arrow">↗</span></a>
               </div>
             </div>
