@@ -2846,7 +2846,11 @@ body::before {
 .agentattach__thumb {
    width: 44px;
    height: 44px;
+   min-width: 44px;
+   max-width: 44px;
+   flex-shrink: 0;
    object-fit: cover;
+   aspect-ratio: 1 / 1;
    border-radius: 6px;
    display: block;
 }
@@ -2874,14 +2878,18 @@ body::before {
    display: flex;
    flex-wrap: wrap;
    justify-content: flex-end;
+   align-self: flex-end;
    gap: 6px;
    margin-bottom: 6px;
+   width: fit-content;
    max-width: 100%;
 }
 
 .agentattach--sent .agentattach__thumb {
    width: 72px;
    height: 72px;
+   min-width: 72px;
+   max-width: 72px;
 }
 
 /* Settings modal (opened from the composer gear) */
