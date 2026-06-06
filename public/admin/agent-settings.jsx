@@ -154,6 +154,9 @@ function AgentSettingsPage({ modal }) {
                 <div style={{ minWidth: 0 }}>
                   <div className="provrow__nm">
                     {p.label}{p.tag && <span className="tag">{p.tag}</span>}
+                    {SCHEMA.supportsVision && SCHEMA.supportsVision(p.id, c.model || curatedDefault) && (
+                      <span className="tag" title="Supports image attachments in agent chat">vision</span>
+                    )}
                     {active && <span className="tag tag--accent">DEFAULT</span>}
                   </div>
                   <div className="provrow__ep">{p.endpoint.replace('{model}', c.model || curatedDefault)}</div>

@@ -495,8 +495,12 @@ const Store = {
     }
     return data != null ? data : { error: 'bad-response', message: 'Empty/invalid response from ' + path };
   },
-  agentTurn({ message, currentRoute, chatId }) {
-    return this._agentFetch('/agent', { message, currentRoute, chatId: chatId || 'default' });
+  agentTurn({ message, attachments, currentRoute, chatId }) {
+    const payload = { message, currentRoute, chatId: chatId || 'default' };
+    if (attachments && attachments.length) {
+      payload.attachments = attachments.map((a) => ({ mime: a.mime, data: a.data }));
+    }
+    return this._agentFetch('/agent', payload);
   },
   agentUndo(chatId) {
     return this._agentFetch('/agent', { action: 'undo', chatId: chatId || 'default' });

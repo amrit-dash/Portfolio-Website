@@ -12,6 +12,62 @@
 const { useState, useEffect, useRef } = React;
 
 const AGENT_UI_CACHE_KEY = 'amritos.agentTurnMeta';
+const ATTACH_MAX_DIM = 1920;
+const ATTACH_MAX_BYTES = 4 * 1024 * 1024;
+const ATTACH_MAX_COUNT = 4;
+
+function bufToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image.')); };
+    img.src = url;
+  });
+}
+
+async function prepareImageAttachment(file) {
+  const img = await loadImageFromFile(file);
+  let w = img.naturalWidth || img.width;
+  let h = img.naturalHeight || img.height;
+  const scale = Math.min(1, ATTACH_MAX_DIM / Math.max(w, h, 1));
+  w = Math.max(1, Math.round(w * scale));
+  h = Math.max(1, Math.round(h * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  const mime = 'image/jpeg';
+  let quality = 0.92;
+  let blob = null;
+  for (let i = 0; i < 10; i++) {
+    blob = await new Promise((r) => canvas.toBlob(r, mime, quality));
+    if (blob && blob.size <= ATTACH_MAX_BYTES) break;
+    quality -= 0.1;
+    if (quality < 0.35) break;
+  }
+  if (!blob || blob.size > ATTACH_MAX_BYTES) throw new Error('Image is too large — try a smaller file.');
+  const data = bufToBase64(await blob.arrayBuffer());
+  return { mime, data, bytes: blob.size, preview: URL.createObjectURL(blob) };
+}
+
+function agentSupportsVision(cfg) {
+  const SCHEMA = window.SHARED_SCHEMA || {};
+  if (!SCHEMA.supportsVision || !cfg) return false;
+  const id = cfg.active || 'gemini';
+  const model = (cfg.byProvider && cfg.byProvider[id] && cfg.byProvider[id].model) || '';
+  return SCHEMA.supportsVision(id, model);
+}
 
 /* Flatten server turnMeta + local undo/revert state onto a UI message. */
 function applyTurnMeta(msg, cache) {
@@ -44,8 +100,8 @@ function buildUiFromRaw(raw) {
   const ui = [];
   for (let i = 0; i < (raw || []).length; i++) {
     const m = raw[i];
-    if (m.role === 'user' && (m.text || '').trim()) {
-      ui.push({ role: 'user', text: m.text, restored: true, ts: m.ts });
+    if (m.role === 'user' && ((m.text || '').trim() || (m.attachments || []).length)) {
+      ui.push({ role: 'user', text: m.text || '', attachments: m.attachments || null, restored: true, ts: m.ts });
       continue;
     }
     if (m.role === 'assistant' && ((m.text || '').trim() || (m.toolCalls || []).length)) {
@@ -208,15 +264,26 @@ function pathToRoute(path) {
 }
 
 /* ---------- the send action (shared) ---------- */
-async function sendAgentMessage({ text, route, setAgentBusy }) {
+async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
   const Store = window.ADMIN_STORE.Store;
-  if (!text.trim() || agentChat.sending) return;
-  agentChat.push({ role: 'user', text });
+  const hasText = !!(text && text.trim());
+  const hasAttach = !!(attachments && attachments.length);
+  if ((!hasText && !hasAttach) || agentChat.sending) return;
+  agentChat.push({
+    role: 'user',
+    text: text || '',
+    attachments: hasAttach ? attachments.map((a) => ({ mime: a.mime, preview: a.preview })) : null,
+  });
   agentChat.push({ role: 'assistant', text: '', pending: true });
   agentChat.setSending(true);
   if (setAgentBusy) setAgentBusy(true);
   try {
-    const res = await Store.agentTurn({ message: text, currentRoute: route, chatId: 'default' });
+    const res = await Store.agentTurn({
+      message: text || '',
+      attachments: hasAttach ? attachments.map((a) => ({ mime: a.mime, data: a.data })) : undefined,
+      currentRoute: route,
+      chatId: 'default',
+    });
     if (res && res.error) {
       agentChat.patchLast({ pending: false, text: '', error: res.message || res.error });
     } else {
@@ -283,7 +350,21 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview }) {
   const Store = window.ADMIN_STORE.Store;
 
   if (msg.role === 'user') {
-    return <div className="agentmsg agentmsg--user"><div className="agentmsg__body">{msg.text}</div></div>;
+    const atts = msg.attachments || [];
+    return (
+      <div className="agentmsg agentmsg--user">
+        {!!atts.length && (
+          <div className="agentattach agentattach--sent">
+            {atts.map((a, i) => (
+              a.preview || a.data
+                ? <img key={i} className="agentattach__thumb" src={a.preview || ('data:' + a.mime + ';base64,' + a.data)} alt="" />
+                : <span key={i} className="agentattach__chip agentattach__chip--meta">{a.mime || 'image'}</span>
+            ))}
+          </div>
+        )}
+        {!!(msg.text || '').trim() && <div className="agentmsg__body">{msg.text}</div>}
+      </div>
+    );
   }
 
   const routes = [...new Set((msg.changedPaths || []).map(pathToRoute).filter(Boolean))];
@@ -381,8 +462,21 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
   const Store = window.ADMIN_STORE.Store;
   const chat = useAgentChat();
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [attachErr, setAttachErr] = useState('');
+  const [visionOk, setVisionOk] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const scroller = useRef(null);
+  const fileInput = useRef(null);
+
+  const refreshVision = () => {
+    Store.fsLoadAgentConfig().then((cfg) => setVisionOk(agentSupportsVision(cfg))).catch(() => setVisionOk(false));
+  };
+
+  useEffect(() => { refreshVision(); }, []);
+  useEffect(() => {
+    if (!settingsOpen) refreshVision();
+  }, [settingsOpen]);
 
   // Clear is only offered when there's a conversation to clear; once cleared it
   // hides until the next message lands (driven by chat.messages.length).
@@ -402,12 +496,69 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
   const overContext = agentContextChars(chat.messages) > AGENT_CONTEXT_WARN;
   const undoIdx = latestUndoableIndex(chat.messages);
 
+  const addFiles = async (files) => {
+    if (!visionOk || !files || !files.length) return;
+    setAttachErr('');
+    const next = attachments.slice();
+    for (const file of files) {
+      if (next.length >= ATTACH_MAX_COUNT) {
+        setAttachErr(`At most ${ATTACH_MAX_COUNT} images per message.`);
+        break;
+      }
+      if (!file.type || !file.type.startsWith('image/')) {
+        setAttachErr('Only image files are supported.');
+        continue;
+      }
+      try {
+        const prep = await prepareImageAttachment(file);
+        next.push({ id: 'att_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), ...prep });
+      } catch (err) {
+        setAttachErr((err && err.message) || 'Could not attach image.');
+      }
+    }
+    setAttachments(next);
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments((list) => {
+      const hit = list.find((a) => a.id === id);
+      if (hit && hit.preview) URL.revokeObjectURL(hit.preview);
+      return list.filter((a) => a.id !== id);
+    });
+  };
+
+  const onPaste = (e) => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    let hasImage = false;
+    const imageFiles = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
+        hasImage = true;
+        const f = items[i].getAsFile();
+        if (f) imageFiles.push(f);
+      }
+    }
+    if (!hasImage) return;
+    e.preventDefault();
+    if (!visionOk) {
+      setAttachErr('This model does not support images — switch to a vision-capable model in settings.');
+      return;
+    }
+    addFiles(imageFiles);
+  };
+
   const submit = (e) => {
     if (e) e.preventDefault();
     const t = input;
+    const atts = attachments;
     setInput('');
-    sendAgentMessage({ text: t, route, setAgentBusy });
+    setAttachments([]);
+    setAttachErr('');
+    sendAgentMessage({ text: t, attachments: atts, route, setAgentBusy });
   };
+
+  const canSend = !chat.sending && (input.trim() || attachments.length > 0);
 
   return (
     <div className={'agentchat' + (compact ? ' agentchat--compact' : '')}>
@@ -439,25 +590,60 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
       )}
 
       <form className="composer" onSubmit={submit}>
+        {!!attachments.length && (
+          <div className="composer__attachments">
+            {attachments.map((a) => (
+              <span key={a.id} className="agentattach__chip">
+                <img className="agentattach__thumb" src={a.preview} alt="" />
+                <button type="button" className="agentattach__remove" aria-label="Remove image" onClick={() => removeAttachment(a.id)}>
+                  <AdminIcon name="x" size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        {attachErr && <div className="helptext" style={{ padding: '0 12px 6px', color: '#e0a341' }}>⚠ {attachErr}</div>}
         <textarea
           className="composer__input"
           rows={compact ? 2 : 3}
           value={input}
-          placeholder="message the agent…"
+          placeholder={visionOk ? 'message the agent… (paste or attach images)' : 'message the agent…'}
           onChange={(e) => setInput(e.target.value)}
+          onPaste={onPaste}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(e); }}
         />
         <div className="composer__bar">
           <button type="button" className="composer__tool" title="Agent settings (keys & model)" onClick={() => setSettingsOpen(true)}>
             <AdminIcon name="settings" size={16} />
           </button>
+          {visionOk && (
+            <>
+              <input
+                ref={fileInput}
+                className="composer__attach"
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                multiple
+                onChange={(e) => { addFiles(Array.from(e.target.files || [])); e.target.value = ''; }}
+              />
+              <button
+                type="button"
+                className="composer__tool"
+                title="Attach image"
+                disabled={chat.sending || attachments.length >= ATTACH_MAX_COUNT}
+                onClick={() => fileInput.current && fileInput.current.click()}
+              >
+                <AdminIcon name="image" size={16} />
+              </button>
+            </>
+          )}
           <span className="spacer" style={{ flex: 1 }} />
           {chat.messages.length > 0 && (
             <button type="button" className="composer__tool" title="Clear conversation" aria-label="Clear conversation" disabled={chat.sending} onClick={clearChat}>
               <AdminIcon name="trash" size={16} />
             </button>
           )}
-          <button className="composer__send" type="submit" disabled={chat.sending || !input.trim()} title="Send (⌘/Ctrl + Enter)">
+          <button className="composer__send" type="submit" disabled={!canSend} title="Send (⌘/Ctrl + Enter)">
             <span>{chat.sending ? 'Working…' : 'Send'}</span>
             <AdminIcon name="send" size={15} />
           </button>
