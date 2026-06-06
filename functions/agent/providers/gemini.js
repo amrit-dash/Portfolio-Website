@@ -36,17 +36,30 @@ function userParts(msg) {
   return parts;
 }
 
+/* Gemini 2.5+/3.x require thoughtSignature on functionCall parts when replaying
+   multi-step tool turns. Prefer verbatim model parts when we have them. */
+function assistantParts(msg) {
+  const raw = msg.providerParts && msg.providerParts.gemini;
+  if (Array.isArray(raw) && raw.length) return raw;
+
+  const parts = [];
+  if (msg.text) parts.push({ text: msg.text });
+  for (const tc of msg.toolCalls || []) {
+    const part = { functionCall: { name: tc.name, args: tc.args || {} } };
+    const sig = tc.thoughtSignature || tc.thought_signature;
+    if (sig) part.thoughtSignature = sig;
+    parts.push(part);
+  }
+  return parts;
+}
+
 function canonicalToContents(messages) {
   const contents = [];
   for (const msg of messages || []) {
     if (msg.role === 'user') {
       contents.push({ role: 'user', parts: userParts(msg) });
     } else if (msg.role === 'assistant') {
-      const parts = [];
-      if (msg.text) parts.push({ text: msg.text });
-      for (const tc of msg.toolCalls || []) {
-        parts.push({ functionCall: { name: tc.name, args: tc.args || {} } });
-      }
+      const parts = assistantParts(msg);
       if (parts.length) contents.push({ role: 'model', parts });
     } else if (msg.role === 'tool') {
       for (const tr of msg.toolResults || []) {
@@ -67,10 +80,18 @@ function parseResponse(data) {
   for (const part of parts) {
     if (part.text) text += part.text;
     if (part.functionCall) {
-      toolCalls.push({ id: newId('tc'), name: part.functionCall.name, args: part.functionCall.args || {} });
+      const sig = part.thoughtSignature || part.thought_signature || null;
+      toolCalls.push({
+        id: newId('tc'),
+        name: part.functionCall.name,
+        args: part.functionCall.args || {},
+        thoughtSignature: sig,
+      });
     }
   }
-  return { text: text.trim(), toolCalls };
+  /* Deep-clone so later history edits cannot mutate signatures. */
+  const modelParts = parts.length ? JSON.parse(JSON.stringify(parts)) : [];
+  return { text: text.trim(), toolCalls, modelParts };
 }
 
 async function generate({ endpoint, model, key, systemPrompt, messages, tools, temperature, maxTokens }) {

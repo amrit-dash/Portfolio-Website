@@ -53,7 +53,7 @@ function sanitizeHistoryForProvider(history, providerChanged) {
   if (!providerChanged) return history;
   return history
     .filter((m) => m.role !== 'tool')
-    .map((m) => ({ ...m, toolCalls: [], toolResults: [] }))
+    .map((m) => ({ ...m, toolCalls: [], toolResults: [], providerParts: null }))
     .filter((m) => m.text);
 }
 
@@ -160,7 +160,19 @@ async function runAgentTurn({
     const calls = gen.toolCalls || [];
 
     // Record the assistant turn (text + any tool calls) in canonical form.
-    messages.push(makeAssistantMessage(gen.text || '', calls.map((c) => ({ id: c.id, name: c.name, args: c.args }))));
+    // Gemini modelParts carry thoughtSignature — required for multi-step tool loops.
+    const providerParts = gen.modelParts?.length ? { gemini: gen.modelParts } : null;
+    messages.push(makeAssistantMessage(
+      gen.text || '',
+      calls.map((c) => ({
+        id: c.id,
+        name: c.name,
+        args: c.args,
+        thoughtSignature: c.thoughtSignature || null,
+      })),
+      null,
+      providerParts,
+    ));
 
     if (!calls.length) break;
 

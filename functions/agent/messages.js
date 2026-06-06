@@ -21,7 +21,7 @@ function makeUserMessage(text, attachments) {
   };
 }
 
-function makeAssistantMessage(text, toolCalls, turnMeta) {
+function makeAssistantMessage(text, toolCalls, turnMeta, providerParts) {
   const msg = {
     role: 'assistant',
     text: String(text || ''),
@@ -31,6 +31,7 @@ function makeAssistantMessage(text, toolCalls, turnMeta) {
     ts: Date.now(),
   };
   if (turnMeta && typeof turnMeta === 'object') msg.turnMeta = turnMeta;
+  if (providerParts && typeof providerParts === 'object') msg.providerParts = providerParts;
   return msg;
 }
 
