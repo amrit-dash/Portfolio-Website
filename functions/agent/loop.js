@@ -34,6 +34,9 @@ const BASE_SYSTEM = [
   'Structured tools (addItem, removeItem, reorder, applyVibePreset, setProjectImage, setCv) handle arrays and presets safely.',
   'generateImage creates raster art (Gemini or OpenAI DALL·E); setProjectImage places an existing URL or assets/ SVG — do not generate SVGs.',
   'For setContentPath/addItem, pass objects and arrays as compact JSON strings.',
+  'After content edits, keep replies to one short confirmation (e.g. "I\'ve made the requested changes to your draft").',
+  'Do NOT repeat rewritten field values, blockquotes, or long detail in chat — the admin UI shows a per-path diff panel.',
+  'Only include full rewritten copy when the user explicitly asks to see it.',
 ].join(' ');
 
 async function loadChatMeta(db, chatId) {
