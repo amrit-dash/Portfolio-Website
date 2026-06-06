@@ -689,6 +689,12 @@ function useContent() {
   const agentBusyRef = React.useRef(false);
   const lastJsonRef = React.useRef('');
   const pendingRemoteRef = React.useRef(null);
+  const publishedSnapshotRef = React.useRef(publishedSnapshot);
+  const publishedAtRef = React.useRef(publishedAt);
+  const draftUpdatedAtRef = React.useRef(draftUpdatedAt);
+  React.useEffect(() => { publishedSnapshotRef.current = publishedSnapshot; }, [publishedSnapshot]);
+  React.useEffect(() => { publishedAtRef.current = publishedAt; }, [publishedAt]);
+  React.useEffect(() => { draftUpdatedAtRef.current = draftUpdatedAt; }, [draftUpdatedAt]);
   const setAgentBusy = React.useCallback((b) => { agentBusyRef.current = !!b; setAgentBusyState(!!b); }, []);
   const isEditingField = () => {
     const el = typeof document !== 'undefined' ? document.activeElement : null;
@@ -717,6 +723,9 @@ function useContent() {
         lastJsonRef.current = contentStateJson(merged);
         if (pub && draftMatchesPublished(merged, pub)) {
           setPublishedSnapshot(pub);
+          setDirty(false);
+          const pubAt = Store.read('amritos.publishedAt');
+          if (pubAt) touchDraftUpdatedAt(pubAt);
         }
       } else {
         // No remote draft yet — seed it from whatever we have locally.
@@ -737,11 +746,23 @@ function useContent() {
     return !draftMatchesPublished(content, publishedSnapshot);
   }, [content, publishedSnapshot]);
 
+  /* Unpublished = local dirty flag or visitor-visible drift from published.
+     Timestamps only break ties when content already differs — never when
+     fingerprints match (Firestore echoes can bump draftUpdatedAt alone). */
   const hasUnpublishedEdits = React.useMemo(() => {
+    if (!publishedSnapshot) return !!dirty;
+    if (!draftDiffersFromPublished) return !!dirty;
     if (dirty) return true;
-    if (!draftUpdatedAt || !publishedAt) return false;
+    if (!draftUpdatedAt || !publishedAt) return true;
     return new Date(draftUpdatedAt).getTime() > new Date(publishedAt).getTime();
-  }, [dirty, draftUpdatedAt, publishedAt]);
+  }, [dirty, publishedSnapshot, draftDiffersFromPublished, draftUpdatedAt, publishedAt]);
+
+  // When draft content matches published, clear stale dirty and align timestamps.
+  React.useEffect(() => {
+    if (!publishedSnapshot || draftDiffersFromPublished) return;
+    if (dirty) setDirty(false);
+    if (publishedAt && draftUpdatedAt !== publishedAt) touchDraftUpdatedAt(publishedAt);
+  }, [content, publishedSnapshot, draftDiffersFromPublished, dirty, publishedAt, draftUpdatedAt, touchDraftUpdatedAt]);
 
   const showSyncFromLive = React.useMemo(() => {
     if (!publishedSnapshot || !draftDiffersFromPublished || hasUnpublishedEdits) return false;
@@ -799,13 +820,20 @@ function useContent() {
       if (!u) return;
       unsub = Store.fsDraftListen(({ content: remote, updatedAtMs }) => {
         if (!remote) return;
+        const json = contentStateJson(remote);
+        if (json === lastJsonRef.current) {
+          const pub = publishedSnapshotRef.current;
+          const pubAt = publishedAtRef.current;
+          if (pub && pubAt && draftMatchesPublished(remote, pub) && draftUpdatedAtRef.current !== pubAt) {
+            touchDraftUpdatedAt(pubAt);
+          }
+          return;
+        }
         if (updatedAtMs) {
           const iso = new Date(updatedAtMs).toISOString();
           Store.write(LS.draftUpdatedAt, iso);
           setDraftUpdatedAt(iso);
         }
-        const json = contentStateJson(remote);
-        if (json === lastJsonRef.current) return; // echo of our own write
         // Defer adoption while a field is focused so we never replace the value
         // under the cursor; the flush interval below picks it up on blur/idle.
         if (isEditingField()) { pendingRemoteRef.current = remote; return; }
