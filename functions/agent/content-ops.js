@@ -11,7 +11,7 @@
 
 const path = require('path');
 const { isBlocklisted, normalizePath, pathString, UNSAFE_KEY } = require('./guards');
-const { coerceImpactArray } = require(path.join(__dirname, '../shared-schema'));
+const { coerceImpactArray, validateImpactWrite } = require(path.join(__dirname, '../shared-schema'));
 
 const SNAPSHOT_RING = 10;
 
@@ -134,6 +134,8 @@ class DraftSession {
       /* about.impact: root path merges a single {label,id,html} object by label/id;
          indexed paths (about.impact.N or .N.html) preserve siblings via setAtPath. */
       if (keys[0] === 'about' && keys[1] === 'impact' && keys.length === 2) {
+        const impactErr = validateImpactWrite(value);
+        if (impactErr) return { ok: false, ...impactErr };
         v = coerceImpactArray(value, getAtPath(this.content, 'about.impact'));
       }
       this.content = setAtPath(this.content, path, v);

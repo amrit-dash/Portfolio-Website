@@ -8,7 +8,7 @@
 
 const path = require('path');
 const schema = require(path.join(__dirname, '../shared-schema'));
-const { coerceImpactArray } = schema;
+const { coerceImpactArray, normalizeImpactEntry, validateImpactWrite } = schema;
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
@@ -55,7 +55,7 @@ const GENERIC_TOOLS = [
 const STRUCTURED_TOOLS = [
   {
     name: 'addItem',
-    description: 'Append an item to a named collection (projects, expertise, experience, about.meta, about.impact, cards.items, contact.socials, bot.qa, bot.commands).',
+    description: 'Append an item to a named collection (projects, expertise, experience, about.meta, about.impact, cards, contact.socials, bot.qa, bot.commands).',
     parameters: {
       type: 'object',
       properties: {
@@ -290,10 +290,13 @@ function validateNewItem(collectionName, item) {
 function execAddItem(a, session) {
   const col = getCollectionArray(session, a.collection);
   if (!col.ok) return col;
-  const item = coerceValue(a.item);
+  let item = coerceValue(a.item);
   if (!item || typeof item !== 'object') return { ok: false, error: 'invalid-item' };
   const check = validateNewItem(a.collection, item);
   if (!check.ok) return check;
+  if (a.collection === 'about.impact') {
+    item = normalizeImpactEntry(item, col.arr.length);
+  }
   let next = col.arr.concat([deepClone(item)]);
   next = applyRenumber(col.meta, next);
   return session.setPath(col.path, next);
@@ -437,9 +440,14 @@ async function execAcceptInbox(a, session, ctx) {
   if (!a.inboxId || !Array.isArray(a.qs) || !Array.isArray(a.as)) {
     return { ok: false, error: 'missing-fields' };
   }
+  const qs = a.qs.filter((s) => typeof s === 'string' && s.trim());
+  const as = a.as.filter((s) => typeof s === 'string' && s.trim());
+  if (qs.length === 0 || as.length === 0) {
+    return { ok: false, error: 'empty-qa-arrays' };
+  }
   const col = getCollectionArray(session, 'bot.qa');
   if (!col.ok) return col;
-  const setResult = session.setPath(col.path, col.arr.concat([{ qs: a.qs, as: a.as }]));
+  const setResult = session.setPath(col.path, col.arr.concat([{ qs, as }]));
   if (!setResult.ok) return setResult;
   await ctx.db.collection('bot_questions').doc(a.inboxId).delete().catch(() => {});
   return { ok: true, added: true, inboxId: a.inboxId };
@@ -462,6 +470,8 @@ async function executeTool(name, args, ctx) {
     const parts = String(a.path).split('.').filter(Boolean);
     if (parts[0] === 'about' && parts[1] === 'impact') {
       if (parts.length === 2) {
+        const impactErr = validateImpactWrite(val);
+        if (impactErr) return { ok: false, ...impactErr };
         val = coerceImpactArray(val, session.readPath('about.impact'));
       } else if (parts.length === 3 && /^\d+$/.test(parts[2]) && val && typeof val === 'object' && !Array.isArray(val)) {
         const idx = Number(parts[2]);
