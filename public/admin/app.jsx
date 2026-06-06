@@ -330,7 +330,7 @@ function AnalyticsPage({ analytics, onReset }) {
 }
 
 /* ---------- Sync & deploy ---------- */
-function SyncPage({ publishedAt, dirty, draftDiffersFromPublished, publishedSnapshot, onPublish, onSyncFromPublished, onPreview }) {
+function SyncPage({ publishedAt, dirty, draftDiffersFromPublished, publishedSnapshot, onPublish, onSyncFromPublished, onDiscard, onPreview }) {
   const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
   const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) || 'amrit-dash-portfolio';
   const consoleHref = (path) => `https://console.firebase.google.com/project/${projectId}/${path}`;
@@ -340,6 +340,7 @@ function SyncPage({ publishedAt, dirty, draftDiffersFromPublished, publishedSnap
       ? (dirty ? 'has unpublished edits' : 'differs from live site')
       : 'matches live site';
   const canSync = !!publishedSnapshot && draftDiffersFromPublished;
+  const canDiscard = dirty && !!publishedSnapshot;
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/SYSTEM.SYNC" title="Sync & deploy">How the dashboard talks to the live site — you edit a private draft, then Publish promotes it to the snapshot the live site reads in real time. Content, media, keys and analytics all live in Firebase.</PageHead>
@@ -354,14 +355,21 @@ function SyncPage({ publishedAt, dirty, draftDiffersFromPublished, publishedSnap
           <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
           <Btn kind="primary" icon="publish" onClick={onPublish} disabled={!dirty}>Publish to site</Btn>
           <span className="spacer" style={{ flex: 1 }} />
+          {canDiscard && (
+            <Btn kind="ghost" icon="reset" onClick={onDiscard}>Discard draft changes</Btn>
+          )}
           <Btn kind="danger" icon="sync" disabled={!canSync} onClick={onSyncFromPublished}>Sync draft from live site</Btn>
         </div>
         <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
           {!publishedSnapshot
             ? 'Publish at least once to create a live snapshot you can sync from.'
-            : canSync
-              ? 'Sync replaces your entire draft with the live published snapshot — unpublished edits are lost. Use this when the draft diverged or is missing content visitors already see.'
-              : 'Draft matches the live published snapshot — nothing to sync.'}
+            : canDiscard && canSync
+              ? 'Discard drops unpublished edits and restores the last published snapshot. Sync reloads from the live site when the draft diverged from what visitors see.'
+              : canSync
+                ? 'Sync replaces your entire draft with the live published snapshot — unpublished edits are lost. Use this when the draft diverged or is missing content visitors already see.'
+                : canDiscard
+                  ? 'Discard drops unpublished edits and restores the last published snapshot.'
+                  : 'Draft matches the live published snapshot — nothing to sync.'}
         </p>
       </Panel>
 
@@ -662,7 +670,7 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, syncDraftFromPublished, previewDraft, dirty, draftDiffersFromPublished, publishedSnapshot, publishedAt, saveLLMConfig, setAgentBusy } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft, dirty, draftDiffersFromPublished, publishedSnapshot, publishedAt, saveLLMConfig, setAgentBusy } = window.ADMIN_STORE.useContent();
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
@@ -691,7 +699,15 @@ function AdminApp() {
     window.ADMIN_STORE.Store.clearPreview();
     setFlash('Draft synced from live site ✓'); setTimeout(() => setFlash(null), 2800);
   };
-  const doDiscard = doSyncFromPublished;
+  const doDiscard = () => {
+    if (!dirty || !publishedSnapshot) return;
+    if (!confirm('Discard all unpublished changes and revert the draft to the last published snapshot?')) return;
+    if (discardDraft()) {
+      window.ADMIN_STORE.Store.clearPreview();
+      setFlash('Draft changes discarded ✓');
+      setTimeout(() => setFlash(null), 2600);
+    }
+  };
 
   if (!authReady) return <div className="login"><div className="login__crt"><div className="login__body" style={{ textAlign: 'center', color: 'var(--fg-mute)' }}>Checking session…</div></div></div>;
   if (!user) return <Login onGoogle={signInGoogle} error={authError} busy={authBusy} />;
@@ -712,7 +728,7 @@ function AdminApp() {
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
       case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
-      case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} draftDiffersFromPublished={draftDiffersFromPublished} publishedSnapshot={publishedSnapshot} onPublish={doPublish} onSyncFromPublished={doSyncFromPublished} onPreview={() => openPreview('draft')} />;
+      case 'sync': return <SyncPage publishedAt={publishedAt} dirty={dirty} draftDiffersFromPublished={draftDiffersFromPublished} publishedSnapshot={publishedSnapshot} onPublish={doPublish} onSyncFromPublished={doSyncFromPublished} onDiscard={doDiscard} onPreview={() => openPreview('draft')} />;
       default: return <Overview content={content} analytics={analytics} dirty={dirty} draftDiffersFromPublished={draftDiffersFromPublished} publishedSnapshot={publishedSnapshot} publishedAt={publishedAt} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} />;
     }
   };
