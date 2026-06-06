@@ -1229,17 +1229,9 @@ body::before {
    border-color: var(--accent);
 }
 
-.iconbtn--danger {
-   border: none;
-   background: transparent;
-   color: var(--danger);
-   outline: none;
-   box-shadow: none;
-}
-
 .iconbtn--danger:hover {
    color: var(--danger);
-   background: transparent;
+   border-color: var(--danger);
 }
 
 /* =====================================================
@@ -3812,6 +3804,28 @@ body::before {
 .refine-entry__label-row > .field--del {
    flex: 0 0 auto;
    margin-bottom: 0;
+}
+
+/* Impact timeline delete: ghost icon aligned to adjacent .inp height */
+.refine-entry__label-row > .field--del .iconbtn {
+   --refine-inp-h: calc(13.5px * 1.5 + 18px + 2px);
+   width: var(--refine-inp-h);
+   height: var(--refine-inp-h);
+   border: none;
+   background: transparent;
+   color: var(--danger);
+   border-radius: 8px;
+}
+
+.refine-entry__label-row > .field--del .iconbtn:hover {
+   color: var(--danger);
+   border: none;
+   background: color-mix(in oklab, var(--danger) 12%, transparent);
+}
+
+.refine-entry__label-row > .field--del .iconbtn:focus-visible {
+   outline: 2px solid color-mix(in oklab, var(--danger) 55%, transparent);
+   outline-offset: 1px;
 }
 
 .refine--entry .refine__wrap .ta {
