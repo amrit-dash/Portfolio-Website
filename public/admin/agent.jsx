@@ -119,14 +119,17 @@ function sortRawMessages(raw) {
 function formatMsgTime(ts) {
   if (!ts) return '';
   try {
-    return new Date(Number(ts)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return new Date(Number(ts)).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   } catch (e) { return ''; }
 }
 
 function formatDurationSec(ms) {
   if (!Number.isFinite(ms) || ms < 0) return '';
-  const s = ms / 1000;
-  return (s < 10 ? s.toFixed(1) : String(Math.round(s))) + 's';
+  return Math.round(ms / 1000) + 's';
 }
 
 function assistantUiFromRaw(assistant, toolMsg) {
@@ -632,7 +635,7 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
             {[
               msg.durationMs != null ? formatDurationSec(msg.durationMs) : '',
               formatMsgTime(msg.repliedAt || msg.ts),
-            ].filter(Boolean).join(' · ')}
+            ].filter(Boolean).join('  .  ')}
           </span>
         </div>
       )}
