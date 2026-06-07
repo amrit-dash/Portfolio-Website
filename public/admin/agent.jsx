@@ -75,6 +75,8 @@ function applyTurnMeta(msg, cache) {
     perPathUndo: tm.perPathUndo || msg.perPathUndo || [],
     provider: tm.provider || msg.provider,
     model: tm.model || msg.model,
+    durationMs: tm.durationMs != null ? tm.durationMs : msg.durationMs,
+    repliedAt: tm.repliedAt != null ? tm.repliedAt : msg.repliedAt,
     bounded: tm.bounded != null ? tm.bounded : msg.bounded,
     quickReplies: tm.quickReplies || msg.quickReplies,
     undone: cached.undone != null ? cached.undone : msg.undone,
@@ -114,7 +116,21 @@ function sortRawMessages(raw) {
   });
 }
 
+function formatMsgTime(ts) {
+  if (!ts) return '';
+  try {
+    return new Date(Number(ts)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  } catch (e) { return ''; }
+}
+
+function formatDurationSec(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const s = ms / 1000;
+  return (s < 10 ? s.toFixed(1) : String(Math.round(s))) + 's';
+}
+
 function assistantUiFromRaw(assistant, toolMsg) {
+  const tm = assistant.turnMeta || {};
   const toolResults = toolMsg && Array.isArray(toolMsg.toolResults) ? toolMsg.toolResults : [];
   const toolCalls = (assistant.toolCalls || []).map((tc, j) => ({
     name: tc.name,
@@ -127,8 +143,13 @@ function assistantUiFromRaw(assistant, toolMsg) {
     text: assistant.text || '',
     restored: true,
     ts: assistant.ts,
+    turnId: tm.turnId,
     turnMeta: assistant.turnMeta || null,
-    quickReplies: (assistant.turnMeta && assistant.turnMeta.quickReplies) || assistant.quickReplies || undefined,
+    provider: tm.provider,
+    model: tm.model,
+    durationMs: tm.durationMs,
+    repliedAt: tm.repliedAt,
+    quickReplies: tm.quickReplies || assistant.quickReplies || undefined,
     toolCalls: toolCalls.length ? toolCalls : undefined,
   };
 }
@@ -139,6 +160,24 @@ function hasUserContent(m) {
 
 function hasAssistantContent(m) {
   return m && m.role === 'assistant' && ((m.text || '').trim() || (m.toolCalls || []).length);
+}
+
+/* Drop duplicate assistant bubbles (same turnId or same ts+text). */
+function dedupeUiMessages(ui) {
+  const seenTurn = new Set();
+  const seenTextTs = new Set();
+  return (ui || []).filter((m) => {
+    if (m.role !== 'assistant') return true;
+    if (m.turnId) {
+      if (seenTurn.has(m.turnId)) return false;
+      seenTurn.add(m.turnId);
+      return true;
+    }
+    const key = String(m.ts || 0) + '\0' + (m.text || '').slice(0, 200);
+    if (seenTextTs.has(key)) return false;
+    seenTextTs.add(key);
+    return true;
+  });
 }
 
 /* Group each user message with the assistant/tool rows before the next user —
@@ -158,11 +197,16 @@ function buildUiFromRaw(raw) {
       });
       let assistant = null;
       let tool = null;
+      let lastJ = i;
       for (let j = i + 1; j < sorted.length && sorted[j].role !== 'user'; j++) {
         if (!assistant && hasAssistantContent(sorted[j])) assistant = sorted[j];
         if (!tool && sorted[j].role === 'tool') tool = sorted[j];
+        lastJ = j;
       }
-      if (assistant) ui.push(assistantUiFromRaw(assistant, tool));
+      if (assistant) {
+        ui.push(assistantUiFromRaw(assistant, tool));
+        i = lastJ;
+      }
       continue;
     }
     if (hasAssistantContent(m)) {
@@ -172,7 +216,7 @@ function buildUiFromRaw(raw) {
       if (tool) i++;
     }
   }
-  return ui;
+  return dedupeUiMessages(ui);
 }
 
 /* Match legacy assistant turns (no turnMeta) to audit docs by chronological order. */
@@ -369,6 +413,8 @@ async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
         turnId: res.turnId,
         provider: res.provider,
         model: res.model,
+        durationMs: res.durationMs,
+        repliedAt: res.repliedAt,
         bounded: res.bounded,
         quickReplies: res.quickReplies || undefined,
       });
@@ -438,6 +484,12 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
           </div>
         )}
         {!!(msg.text || '').trim() && <div className="agentmsg__body">{msg.text}</div>}
+        {!!msg.ts && !msg.pending && (
+          <div className="agentchat__meta">
+            <span />
+            <span>{formatMsgTime(msg.ts)}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -573,7 +625,17 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
         </div>
       )}
       {msg.undone && <div className="helptext" style={{ marginTop: 6 }}>↩ turn undone.</div>}
-      {msg.provider && <div className="agentmeta">{msg.provider} · {msg.model}</div>}
+      {!msg.pending && !msg.error && (msg.provider || msg.durationMs || msg.repliedAt || msg.ts) && (
+        <div className="agentchat__meta">
+          <span>{msg.provider ? `${msg.provider} · ${msg.model || ''}` : ''}</span>
+          <span>
+            {[
+              msg.durationMs != null ? formatDurationSec(msg.durationMs) : '',
+              formatMsgTime(msg.repliedAt || msg.ts),
+            ].filter(Boolean).join(' · ')}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

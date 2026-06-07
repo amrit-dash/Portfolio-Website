@@ -125,6 +125,7 @@ async function runAgentTurn({
 
   const cid = chatId || 'default';
   const turnId = newId('turn');
+  const turnStartedAt = Date.now();
   const session = new DraftSession({ db, FieldValue, chatId: cid });
   await session.load();
   await session.saveSnapshot(turnId);
@@ -222,6 +223,8 @@ async function runAgentTurn({
     perPathUndo,
   });
   const quickReplies = inferQuickReplies({ reply, toolLog, outline });
+  const repliedAt = Date.now();
+  const durationMs = repliedAt - turnStartedAt;
   const turnMeta = {
     turnId,
     auditId,
@@ -229,6 +232,8 @@ async function runAgentTurn({
     perPathUndo,
     provider: providerId,
     model,
+    durationMs,
+    repliedAt,
     bounded: iter >= MAX_TOOL_ITERS,
     quickReplies: quickReplies.length ? quickReplies : undefined,
   };
@@ -259,6 +264,8 @@ async function runAgentTurn({
       perPathUndo,
       reviewLinks: session.changedPaths.slice(0, 10).map((p) => ({ path: p })),
       bounded: iter >= MAX_TOOL_ITERS,
+      durationMs,
+      repliedAt,
       providerSwitched: providerChanged,
       quickReplies: quickReplies.length ? quickReplies : undefined,
     },
