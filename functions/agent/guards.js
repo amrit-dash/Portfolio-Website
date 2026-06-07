@@ -47,7 +47,10 @@ const INBOX_SYSTEM_GUARD = [
 ].join(' ');
 
 /* Tools omitted on inbox-processing turns (injection + cost surface). */
-const INBOX_RESTRICTED_TOOLS = new Set(['publish', 'undoLastChange', 'generateImage']);
+const INBOX_RESTRICTED_TOOLS = new Set([
+  'publish', 'undoLastChange', 'generateImage', 'clearAnalytics', 'clearChatHistory',
+  'syncDraftFromPublished', 'setConsoleTheme', 'setLimits',
+]);
 
 function filterToolsForMode(tools, { inboxMode } = {}) {
   if (!inboxMode) return tools;

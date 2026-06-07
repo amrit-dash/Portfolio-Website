@@ -21,6 +21,7 @@ const {
   stampPersistOrder,
 } = require('./messages');
 const providers = require('./providers');
+const agentProviders = providers;
 const { inferQuickReplies } = require('./quick-replies');
 
 const MAX_TOOL_ITERS = 25;
@@ -43,6 +44,8 @@ const BASE_SYSTEM = [
   'Only include full rewritten copy when the user explicitly asks to see it.',
   'When the owner attaches images inline, you receive them — you CAN see and describe them; never claim you cannot analyze uploaded images.',
   'Tool JSON args stay plain text — never use markdown inside tool arguments.',
+  'Many read/ops tools return links[] with adminLink + label — mention these when helpful so the owner can jump to the right admin screen.',
+  'Inbox workflow: runInboxTriage → generateInboxVariations (optional) → applyInboxSuggestion. Use refineField for copy tweaks before applying.',
 ].join(' ');
 
 async function loadChatMeta(db, chatId) {
@@ -97,6 +100,8 @@ async function runAgentTurn({
   admin,
   agentConfig,
   providerKey,
+  refinerProviderId,
+  refinerProviderKey,
   imageGemini,
   imageOpenai,
   imagePrefer,
@@ -137,7 +142,18 @@ async function runAgentTurn({
   const history = sanitizeHistoryForProvider(rawHistory, providerChanged);
 
   const tools = filterToolsForMode(ALL_TOOLS, { inboxMode });
-  const toolCtx = { session, db, FieldValue, chatId: cid, admin, imageGemini, imageOpenai, imagePrefer };
+  const toolCtx = {
+    session, db, FieldValue, chatId: cid, admin, imageGemini, imageOpenai, imagePrefer,
+    agentProviders,
+    agentConfig: agentConfig,
+    providerCatalog,
+    providerId,
+    provider,
+    providerKey: key,
+    refinerProviderId: refinerProviderId || providerId,
+    refinerProviderKey: refinerProviderKey || key,
+    model,
+  };
   const userText = inboxMode ? wrapVisitorText(message) : String(message || '');
 
   let systemPrompt = BASE_SYSTEM;

@@ -452,12 +452,13 @@ async function getAgentConfig() {
     const data = snap.exists ? snap.data() : {};
     return {
       active: data.active || sharedSchema.AGENT_CONFIG_DEFAULTS.active,
+      refinerActive: data.refinerActive || data.active || sharedSchema.AGENT_CONFIG_DEFAULTS.refinerActive || sharedSchema.AGENT_CONFIG_DEFAULTS.active,
       byProvider: (data.byProvider && typeof data.byProvider === 'object') ? data.byProvider : {},
       refinerModel: data.refinerModel || null,
       imageProvider: data.imageProvider || null,
     };
   } catch (e) {
-    return { active: 'gemini', byProvider: {}, refinerModel: null, imageProvider: null };
+    return { active: 'gemini', refinerActive: 'gemini', byProvider: {}, refinerModel: null, imageProvider: null };
   }
 }
 
@@ -478,6 +479,7 @@ function stripAgentConfigKeys(config) {
   }
   return {
     active: config.active,
+    refinerActive: config.refinerActive || config.active || null,
     byProvider: by,
     refinerModel: config.refinerModel || null,
     imageProvider: config.imageProvider || null,
@@ -551,6 +553,8 @@ exports.agent = onRequest({ invoker: 'public', timeoutSeconds: 300, memory: '512
   const fullConfig = await getAgentConfig();
   const providerId = fullConfig.active || 'gemini';
   const providerKey = resolveAgentKey(fullConfig, providerId);
+  const refinerProviderId = fullConfig.refinerActive || providerId;
+  const refinerProviderKey = resolveAgentKey(fullConfig, refinerProviderId);
   const imageGen = resolveImageGenConfig(fullConfig);
   const settings = await getSettings();
 
@@ -589,6 +593,8 @@ exports.agent = onRequest({ invoker: 'public', timeoutSeconds: 300, memory: '512
       admin,                                            // for Admin-SDK Storage upload (image gen)
       agentConfig: stripAgentConfigKeys(fullConfig),   // model/provider only — no secrets pass deeper
       providerKey,                                      // the one resolved key, used to call the provider
+      refinerProviderId,
+      refinerProviderKey,
       imageGemini: imageGen.imageGemini,
       imageOpenai: imageGen.imageOpenai,
       imagePrefer: imageGen.imagePrefer,
@@ -649,12 +655,12 @@ exports.refine = onRequest({ invoker: 'public' }, async (req, res) => {
   if (!cap.ok) return res.status(429).json({ error: 'daily-cap', message: 'Daily limit reached.' });
 
   const cfg = await getAgentConfig();
-  const providerId = cfg.active || 'gemini';
+  const providerId = cfg.refinerActive || cfg.active || 'gemini';
   const provider = PROVIDERS[providerId];
   const key = resolveAgentKey(cfg, providerId);
   const pcfg = (cfg.byProvider && cfg.byProvider[providerId]) || {};
   const model = cfg.refinerModel || pcfg.model;
-  if (!provider || !key || !model) return res.status(400).json({ error: 'no-config', message: 'Agent provider/key/model not configured.' });
+  if (!provider || !key || !model) return res.status(400).json({ error: 'no-config', message: 'Refiner provider/key/model not configured.' });
 
   const stripWrappingQuotes = (s) => {
     const t = String(s || '').trim();
@@ -1000,7 +1006,7 @@ exports.inboxProcess = onRequest({ invoker: 'public', timeoutSeconds: 300, memor
     suggestions.forEach((s) => { if (s && s.id) sugMap[s.id] = s; });
     await mergeInboxRun(db, FieldValue, {
       suggestions: sugMap,
-      processedIds: triageIds,
+      processedIds: suggestions.map((s) => s.id).filter(Boolean),
       purgedIds: purged.map((p) => p.id),
     });
     return res.status(200).json({ suggestions, processed, purged, provider: providerId, model });
