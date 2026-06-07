@@ -21,6 +21,8 @@
 const crypto = require('crypto');
 
 const GEN_PREFIX = 'public/agent-gen/';        // hard-coded; never derived from input
+const UPLOAD_PREFIX = 'public/agent-upload/';  // owner uploads via uploadAsset tool
+const ALLOWED_PREFIXES = new Set([GEN_PREFIX, UPLOAD_PREFIX]);
 const MAX_BYTES = 15 * 1024 * 1024;            // 15 MB (Storage upload cap)
 const ATTACH_MAX_BYTES = 4 * 1024 * 1024;      // ~4 MB per chat attachment
 const ATTACH_MAX_COUNT = 4;
@@ -35,6 +37,20 @@ const IMAGE_OUTPUT_PROVIDERS = {
   gemini: { defaultModel: DEFAULT_GEMINI_IMAGE_MODEL, label: 'Gemini' },
   openai: { defaultModel: DEFAULT_OPENAI_IMAGE_MODEL, label: 'OpenAI DALL·E' },
 };
+
+function sniffPdf(buf) {
+  if (!buf || buf.length < 5) return null;
+  if (buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) {
+    return { mime: 'application/pdf', ext: 'pdf' };
+  }
+  return null;
+}
+
+function resolveUploadPrefix(prefix) {
+  const p = String(prefix || UPLOAD_PREFIX);
+  if (!ALLOWED_PREFIXES.has(p)) return UPLOAD_PREFIX;
+  return p;
+}
 
 /* Identify an image by magic bytes — do NOT trust any caller-declared MIME. */
 function sniffImage(buf) {
@@ -179,8 +195,40 @@ function parseAttachments(raw) {
   return out;
 }
 
+/* Upload a validated image or PDF buffer under a pinned prefix. */
+async function uploadAsset({ admin, buffer, bucketName, prefix, kind }) {
+  let buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || '');
+  if (buf.length === 0) throw new Error('empty-asset');
+  if (buf.length > MAX_BYTES) throw new Error('asset-too-large');
+
+  const sniff = kind === 'pdf' ? sniffPdf(buf) : (sniffImage(buf) || sniffPdf(buf));
+  if (!sniff) throw new Error('unsupported-asset-type');
+
+  const base = resolveUploadPrefix(prefix);
+  const name = base + 'up_' + crypto.randomBytes(10).toString('hex') + '.' + sniff.ext;
+  const bucket = admin.storage().bucket(bucketName || DEFAULT_BUCKET);
+  const file = bucket.file(name);
+  await file.save(buf, {
+    contentType: sniff.mime,
+    resumable: false,
+    metadata: { cacheControl: 'public, max-age=31536000', metadata: { source: 'agent-upload' } },
+  });
+  await file.makePublic().catch(() => {});
+  return { path: name, url: `https://storage.googleapis.com/${bucket.name}/${name}`, mime: sniff.mime };
+}
+
+function decodeBase64Asset(data) {
+  let raw = String(data || '').trim();
+  const m = raw.match(/^data:([^;]+);base64,(.+)$/i);
+  if (m) raw = m[2];
+  try { return Buffer.from(raw, 'base64'); }
+  catch (e) { throw new Error('invalid-base64'); }
+}
+
 module.exports = {
   GEN_PREFIX,
+  UPLOAD_PREFIX,
+  ALLOWED_PREFIXES,
   MAX_BYTES,
   ATTACH_MAX_BYTES,
   ATTACH_MAX_COUNT,
@@ -191,8 +239,11 @@ module.exports = {
   PROMPT_LIMIT,
   IMAGE_OUTPUT_PROVIDERS,
   sniffImage,
+  sniffPdf,
+  decodeBase64Asset,
   parseAttachments,
   uploadImage,
+  uploadAsset,
   geminiGenerateImage,
   openaiGenerateImage,
   generateImage,
