@@ -76,6 +76,7 @@ function applyTurnMeta(msg, cache) {
     provider: tm.provider || msg.provider,
     model: tm.model || msg.model,
     bounded: tm.bounded != null ? tm.bounded : msg.bounded,
+    quickReplies: tm.quickReplies || msg.quickReplies,
     undone: cached.undone != null ? cached.undone : msg.undone,
     revertedPaths: cached.revertedPaths || msg.revertedPaths || {},
   };
@@ -127,6 +128,7 @@ function assistantUiFromRaw(assistant, toolMsg) {
     restored: true,
     ts: assistant.ts,
     turnMeta: assistant.turnMeta || null,
+    quickReplies: (assistant.turnMeta && assistant.turnMeta.quickReplies) || assistant.quickReplies || undefined,
     toolCalls: toolCalls.length ? toolCalls : undefined,
   };
 }
@@ -368,6 +370,7 @@ async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
         provider: res.provider,
         model: res.model,
         bounded: res.bounded,
+        quickReplies: res.quickReplies || undefined,
       });
       // Pull the server draft immediately so open editors update even when the
       // agent composer (or another non-content field) still has focus.
@@ -416,7 +419,7 @@ function Thinking() {
 }
 
 /* ---------- one turn's message bubble ---------- */
-function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact }) {
+function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, onQuickReply, quickReplyDisabled }) {
   const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
   const [diffOpen, setDiffOpen] = useState(false);
@@ -445,6 +448,7 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact })
 
   const displayText = assistantBubbleText(msg);
   const diffEntries = msg.perPathUndo || (msg.changedPaths || []).map((p) => ({ path: p }));
+  const quickReplies = Array.isArray(msg.quickReplies) ? msg.quickReplies : [];
 
   const revertOne = async (pu, i) => {
     if (!('before' in pu) || (pu.before && pu.before._truncated)) return;
@@ -477,6 +481,23 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact })
             : <div className="agentmsg__reveal">{mdInline ? mdInline(displayText) : displayText}</div>}
         {msg.bounded && <div className="helptext" style={{ marginTop: 4 }}>⚠ stopped at the tool-iteration limit.</div>}
       </div>
+
+      {!!quickReplies.length && !msg.pending && !msg.error && (
+        <div className="agentchat__quickreplies" onMouseDown={(e) => e.stopPropagation()}>
+          {quickReplies.map((qr, i) => (
+            <button
+              key={i}
+              type="button"
+              className="agentchat__quickreply"
+              disabled={quickReplyDisabled}
+              title={qr.value !== qr.label ? qr.value : undefined}
+              onClick={() => onQuickReply && onQuickReply(qr.value, qr)}
+            >
+              {qr.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!!(msg.toolCalls && msg.toolCalls.length) && (
         <div className="agenttools">
@@ -663,6 +684,11 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
 
   const canSend = !chat.sending && (input.trim() || attachments.length > 0);
 
+  const onQuickReply = (value) => {
+    if (chat.sending || !value) return;
+    sendAgentMessage({ text: String(value), attachments: [], route, setAgentBusy });
+  };
+
   return (
     <div className={'agentchat' + (compact ? ' agentchat--compact' : '')}>
       <div className="agentchat__scroll" ref={scroller}>
@@ -681,6 +707,8 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
             go={go}
             openPreview={openPreview}
             compact={compact}
+            onQuickReply={onQuickReply}
+            quickReplyDisabled={chat.sending}
           />
         ))}
       </div>

@@ -3157,6 +3157,38 @@ body::before {
    margin-top: 8px;
 }
 
+.agentchat__quickreplies {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 6px;
+   margin-top: 8px;
+}
+
+.agentchat__quickreply {
+   appearance: none;
+   font: inherit;
+   font-size: 12px;
+   line-height: 1.25;
+   padding: 5px 11px;
+   border-radius: 999px;
+   border: 1px solid color-mix(in oklab, var(--accent) 55%, var(--line));
+   background: transparent;
+   color: var(--accent);
+   cursor: pointer;
+   transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.agentchat__quickreply:hover:not(:disabled) {
+   background: var(--accent);
+   border-color: var(--accent);
+   color: var(--accent-fg);
+}
+
+.agentchat__quickreply:disabled {
+   opacity: .45;
+   cursor: not-allowed;
+}
+
 .toolchip {
    display: inline-flex;
    align-items: center;

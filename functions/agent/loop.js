@@ -21,6 +21,7 @@ const {
   stampPersistOrder,
 } = require('./messages');
 const providers = require('./providers');
+const { inferQuickReplies } = require('./quick-replies');
 
 const MAX_TOOL_ITERS = 25;
 
@@ -40,6 +41,7 @@ const BASE_SYSTEM = [
   'Do NOT repeat rewritten field values, blockquotes, or long detail in chat — the admin UI shows a per-path diff panel.',
   'Only include full rewritten copy when the user explicitly asks to see it.',
   'In conversational replies, use lightweight markdown (**bold**, *italic*, `-` or `1.` lists) when explaining multiple points; never use markdown inside tool JSON args.',
+  'When offering the owner a choice (project, thumb vs gallery, or any pick-one prompt), use a markdown bullet or numbered list with one option per line so the admin UI can show quick-reply buttons.',
   'When the owner attaches images inline, you receive them — you CAN see and describe them; never claim you cannot analyze uploaded images.',
 ].join(' ');
 
@@ -219,6 +221,7 @@ async function runAgentTurn({
     changedPaths: session.changedPaths,
     perPathUndo,
   });
+  const quickReplies = inferQuickReplies({ reply, toolLog, outline });
   const turnMeta = {
     turnId,
     auditId,
@@ -227,6 +230,7 @@ async function runAgentTurn({
     provider: providerId,
     model,
     bounded: iter >= MAX_TOOL_ITERS,
+    quickReplies: quickReplies.length ? quickReplies : undefined,
   };
   const newMessages = [
     makeUserMessage(message, attachments),
@@ -256,6 +260,7 @@ async function runAgentTurn({
       reviewLinks: session.changedPaths.slice(0, 10).map((p) => ({ path: p })),
       bounded: iter >= MAX_TOOL_ITERS,
       providerSwitched: providerChanged,
+      quickReplies: quickReplies.length ? quickReplies : undefined,
     },
   };
 }
