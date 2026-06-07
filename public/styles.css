@@ -818,7 +818,8 @@ ul { margin: 0; padding: 0; list-style: none; }
   color: var(--fg-dim);
   max-width: 78%;
 }
-.bot-msg__bubble code {
+.bot-msg__bubble code,
+.bot-msg__bubble .md-code {
   font-family: var(--font-mono);
   font-size: 11px;
   background: color-mix(in oklab, var(--accent) 16%, transparent);
@@ -826,18 +827,23 @@ ul { margin: 0; padding: 0; list-style: none; }
   padding: 1px 5px;
   border-radius: 3px;
 }
-.bot-msg__bubble em {
+.bot-msg__bubble em,
+.bot-msg__bubble .md-em {
   font-style: italic;
-  color: var(--fg-mute);
+  color: color-mix(in oklab, var(--accent) 55%, var(--fg-mute));
 }
-.bot-msg__bubble strong {
+.bot-msg__bubble strong,
+.bot-msg__bubble .md-strong {
   font-weight: 600;
-  color: var(--fg);
+  color: var(--accent);
 }
 .bot-msg__bubble .md-list {
   margin: 0.35em 0 0.35em 1.15em;
   padding: 0;
   list-style: disc;
+}
+.bot-msg__bubble .md-list li::marker {
+  color: var(--accent);
 }
 .bot-msg__bubble .md-list--ol {
   list-style: decimal;

@@ -18,7 +18,10 @@ const useSiteContent = () => React.useContext(ContentCtx) || CONTENT;
 const rt = (html) => ({ __html: String(html == null ? '' : html) });
 
 /* Bot markdown renderer — shared module (md.jsx): lists, bold, italic, code. */
-const mdInline = window.mdInline || ((text) => [String(text == null ? '' : text)]);
+function mdInline(text) {
+  const fn = window.mdInline;
+  return (typeof fn === 'function' ? fn : (t) => [String(t == null ? '' : t)])(text);
+}
 
 /* =====================================================
    ANALYTICS — fire-and-forget POST to the /track function,

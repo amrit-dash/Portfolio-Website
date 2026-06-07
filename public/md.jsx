@@ -12,9 +12,9 @@ function mdInlineParts(text, keyPrefix) {
   while ((m = re.exec(line)) !== null) {
     if (m.index > last) out.push(line.slice(last, m.index));
     const key = (keyPrefix || 'i') + '-' + (k++);
-    if (m[2] != null) out.push(React.createElement('strong', { key }, m[2]));
-    else if (m[3] != null) out.push(React.createElement('code', { key }, m[3]));
-    else out.push(React.createElement('em', { key }, m[4] != null ? m[4] : m[5]));
+    if (m[2] != null) out.push(React.createElement('strong', { key, className: 'md-strong' }, m[2]));
+    else if (m[3] != null) out.push(React.createElement('code', { key, className: 'md-code' }, m[3]));
+    else out.push(React.createElement('em', { key, className: 'md-em' }, m[4] != null ? m[4] : m[5]));
     last = m.index + m[0].length;
   }
   if (last < line.length) out.push(line.slice(last));

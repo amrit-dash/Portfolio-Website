@@ -474,7 +474,7 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact })
       <div className="agentmsg__body">
         {msg.pending ? <Thinking />
           : msg.error ? <span className="login__err">⚠ {msg.error}</span>
-            : <span className="agentmsg__reveal">{mdInline ? mdInline(displayText) : displayText}</span>}
+            : <div className="agentmsg__reveal">{mdInline ? mdInline(displayText) : displayText}</div>}
         {msg.bounded && <div className="helptext" style={{ marginTop: 4 }}>⚠ stopped at the tool-iteration limit.</div>}
       </div>
 

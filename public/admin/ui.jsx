@@ -126,8 +126,12 @@ function PageHead({ eyebrow, title, children, actions }) {
   );
 }
 
-/* Markdown renderer — shared module (md.jsx). Agent bubbles + bot test panel. */
-const mdInline = window.mdInline || ((text) => [String(text == null ? '' : text)]);
+/* Markdown renderer — shared module (md.jsx). Resolve at call time so a sync
+   md.jsx load always wins over Babel-async script order. */
+function mdInline(text) {
+  const fn = window.mdInline;
+  return (typeof fn === 'function' ? fn : (t) => [String(t == null ? '' : t)])(text);
+}
 
 function Panel({ title, sub, actions, children, tight, className }) {
   return (
