@@ -126,10 +126,11 @@ function PageHead({ eyebrow, title, children, actions }) {
   );
 }
 
-/* Markdown renderer — shared module (md.jsx). Resolve at call time so a sync
-   md.jsx load always wins over Babel-async script order. */
-function mdInline(text) {
-  const fn = window.mdInline;
+/* Markdown renderer — shared module (md.jsx). Capture impl before defining a
+   local wrapper; a global `function mdInline` would overwrite window.mdInline. */
+const _mdInlineImpl = window.mdInline;
+function renderMd(text) {
+  const fn = _mdInlineImpl;
   return (typeof fn === 'function' ? fn : (t) => [String(t == null ? '' : t)])(text);
 }
 
@@ -446,5 +447,5 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 window.ADMIN_UI = {
   AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
   Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes, inputStr,
-  storageReady, uploadToStorage, mdInline,
+  storageReady, uploadToStorage, mdInline: renderMd,
 };

@@ -17,9 +17,11 @@ const useSiteContent = () => React.useContext(ContentCtx) || CONTENT;
    dangerouslySetInnerHTML is fine because the source is the portfolio owner. */
 const rt = (html) => ({ __html: String(html == null ? '' : html) });
 
-/* Bot markdown renderer — shared module (md.jsx): lists, bold, italic, code. */
-function mdInline(text) {
-  const fn = window.mdInline;
+/* Bot markdown renderer — shared module (md.jsx): lists, bold, italic, code.
+   Capture impl before a local wrapper; global `function mdInline` overwrites window.mdInline. */
+const _mdInlineImpl = window.mdInline;
+function renderMd(text) {
+  const fn = _mdInlineImpl;
   return (typeof fn === 'function' ? fn : (t) => [String(t == null ? '' : t)])(text);
 }
 
@@ -793,7 +795,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
             // Slash-commands store React elements (StatsCard, LinksCard, …) as
             // body; only string bodies (LLM/Q&A replies) go through the inline
             // markdown renderer — otherwise String(element) prints "[object Object]".
-            <BotMsg key={i}>{typeof m.body === 'string' ? mdInline(m.body) : m.body}</BotMsg> :
+            <BotMsg key={i}>{typeof m.body === 'string' ? renderMd(m.body) : m.body}</BotMsg> :
             <UserMsg key={i}>{m.body}</UserMsg>
         )}
         {thinking && <BotMsg typing />}

@@ -1,7 +1,7 @@
 /* global React */
 /* Safe markdown subset → React nodes for bot + agent chat bubbles.
    Builds React elements only — never injects HTML from model output.
-   Supported: **bold**, *italic*, _italic_, `code`, -/*/+ bullets, 1. ordered
+   Supported: **bold**, *italic*, _italic_, `code`, [-*+] bullets, 1. ordered
    lists, paragraphs, line breaks. */
 
 function mdInlineParts(text, keyPrefix) {
