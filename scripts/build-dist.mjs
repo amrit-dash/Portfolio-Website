@@ -40,11 +40,12 @@ const cp = (rel, destDir, destName) => {
 // ---- Public portfolio (dist/site) ----
 // data.jsx + firebase-* are shared between both targets.
 const shared = ['data.jsx', 'firebase-config.js', 'firebase-init.js'];
-['index.html', 'app.jsx', 'tweaks-panel.jsx', 'styles.css', 'assets', ...shared].forEach((f) => cp(f, site));
+['index.html', 'app.jsx', 'md.jsx', 'tweaks-panel.jsx', 'styles.css', 'assets', ...shared].forEach((f) => cp(f, site));
 
 // ---- Admin console (dist/admin) ----
 cp('admin.html', admin, 'index.html');   // admin entry → index.html
 cp('admin', admin, 'admin');             // admin/*.jsx + admin.css
+cp('md.jsx', admin);                     // shared markdown renderer (plain script, not text/babel)
 cp('shared-schema.js', admin);           // plain-JS global used by the agent UI
 shared.forEach((f) => cp(f, admin));
 
@@ -117,6 +118,9 @@ function productionizeHtml(file) {
     /<script\s+type="text\/babel"\s+data-presets="[^"]*"\s+src="([^"]+)\.jsx"><\/script>/g,
     '<script src="$1.js"></script>'
   );
+
+  // Plain md.jsx script (shared markdown helper — compiled by walk(), not text/babel).
+  html = html.replace(/<script\s+src="md\.jsx"><\/script>/g, '<script src="md.js"></script>');
 
   writeFileSync(file, html);
 }

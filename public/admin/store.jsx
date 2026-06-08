@@ -971,6 +971,10 @@ function useContent() {
   const draftSaveGenRef = React.useRef(0);
   const draftSaveInFlightRef = React.useRef(null);
   const publishingRef = React.useRef(false);
+  const publishCooldownUntilRef = React.useRef(0);
+  const PUBLISH_LISTENER_GUARD_MS = 5000;
+  const [publishing, setPublishing] = React.useState(false);
+  const [draftSaving, setDraftSaving] = React.useState(false);
   const publishedSnapshotRef = React.useRef(publishedSnapshot);
   const publishedAtRef = React.useRef(publishedAt);
   const draftUpdatedAtRef = React.useRef(draftUpdatedAt);
@@ -978,23 +982,42 @@ function useContent() {
   React.useEffect(() => { publishedAtRef.current = publishedAt; }, [publishedAt]);
   React.useEffect(() => { draftUpdatedAtRef.current = draftUpdatedAt; }, [draftUpdatedAt]);
   const setAgentBusy = React.useCallback((b) => { agentBusyRef.current = !!b; setAgentBusyState(!!b); }, []);
+  const syncDraftSavingFlag = React.useCallback(() => {
+    setDraftSaving(!!draftTimer.current || !!draftSaveInFlightRef.current);
+  }, []);
   const trackDraftSave = React.useCallback((promise) => {
     draftSaveInFlightRef.current = promise;
+    setDraftSaving(true);
     promise.finally(() => {
       if (draftSaveInFlightRef.current === promise) draftSaveInFlightRef.current = null;
+      syncDraftSavingFlag();
     });
     return promise;
-  }, []);
+  }, [syncDraftSavingFlag]);
+  const runDraftSave = React.useCallback((canonical, saveGen) => {
+    const gen = typeof saveGen === 'number' ? saveGen : draftSaveGenRef.current;
+    return trackDraftSave((async () => {
+      if (gen !== draftSaveGenRef.current) return;
+      await Store.fsSaveDraft(canonical);
+    })());
+  }, [trackDraftSave]);
   const cancelPendingDraftSync = React.useCallback(() => {
     if (draftTimer.current) {
       clearTimeout(draftTimer.current);
       draftTimer.current = null;
     }
     draftSaveGenRef.current += 1;
-  }, []);
+    syncDraftSavingFlag();
+  }, [syncDraftSavingFlag]);
   const awaitInFlightDraftSave = React.useCallback(async () => {
     const p = draftSaveInFlightRef.current;
     if (p) await p.catch(() => {});
+  }, []);
+  const releasePublishGuard = React.useCallback(() => {
+    const delay = Math.max(0, publishCooldownUntilRef.current - Date.now());
+    setTimeout(() => {
+      if (Date.now() >= publishCooldownUntilRef.current) publishingRef.current = false;
+    }, delay);
   }, []);
   const isEditingField = () => {
     const el = typeof document !== 'undefined' ? document.activeElement : null;
@@ -1031,7 +1054,7 @@ function useContent() {
         // No remote draft yet — seed it from whatever we have locally.
         setContent((cur) => {
           const canonical = mergeContentSnapshot(cur);
-          Store.fsSaveDraft(canonical);
+          runDraftSave(canonical, draftSaveGenRef.current);
           lastJsonRef.current = contentStateJson(canonical);
           return canonical;
         });
@@ -1086,12 +1109,13 @@ function useContent() {
     // snapshot as an echo, not a remote change (must match listener normalization).
     lastJsonRef.current = contentStateJson(canonical);
     const saveGen = draftSaveGenRef.current;
+    setDraftSaving(true);
     draftTimer.current = setTimeout(() => {
       draftTimer.current = null;
-      if (saveGen !== draftSaveGenRef.current) return;
-      trackDraftSave(Store.fsSaveDraft(canonical));
+      if (saveGen !== draftSaveGenRef.current) { syncDraftSavingFlag(); return; }
+      runDraftSave(canonical, saveGen);
     }, 1000);
-  }, [trackDraftSave]);
+  }, [runDraftSave, syncDraftSavingFlag]);
 
   // U14 — adopt the agent's server-side draft writes into the open editor, and
   // keep the dedicated Agent page + floating dock in sync, WITHOUT stomping the
@@ -1127,7 +1151,18 @@ function useContent() {
       unsub = Store.fsDraftListen(({ content: remote, updatedAtMs }) => {
         if (!remote) return;
         const json = contentStateJson(remote);
-        if (publishingRef.current && json !== lastJsonRef.current) return;
+        if (json !== lastJsonRef.current) {
+          const guarded = publishingRef.current || Date.now() < publishCooldownUntilRef.current;
+          if (guarded) {
+            const pub = publishedSnapshotRef.current;
+            if (pub && draftMatchesPublished(remote, pub)) {
+              lastJsonRef.current = json;
+              const pubAt = publishedAtRef.current;
+              if (pubAt && draftUpdatedAtRef.current !== pubAt) touchDraftUpdatedAt(pubAt);
+            }
+            return;
+          }
+        }
         if (json === lastJsonRef.current) {
           const pub = publishedSnapshotRef.current;
           const pubAt = publishedAtRef.current;
@@ -1188,11 +1223,16 @@ function useContent() {
   }, [scheduleDraftSync, touchDraftUpdatedAt]);
 
   const publish = React.useCallback(async () => {
+    if (publishingRef.current) return false;
     cancelPendingDraftSync();
     publishingRef.current = true;
+    publishCooldownUntilRef.current = Date.now() + PUBLISH_LISTENER_GUARD_MS;
+    setPublishing(true);
     let snap = null;
     let pubSnap = null;
     try {
+      // Let any pre-cancel in-flight autosave finish; gen bump above makes it a no-op.
+      await awaitInFlightDraftSave();
       setContent((cur) => {
         snap = mergeContentSnapshot(cur);
         pubSnap = canonicalPublishedFromDraft(snap);
@@ -1200,7 +1240,7 @@ function useContent() {
         lastJsonRef.current = contentStateJson(snap);
         return snap;
       });
-      if (!snap || !pubSnap) return;
+      if (!snap || !pubSnap) return false;
       const ts = new Date().toISOString();
       // Sync refs before any await so the draft listener can heal echoes immediately.
       publishedSnapshotRef.current = pubSnap;
@@ -1215,11 +1255,14 @@ function useContent() {
       setPublishedAt(ts);
       touchDraftUpdatedAt(ts);
       setDirty(false);
-      await awaitInFlightDraftSave();
       await Store.fsPublish(snap);
-    } catch (e) { /* local publish already applied */ }
-    finally { publishingRef.current = false; }
-  }, [cancelPendingDraftSync, awaitInFlightDraftSave, touchDraftUpdatedAt]);
+      return true;
+    } catch (e) { /* local publish already applied */ return false; }
+    finally {
+      setPublishing(false);
+      releasePublishGuard();
+    }
+  }, [cancelPendingDraftSync, awaitInFlightDraftSave, touchDraftUpdatedAt, releasePublishGuard]);
 
   const reset = React.useCallback(() => {
     const def = Store.resetDraft();
@@ -1257,7 +1300,7 @@ function useContent() {
       const merged = mergeContentSnapshot(next);
       lastJsonRef.current = contentStateJson(merged);
       Store.saveDraft(merged);
-      trackDraftSave(Store.fsSaveDraft(merged));
+      runDraftSave(merged, draftSaveGenRef.current);
       return merged;
     });
       Store.clearPreview();
@@ -1265,7 +1308,7 @@ function useContent() {
     if (publishedAt) touchDraftUpdatedAt(publishedAt);
     setPublishedSnapshot(canonicalPublishedFromDraft(base) || base);
     return true;
-  }, [cancelPendingDraftSync, publishedAt, touchDraftUpdatedAt, trackDraftSave]);
+  }, [cancelPendingDraftSync, publishedAt, touchDraftUpdatedAt, runDraftSave]);
 
   /* Revert draft to the in-memory published snapshot (discard unpublished edits). */
   const discardDraft = React.useCallback(() => {
@@ -1293,14 +1336,14 @@ function useContent() {
       const merged = mergeContentSnapshot(next);
       lastJsonRef.current = contentStateJson(merged);
       Store.saveDraft(merged);
-      trackDraftSave(Store.fsSaveDraft(merged));
+      runDraftSave(merged, draftSaveGenRef.current);
       return merged;
     });
     Store.clearPreview();
     setDirty(false);
     if (publishedAt) touchDraftUpdatedAt(publishedAt);
     return true;
-  }, [publishedSnapshot, publishedAt, touchDraftUpdatedAt, cancelPendingDraftSync, trackDraftSave]);
+  }, [publishedSnapshot, publishedAt, touchDraftUpdatedAt, cancelPendingDraftSync, runDraftSave]);
 
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
@@ -1316,11 +1359,14 @@ function useContent() {
     });
   }, []);
 
+  const canPublish = hasUnpublishedEdits && !publishing && !draftSaving;
+
   return {
     content, setAt, replace, publish, reset, discardDraft, syncDraftFromPublished, previewDraft,
     dirty, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, draftUpdatedAt,
     publishedSnapshot, publishedAt, setDirty, synced,
     saveLLMConfig, agentBusy, setAgentBusy, adoptRemoteDraft,
+    publishing, draftSaving, canPublish,
   };
 }
 

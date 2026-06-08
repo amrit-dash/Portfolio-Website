@@ -49,7 +49,7 @@ function Stat({ icon, label, num, delta, down }) {
   );
 }
 
-function Overview({ content, analytics, hasUnpublishedEdits, showSyncFromLive, onPublish, onPreview, onDiscard, onSyncFromPublished, onResetAnalytics, go }) {
+function Overview({ content, analytics, hasUnpublishedEdits, showSyncFromLive, onPublish, onPreview, onDiscard, onSyncFromPublished, onResetAnalytics, go, canPublish, publishing }) {
   const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
   const hasData = (analytics.totalEvents || 0) > 0;
   const max = Math.max(1, ...analytics.history);
@@ -75,7 +75,7 @@ function Overview({ content, analytics, hasUnpublishedEdits, showSyncFromLive, o
           <div className="callout__actions">
             <Btn sm kind="ghost" icon="reset" onClick={onDiscard}>Discard</Btn>
             <Btn sm icon="eye" onClick={onPreview}>Preview</Btn>
-            <Btn sm kind="primary" icon="publish" onClick={onPublish}>Publish</Btn>
+            <Btn sm kind="primary" icon="publish" onClick={onPublish} disabled={!canPublish}>{publishing ? 'Publishing…' : 'Publish'}</Btn>
           </div>
         </div>
       )}
@@ -326,7 +326,7 @@ function AnalyticsPage({ analytics, onReset }) {
 }
 
 /* ---------- Sync & deploy ---------- */
-function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, onPublish, onSyncFromPublished, onDiscard, onPreview }) {
+function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, onPublish, onSyncFromPublished, onDiscard, onPreview, canPublish, publishing }) {
   const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
   const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) || 'amrit-dash-portfolio';
   const consoleHref = (path) => `https://console.firebase.google.com/project/${projectId}/${path}`;
@@ -349,7 +349,7 @@ function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDif
         <div className="divider" />
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
-          <Btn kind="primary" icon="publish" onClick={onPublish} disabled={!hasUnpublishedEdits}>Publish to site</Btn>
+          <Btn kind="primary" icon="publish" onClick={onPublish} disabled={!canPublish}>{publishing ? 'Publishing…' : 'Publish to site'}</Btn>
           <span className="spacer" style={{ flex: 1 }} />
           {canDiscard && (
             <Btn kind="ghost" icon="reset" onClick={onDiscard}>Discard draft changes</Btn>
@@ -688,7 +688,7 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, publishedAt, saveLLMConfig, setAgentBusy } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, publishedAt, saveLLMConfig, setAgentBusy, publishing, canPublish } = window.ADMIN_STORE.useContent();
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
@@ -709,8 +709,9 @@ function AdminApp() {
   const changePreviewMode = (mode) => { setPreviewMode(mode); if (mode === 'draft') previewDraft(); else window.ADMIN_STORE.Store.clearPreview(); };
 
   const doPublish = async () => {
-    if (!hasUnpublishedEdits) return;
-    await publish();
+    if (!canPublish) return;
+    const ok = await publish();
+    if (!ok) return;
     setFlash('Published to site ✓');
     setTimeout(() => setFlash(null), 2600);
   };
@@ -739,7 +740,7 @@ function AdminApp() {
   const E = window.ADMIN_EDITORS, WP = window.ADMIN_EDITORS_WP, BOT = window.ADMIN_BOT;
   const renderRoute = () => {
     switch (route) {
-      case 'overview': return <Overview content={content} analytics={analytics} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} />;
+      case 'overview': return <Overview content={content} analytics={analytics} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} canPublish={canPublish} publishing={publishing} />;
       case 'analytics': return <AnalyticsPage analytics={analytics} onReset={resetAnalytics} />;
       case 'hero': return <E.HeroEditor content={content} setAt={setAt} />;
       case 'about': return <E.AboutEditor content={content} setAt={setAt} />;
@@ -752,8 +753,8 @@ function AdminApp() {
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
       case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
-      case 'sync': return <SyncPage publishedAt={publishedAt} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} draftDiffersFromPublished={draftDiffersFromPublished} publishedSnapshot={publishedSnapshot} onPublish={doPublish} onSyncFromPublished={doSyncFromPublished} onDiscard={doDiscard} onPreview={() => openPreview('draft')} />;
-      default: return <Overview content={content} analytics={analytics} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} />;
+      case 'sync': return <SyncPage publishedAt={publishedAt} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} draftDiffersFromPublished={draftDiffersFromPublished} publishedSnapshot={publishedSnapshot} onPublish={doPublish} onSyncFromPublished={doSyncFromPublished} onDiscard={doDiscard} onPreview={() => openPreview('draft')} canPublish={canPublish} publishing={publishing} />;
+      default: return <Overview content={content} analytics={analytics} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} canPublish={canPublish} publishing={publishing} />;
     }
   };
 
@@ -774,7 +775,7 @@ function AdminApp() {
           {hasUnpublishedEdits && publishedSnapshot && (
             <span className="topbar__hide-sm"><Btn kind="ghost" icon="reset" onClick={doDiscard} title="Discard unpublished edits">Discard</Btn></span>
           )}
-          <Btn kind="primary" icon="publish" onClick={doPublish} disabled={!hasUnpublishedEdits}>Publish</Btn>
+          <Btn kind="primary" icon="publish" onClick={doPublish} disabled={!canPublish}>{publishing ? 'Publishing…' : 'Publish'}</Btn>
         </div>
         <div className="canvas">{renderRoute()}</div>
       </div>

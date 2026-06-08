@@ -36,6 +36,10 @@
   // useEmulator() wiring (which must run before the client starts) and skipped
   // under the emulator. Must precede the first query — safe here since queries
   // only begin once React mounts. Failures (private mode / unsupported) no-op.
+  //
+  // Note: compat SDK 10.x still routes through enablePersistence(); the console
+  // deprecation for enableMultiTabIndexedDbPersistence only goes away after a
+  // full modular-SDK migration (initializeFirestore + persistentLocalCache).
   if (!useEmu) {
     try {
       db.enablePersistence({ synchronizeTabs: true })
