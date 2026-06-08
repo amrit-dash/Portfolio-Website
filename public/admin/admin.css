@@ -3757,13 +3757,8 @@ body::before {
    color: var(--accent);
 }
 
-/* Background inbox-triage indicator — fixed, visible on every page while the
-   runner is active (bottom-left, clear of the bottom-right agent dock). */
+/* Background inbox-triage indicator — sidebar on desktop, topbar on mobile. */
 .inboxrun {
-   position: fixed;
-   left: calc(var(--sidebar-w) + 18px);
-   bottom: 18px;
-   z-index: 60;
    display: inline-flex;
    align-items: center;
    gap: 9px;
@@ -3776,9 +3771,35 @@ body::before {
    border-radius: 999px;
    box-shadow: var(--shadow-sm);
    cursor: pointer;
+   transition: border-color .12s, background .12s;
 }
 
 .inboxrun:hover { border-color: var(--accent); }
+
+.inboxrun--sidebar {
+   display: flex;
+   width: 100%;
+   margin: 0;
+   padding: 10px 12px;
+   border-radius: 0;
+   border: 0;
+   border-top: 1px solid var(--line);
+   box-shadow: none;
+   background: color-mix(in oklab, var(--accent) 7%, var(--bg-elev));
+   flex-shrink: 0;
+}
+
+.inboxrun--sidebar:hover {
+   background: color-mix(in oklab, var(--accent) 11%, var(--bg-elev));
+}
+
+.inboxrun--topbar {
+   display: none;
+   flex-shrink: 0;
+   padding: 5px 11px;
+   font-size: 11.5px;
+   gap: 7px;
+}
 
 .inboxrun__spin {
    width: 13px;
@@ -3787,12 +3808,26 @@ body::before {
    border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
    border-top-color: var(--accent);
    animation: inboxspin .8s linear infinite;
+   flex-shrink: 0;
+}
+
+.inboxrun__t {
+   white-space: nowrap;
 }
 
 @keyframes inboxspin { to { transform: rotate(360deg); } }
 
 @media (max-width: 860px) {
-   .inboxrun { left: 16px; bottom: 16px; }
+   .inboxrun--sidebar { display: none; }
+
+   .inboxrun--topbar {
+      display: inline-flex;
+   }
+
+   .inboxrun--topbar .inboxrun__spin {
+      width: 11px;
+      height: 11px;
+   }
 
    /* Expertise panel — icon-only header actions, wrap title row */
    .panel--expertise .panel__hd {

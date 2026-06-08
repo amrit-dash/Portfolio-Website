@@ -571,6 +571,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setA
           </div>
         ))}
       </nav>
+      {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} placement="sidebar" />}
       <div className="side__foot">
         <div className="side__user">
           <span className="side__avatar">AD</span>
@@ -768,6 +769,7 @@ function AdminApp() {
           <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu"><AdminIcon name="menu" size={18} /></button>
           <span className="topbar__crumb">amrit.os / <b>{Reflect.get(TITLES, route) || route}</b></span>
           <span className="topbar__spacer" />
+          {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} placement="topbar" />}
           {flash
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + ((hasUnpublishedEdits || draftDiffersFromPublished) ? '' : ' saved')}><span className="dot" />{hasUnpublishedEdits ? 'Draft · unpublished changes' : (draftDiffersFromPublished ? 'Draft · out of sync with live' : 'All changes published')}</span>}
@@ -783,7 +785,6 @@ function AdminApp() {
         content={content} publishedContent={publishedSnapshot || window.ADMIN_STORE.Store.loadPublished()} showSyncFromLive={showSyncFromLive} onSyncFromPublished={doSyncFromPublished}
         canDiscard={hasUnpublishedEdits && !!publishedSnapshot} onDiscard={doDiscard} />
       <window.ADMIN_AGENT.AgentDock route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
-      {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} />}
     </div>
   );
 }

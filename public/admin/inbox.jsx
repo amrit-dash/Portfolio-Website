@@ -119,13 +119,13 @@ function useInboxRunner() {
   return inboxRunner;
 }
 
-// Global pill shown on EVERY page while a background run is active, so you know
-// triage is still going after you've navigated away from the AmritBot page.
-function InboxRunnerIndicator({ go }) {
+// Shown while a background run is active so triage progress survives navigation.
+// Rendered in the sidebar (desktop) and topbar (mobile) — see admin.css.
+function InboxRunnerIndicator({ go, placement = 'sidebar' }) {
   const r = useInboxRunner();
   if (!r.running) return null;
   return (
-    <button className="inboxrun" onClick={() => go && go('bot')} title="Open AmritBot → Review">
+    <button className={'inboxrun inboxrun--' + placement} onClick={() => go && go('bot')} title="Open AmritBot → Review">
       <span className="inboxrun__spin" />
       <span className="inboxrun__t">Triaging inbox… {r.done}/{r.total}</span>
     </button>
