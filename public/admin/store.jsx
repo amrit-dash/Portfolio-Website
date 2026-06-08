@@ -965,6 +965,12 @@ function useContent() {
   const agentBusyRef = React.useRef(false);
   const lastJsonRef = React.useRef('');
   const pendingRemoteRef = React.useRef(null);
+  /* Debounced fsSaveDraft can still be in flight when Publish runs; bumping
+     draftSaveGenRef invalidates scheduled + completing saves so a stale write
+     cannot land on Firestore after ship and revert the draft via the listener. */
+  const draftSaveGenRef = React.useRef(0);
+  const draftSaveInFlightRef = React.useRef(null);
+  const publishingRef = React.useRef(false);
   const publishedSnapshotRef = React.useRef(publishedSnapshot);
   const publishedAtRef = React.useRef(publishedAt);
   const draftUpdatedAtRef = React.useRef(draftUpdatedAt);
@@ -972,6 +978,24 @@ function useContent() {
   React.useEffect(() => { publishedAtRef.current = publishedAt; }, [publishedAt]);
   React.useEffect(() => { draftUpdatedAtRef.current = draftUpdatedAt; }, [draftUpdatedAt]);
   const setAgentBusy = React.useCallback((b) => { agentBusyRef.current = !!b; setAgentBusyState(!!b); }, []);
+  const trackDraftSave = React.useCallback((promise) => {
+    draftSaveInFlightRef.current = promise;
+    promise.finally(() => {
+      if (draftSaveInFlightRef.current === promise) draftSaveInFlightRef.current = null;
+    });
+    return promise;
+  }, []);
+  const cancelPendingDraftSync = React.useCallback(() => {
+    if (draftTimer.current) {
+      clearTimeout(draftTimer.current);
+      draftTimer.current = null;
+    }
+    draftSaveGenRef.current += 1;
+  }, []);
+  const awaitInFlightDraftSave = React.useCallback(async () => {
+    const p = draftSaveInFlightRef.current;
+    if (p) await p.catch(() => {});
+  }, []);
   const isEditingField = () => {
     const el = typeof document !== 'undefined' ? document.activeElement : null;
     if (!el) return false;
@@ -1061,8 +1085,13 @@ function useContent() {
     // Record our own latest content so the live listener treats the resulting
     // snapshot as an echo, not a remote change (must match listener normalization).
     lastJsonRef.current = contentStateJson(canonical);
-    draftTimer.current = setTimeout(() => { Store.fsSaveDraft(canonical); }, 1000);
-  }, []);
+    const saveGen = draftSaveGenRef.current;
+    draftTimer.current = setTimeout(() => {
+      draftTimer.current = null;
+      if (saveGen !== draftSaveGenRef.current) return;
+      trackDraftSave(Store.fsSaveDraft(canonical));
+    }, 1000);
+  }, [trackDraftSave]);
 
   // U14 — adopt the agent's server-side draft writes into the open editor, and
   // keep the dedicated Agent page + floating dock in sync, WITHOUT stomping the
@@ -1074,14 +1103,15 @@ function useContent() {
     if (json === lastJsonRef.current) return; // our own echo
     // Firestore echoes / key-only diffs must not replace the editor when the
     // remote payload already matches the live published baseline.
-    if (publishedSnapshot && draftMatchesPublished(merged, publishedSnapshot)) {
+    const pub = publishedSnapshotRef.current;
+    if (pub && draftMatchesPublished(merged, pub)) {
       lastJsonRef.current = json;
       return;
     }
     lastJsonRef.current = json;
     Store.saveDraft(merged);
     setContent(merged);
-  }, [publishedSnapshot]);
+  }, []);
 
   React.useEffect(() => {
     Store._draftAdopter = adoptRemoteDraft;
@@ -1097,6 +1127,7 @@ function useContent() {
       unsub = Store.fsDraftListen(({ content: remote, updatedAtMs }) => {
         if (!remote) return;
         const json = contentStateJson(remote);
+        if (publishingRef.current && json !== lastJsonRef.current) return;
         if (json === lastJsonRef.current) {
           const pub = publishedSnapshotRef.current;
           const pubAt = publishedAtRef.current;
@@ -1157,36 +1188,38 @@ function useContent() {
   }, [scheduleDraftSync, touchDraftUpdatedAt]);
 
   const publish = React.useCallback(async () => {
-    // Cancel any pending debounced draft write — it can land after publish and
-    // revert the draft on Firestore, leaving draft↔published permanently out of sync.
-    if (draftTimer.current) {
-      clearTimeout(draftTimer.current);
-      draftTimer.current = null;
-    }
+    cancelPendingDraftSync();
+    publishingRef.current = true;
     let snap = null;
     let pubSnap = null;
-    setContent((cur) => {
-      snap = mergeContentSnapshot(cur);
-      pubSnap = canonicalPublishedFromDraft(snap);
-      Store.saveDraft(snap);
-      lastJsonRef.current = contentStateJson(snap);
-      return snap;
-    });
-    if (!snap || !pubSnap) return;
-    // Local published cache matches the public Firestore doc (key-stripped).
-    Store.publish(pubSnap);
-    // In-memory published baseline is the canonical public snapshot (no apiKeys).
-    // Draft keeps keys for editing; fingerprint compare strips them on both sides.
-    setPublishedSnapshot(pubSnap);
-    const ts = new Date().toISOString();
-    Store.write('amritos.publishedAt', ts);
-    setPublishedAt(ts);
-    touchDraftUpdatedAt(ts);
-    setDirty(false);
     try {
+      setContent((cur) => {
+        snap = mergeContentSnapshot(cur);
+        pubSnap = canonicalPublishedFromDraft(snap);
+        Store.saveDraft(snap);
+        lastJsonRef.current = contentStateJson(snap);
+        return snap;
+      });
+      if (!snap || !pubSnap) return;
+      const ts = new Date().toISOString();
+      // Sync refs before any await so the draft listener can heal echoes immediately.
+      publishedSnapshotRef.current = pubSnap;
+      publishedAtRef.current = ts;
+      draftUpdatedAtRef.current = ts;
+      // Local published cache matches the public Firestore doc (key-stripped).
+      Store.publish(pubSnap);
+      // In-memory published baseline is the canonical public snapshot (no apiKeys).
+      // Draft keeps keys for editing; fingerprint compare strips them on both sides.
+      setPublishedSnapshot(pubSnap);
+      Store.write('amritos.publishedAt', ts);
+      setPublishedAt(ts);
+      touchDraftUpdatedAt(ts);
+      setDirty(false);
+      await awaitInFlightDraftSave();
       await Store.fsPublish(snap);
     } catch (e) { /* local publish already applied */ }
-  }, [touchDraftUpdatedAt]);
+    finally { publishingRef.current = false; }
+  }, [cancelPendingDraftSync, awaitInFlightDraftSave, touchDraftUpdatedAt]);
 
   const reset = React.useCallback(() => {
     const def = Store.resetDraft();
@@ -1197,10 +1230,7 @@ function useContent() {
   // overwriting every in-progress edit. Prefers Firestore when signed in.
   // Preserves bot LLM apiKeys — the public published doc is key-stripped.
   const syncDraftFromPublished = React.useCallback(async () => {
-    if (draftTimer.current) {
-      clearTimeout(draftTimer.current);
-      draftTimer.current = null;
-    }
+    cancelPendingDraftSync();
     const base = await Store.loadPublishedSnapshot();
     if (!base) return false;
     setContent((cur) => {
@@ -1227,7 +1257,7 @@ function useContent() {
       const merged = mergeContentSnapshot(next);
       lastJsonRef.current = contentStateJson(merged);
       Store.saveDraft(merged);
-      Store.fsSaveDraft(merged);
+      trackDraftSave(Store.fsSaveDraft(merged));
       return merged;
     });
       Store.clearPreview();
@@ -1235,15 +1265,12 @@ function useContent() {
     if (publishedAt) touchDraftUpdatedAt(publishedAt);
     setPublishedSnapshot(canonicalPublishedFromDraft(base) || base);
     return true;
-  }, [publishedAt, touchDraftUpdatedAt]);
+  }, [cancelPendingDraftSync, publishedAt, touchDraftUpdatedAt, trackDraftSave]);
 
   /* Revert draft to the in-memory published snapshot (discard unpublished edits). */
   const discardDraft = React.useCallback(() => {
     if (!publishedSnapshot) return false;
-    if (draftTimer.current) {
-      clearTimeout(draftTimer.current);
-      draftTimer.current = null;
-    }
+    cancelPendingDraftSync();
     setContent((cur) => {
       const next = clone(publishedSnapshot);
       try {
@@ -1266,14 +1293,14 @@ function useContent() {
       const merged = mergeContentSnapshot(next);
       lastJsonRef.current = contentStateJson(merged);
       Store.saveDraft(merged);
-      Store.fsSaveDraft(merged);
+      trackDraftSave(Store.fsSaveDraft(merged));
       return merged;
     });
     Store.clearPreview();
     setDirty(false);
     if (publishedAt) touchDraftUpdatedAt(publishedAt);
     return true;
-  }, [publishedSnapshot, publishedAt, touchDraftUpdatedAt]);
+  }, [publishedSnapshot, publishedAt, touchDraftUpdatedAt, cancelPendingDraftSync, trackDraftSave]);
 
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
