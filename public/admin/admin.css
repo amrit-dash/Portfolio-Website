@@ -1949,9 +1949,9 @@ body::before {
 
 .logline {
    display: grid;
-   grid-template-columns: 76px 42px 110px 1fr;
+   grid-template-columns: 96px 42px 110px 1fr;
    gap: 10px;
-   align-items: baseline;
+   align-items: start;
    padding: 5px 12px;
    font-family: var(--font-mono, monospace);
    font-size: 12px;
@@ -1961,7 +1961,11 @@ body::before {
 
 .logline:last-child { border-bottom: 0; }
 
-.logline__time { color: var(--fg-mute); white-space: nowrap; }
+.logline__time {
+   color: var(--fg-mute);
+   white-space: nowrap;
+   font-variant-numeric: tabular-nums;
+}
 
 .logline__sev {
    font-weight: 600;
