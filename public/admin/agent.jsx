@@ -132,6 +132,29 @@ function formatDurationSec(ms) {
   return Math.round(ms / 1000) + 's';
 }
 
+/* True when this turn successfully cleared persisted chat history. */
+function turnClearedHistory(toolCalls) {
+  return (toolCalls || []).some(
+    (t) => t.name === 'clearChatHistory' && t.result && t.result.ok !== false,
+  );
+}
+
+/* Collect unique admin deep links from tool results (server attachLinks helper). */
+function collectToolLinks(toolCalls) {
+  const seen = new Set();
+  const out = [];
+  for (const tc of toolCalls || []) {
+    const links = tc && tc.result && tc.result.links;
+    if (!Array.isArray(links)) continue;
+    for (const l of links) {
+      if (!l || !l.adminLink || seen.has(l.adminLink)) continue;
+      seen.add(l.adminLink);
+      out.push(l);
+    }
+  }
+  return out;
+}
+
 function assistantUiFromRaw(assistant, toolMsg) {
   const tm = assistant.turnMeta || {};
   const toolResults = toolMsg && Array.isArray(toolMsg.toolResults) ? toolMsg.toolResults : [];
@@ -281,6 +304,16 @@ const agentChat = {
     try { localStorage.removeItem(AGENT_UI_CACHE_KEY); } catch (e) { /* quota */ }
     this.emit();
   },
+  /* After clearChatHistory, keep only the triggering user turn + assistant reply. */
+  collapseToCurrentTurn(assistantMsg) {
+    const userMsg = this.messages.length >= 2 ? this.messages[this.messages.length - 2] : null;
+    this.messages = (userMsg && userMsg.role === 'user')
+      ? [userMsg, assistantMsg]
+      : [assistantMsg];
+    this.hydrated = true;
+    try { localStorage.removeItem(AGENT_UI_CACHE_KEY); } catch (e) { /* quota */ }
+    this.emit();
+  },
   _persistUi() {
     const meta = {};
     this.messages.forEach((m) => {
@@ -407,7 +440,8 @@ async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
     if (res && res.error) {
       agentChat.patchLast({ pending: false, text: '', error: res.message || res.error });
     } else {
-      agentChat.patchLast({
+      const assistantMsg = {
+        role: 'assistant',
         pending: false,
         text: res.reply || '(no reply)',
         toolCalls: res.toolCalls || [],
@@ -420,7 +454,13 @@ async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
         repliedAt: res.repliedAt,
         bounded: res.bounded,
         quickReplies: res.quickReplies || undefined,
-      });
+        ts: Date.now(),
+      };
+      if (turnClearedHistory(res.toolCalls)) {
+        agentChat.collapseToCurrentTurn(assistantMsg);
+      } else {
+        agentChat.patchLast(assistantMsg);
+      }
       // Pull the server draft immediately so open editors update even when the
       // agent composer (or another non-content field) still has focus.
       try {
@@ -504,6 +544,7 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
   const displayText = assistantBubbleText(msg);
   const diffEntries = msg.perPathUndo || (msg.changedPaths || []).map((p) => ({ path: p }));
   const quickReplies = Array.isArray(msg.quickReplies) ? msg.quickReplies : [];
+  const toolLinks = collectToolLinks(msg.toolCalls);
 
   const revertOne = async (pu, i) => {
     if (!('before' in pu) || (pu.before && pu.before._truncated)) return;
@@ -528,6 +569,8 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
       } catch (e) { /* offline */ }
     }
   };
+  const hasTools = !!(msg.toolCalls && msg.toolCalls.length);
+
   return (
     <div className="agentmsg agentmsg--bot">
       <div className="agentmsg__body">
@@ -535,6 +578,26 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
           : msg.error ? <span className="login__err">⚠ {msg.error}</span>
             : <div className="agentmsg__reveal">{mdInline ? mdInline(displayText) : displayText}</div>}
         {msg.bounded && <div className="helptext" style={{ marginTop: 4 }}>⚠ stopped at the tool-iteration limit.</div>}
+
+        {hasTools && !msg.pending && (
+          <div className="agenttools-section">
+            <div className="agenttools__hd">Tool calls</div>
+            <div className="agenttools">
+              {msg.toolCalls.map((t, i) => (
+                <span key={i} className={'toolchip' + (t.result && t.result.ok === false ? ' toolchip--err' : '')}>
+                  <AdminIcon name="sparkle" size={11} />{t.name}{t.result && t.result.ok === false ? ' ✗' : ''}
+                </span>
+              ))}
+            </div>
+            {!!toolLinks.length && (
+              <div className="agenttoollinks">
+                {toolLinks.map((l, i) => (
+                  <a key={i} className="agenttoollinks__a" href={l.adminLink}>{l.label || 'Open admin'}</a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {!!quickReplies.length && !msg.pending && !msg.error && (
@@ -550,16 +613,6 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
             >
               {qr.label}
             </button>
-          ))}
-        </div>
-      )}
-
-      {!!(msg.toolCalls && msg.toolCalls.length) && (
-        <div className="agenttools">
-          {msg.toolCalls.map((t, i) => (
-            <span key={i} className={'toolchip' + (t.result && t.result.ok === false ? ' toolchip--err' : '')}>
-              <AdminIcon name="sparkle" size={11} />{t.name}{t.result && t.result.ok === false ? ' ✗' : ''}
-            </span>
           ))}
         </div>
       )}
@@ -656,10 +709,12 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
   const scroller = useRef(null);
   const fileInput = useRef(null);
 
-  const refreshVision = () => {
-    Store.fsLoadAgentConfig()
-      .then((cfg) => setVisionOk(Store.agentSupportsVision(cfg)))
-      .catch(() => setVisionOk(false));
+  const refreshVision = async () => {
+    await Store.hydrateVisionSupport('agent');
+    try {
+      const cfg = await Store.fsLoadAgentConfig();
+      setVisionOk(Store.agentSupportsVision(cfg));
+    } catch (e) { setVisionOk(false); }
   };
 
   useEffect(() => { refreshVision(); }, []);
