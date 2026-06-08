@@ -600,8 +600,13 @@ const Store = {
   agentRevertPath(path, before) {
     return this._agentFetch('/agent', { action: 'revert-path', path, before });
   },
+  // Inbox junk purge — rules-only cleanup (single-word, repeated-word, duplicates).
+  inboxPurge(ids) {
+    return this._agentFetch('/inboxPurge', { ids: ids || [] });
+  },
   // Inbox triage — batch-classify visitor questions (server caps a run at 25,
-  // processed 5 at a time in one conversation).
+  // processed 5 at a time in one conversation). Purges junk first; persists to
+  // config/inboxRun server-side.
   inboxProcess(ids) {
     return this._agentFetch('/inboxProcess', { ids });
   },

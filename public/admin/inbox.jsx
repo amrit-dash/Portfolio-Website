@@ -8,9 +8,10 @@
    routing, no full reload between pages), so this keeps running across page
    changes. It classifies visitor questions in small chunks via /inboxProcess,
    accumulates suggestions, and syncs each step to Firestore (config/inboxRun) so
-   a reload doesn't lose progress.
+   a reload doesn't lose progress. A weekly Cloud Scheduler job also triages new
+   questions server-side and writes suggestions there.
 
-   Browser-local by design: closing the tab stops it (no cloud job, per request).
+   Manual runs are browser-local: closing the tab stops an in-flight manual run.
    ===================================================== */
 const { useState: useIxState, useEffect: useIxEffect } = React;
 
@@ -35,6 +36,11 @@ const inboxRunner = {
   async loadPersisted() {
     if (this._loaded) return;
     this._loaded = true;
+    await this.reloadPersisted();
+  },
+
+  // Re-read config/inboxRun (e.g. after server purge or weekly auto-triage).
+  async reloadPersisted() {
     try {
       const d = await window.ADMIN_STORE.Store.fsLoadInboxRun();
       if (d) {
@@ -53,7 +59,7 @@ const inboxRunner = {
   // processed/suggested. Safe to call again to pick up newly-arrived questions.
   async start(ids) {
     if (this.running) return;
-    const todo = (ids || []).filter((id) => id && !this.processed[id] && !this.suggestions[id]);
+    const todo = (ids || []).filter((id) => id && !this.processed[id]);
     if (!todo.length) return;
     this.running = true; this.error = null; this.total = todo.length; this.done = 0; this.emit();
     try {

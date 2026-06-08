@@ -181,11 +181,25 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const [qLoading, setQLoading] = useBState(false);
   const loadQuestions = async () => {
     setQLoading(true);
-    try { setQuestions(await window.ADMIN_STORE.Store.fsBotQuestions(100)); }
-    catch (e) { setQuestions([]); }
+    try {
+      let qs = await window.ADMIN_STORE.Store.fsBotQuestions(100);
+      if (qs.length) {
+        const purgeRes = await window.ADMIN_STORE.Store.inboxPurge(qs.map((q) => q.id));
+        if (purgeRes && purgeRes.purged && purgeRes.purged.length) {
+          const gone = new Set(purgeRes.purged.map((p) => p.id));
+          qs = qs.filter((q) => !gone.has(q.id));
+          if (window.ADMIN_INBOX) await window.ADMIN_INBOX.inboxRunner.reloadPersisted();
+        }
+      }
+      setQuestions(qs);
+    } catch (e) { setQuestions([]); }
     finally { setQLoading(false); }
   };
-  useBEffect(() => { if (tab === 'review' && questions === null) loadQuestions(); }, [tab]);
+  useBEffect(() => {
+    if (tab !== 'review') return;
+    if (window.ADMIN_INBOX) window.ADMIN_INBOX.inboxRunner.reloadPersisted();
+    if (questions === null) loadQuestions();
+  }, [tab]);
 
   // ---- AI triage: classify visitor questions in batches of 5 (server-side
   //      conversation), then apply suggestions by TEXT match (never a stale index).
@@ -203,7 +217,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   // step — so you can navigate away and come back to ready suggestions.
   const aiProcess = () => {
     if (!questions || aiBusy) return;
-    const ids = questions.filter((q) => !suggestions[q.id]).map((q) => q.id);
+    const ids = questions.filter((q) => !suggestions[q.id] && !inboxRun.processed[q.id]).map((q) => q.id);
     inboxRun.start(ids);
   };
 
@@ -241,7 +255,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const dismissQ = (q) => { removeQuestion(q.id); };
   const verdictLabel = (v) => v === 'existing_phrase' ? 'Already covered' : v === 'irrelevant' ? 'Not worth automating' : 'New question';
   const verdictLabelShort = (v) => v === 'existing_phrase' ? 'Covered' : v === 'irrelevant' ? 'Skip' : 'New';
-  const unprocessedCount = () => (questions || []).filter((q) => !suggestions[q.id]).length;
+  const unprocessedCount = () => (questions || []).filter((q) => !suggestions[q.id] && !inboxRun.processed[q.id]).length;
 
   const qWhen = (q) => {
     const ms = q.at && q.at.toMillis ? q.at.toMillis() : (q.at && q.at.seconds ? q.at.seconds * 1000 : 0);
@@ -436,7 +450,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
               </Btn>
               <Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading} title="Reload visitor questions"><span className="btn__label">{qLoading ? 'Loading…' : 'Refresh'}</span></Btn>
             </>}>
-            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Hit <b>AI process</b> to let the agent triage them (5 at a time) — it suggests merging a question into an existing Q&amp;A, creating a new one with answers, or dismissing junk. Triage runs in the background, so you can leave this page and come back to ready suggestions.</p>
+            <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Junk is auto-removed on load — single-word noise, repeated words like &ldquo;hello hello&rdquo;, and exact duplicates never reach the AI. Hit <b>AI process</b> to triage the rest (5 at a time): merge into an existing Q&amp;A, create a new pair, or skip. Suggestions persist in Firestore, and a weekly background job classifies new questions automatically. Check <b>AmritBot logs</b> for purge and triage activity.</p>
             {(aiErr || actErr) && <div className="helptext" style={{ color: '#e0a341', marginBottom: 10 }}>⚠ {aiErr || actErr}</div>}
             {questions === null ? <p className="helptext" style={{ margin: 0 }}>Loading…</p>
               : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
@@ -456,7 +470,8 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                         <div className="item__actions">
                           {proc ? <span className="helptext">processing…</span>
                             : s ? <span className={'iconbtn infobtn infobtn--' + s.verdict} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion — review & add"><AdminIcon name="info" size={15} /></span>
-                              : <span className="helptext" style={{ fontSize: 11, opacity: .7 }}>not triaged</span>}
+                              : inboxRun.processed[q.id] ? <span className="helptext" style={{ fontSize: 11, opacity: .7 }}>triaged</span>
+                                : <span className="helptext" style={{ fontSize: 11, opacity: .7 }}>not triaged</span>}
                           <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
                         </div>
                       </div>
