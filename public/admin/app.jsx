@@ -245,7 +245,7 @@ function AnalyticsPage({ analytics, onReset }) {
   };
 
   return (
-    <div>
+    <div className="page--analytics">
       <PageHead eyebrow="/ANALYTICS" title="Analytics" actions={hasData ? <Btn sm kind="ghost" icon="trash" onClick={onReset}>Clear all</Btn> : null}>
         Real visitor activity captured from the live site — last 30 days. Counts update in real time as events come in.
       </PageHead>
@@ -425,9 +425,17 @@ function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDif
 function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent, showSyncFromLive, onSyncFromPublished, canDiscard, onDiscard }) {
   const { AdminIcon, Btn } = window.ADMIN_UI;
   const [device, setDevice] = useAState('desktop');
+  const [narrow, setNarrow] = useAState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 820px)').matches);
   const [nonce, setNonce] = useAState(0);
   const frameRef = useARef(null);
   useAEffect(() => { if (open) setNonce((n) => n + 1); }, [open, mode]);
+  useAEffect(() => {
+    const mq = window.matchMedia('(max-width: 820px)');
+    const onChange = () => setNarrow(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   const post = React.useCallback(() => {
     try {
@@ -455,37 +463,46 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
   const portfolioBase = isLocal ? '/' : ((window.PORTFOLIO_URL || '').replace(/\/$/, '') + '/');
   const previewSrc = portfolioBase + '?adminpreview=' + nonce;
   const openHref = portfolioBase;
+  const phoneChrome = device === 'mobile' && !narrow;
   return (
     <>
       <div className="preview-scrim" data-open={open} onClick={onClose} />
-      <div className="preview-drawer" data-open={open}>
+      <div className="preview-drawer" data-open={open} data-narrow={narrow ? 'true' : 'false'}>
         <div className="preview-drawer__bar">
-          <AdminIcon name="eye" size={15} />
-          <span>Live preview</span>
-          <div className="seg" style={{ padding: 2 }}>
-            <button data-on={mode === 'draft'} onClick={() => onMode('draft')} style={{ fontSize: 11, padding: '4px 10px' }}>Draft</button>
-            <button data-on={mode === 'published'} onClick={() => onMode('published')} style={{ fontSize: 11, padding: '4px 10px' }}>Published</button>
+          <div className="preview-drawer__head">
+            <AdminIcon name="eye" size={15} />
+            <span>Live preview</span>
           </div>
-          <span className="spacer" />
-          <div className="devicebar">
-            <button data-on={device === 'desktop'} onClick={() => setDevice('desktop')} title="Desktop"><AdminIcon name="desktop" size={15} /></button>
-            <button data-on={device === 'mobile'} onClick={() => setDevice('mobile')} title="Mobile"><AdminIcon name="mobile" size={15} /></button>
+          <div className="preview-drawer__tools">
+            <div className="seg preview-drawer__mode" style={{ padding: 2 }}>
+              <button type="button" data-on={mode === 'draft'} onClick={() => onMode('draft')} style={{ fontSize: 11, padding: '4px 10px' }}>Draft</button>
+              <button type="button" data-on={mode === 'published'} onClick={() => onMode('published')} style={{ fontSize: 11, padding: '4px 10px' }}>Published</button>
+            </div>
+            {!narrow && (
+              <>
+                <span className="spacer" />
+                <div className="devicebar preview-drawer__device">
+                  <button type="button" data-on={device === 'desktop'} onClick={() => setDevice('desktop')} title="Desktop"><AdminIcon name="desktop" size={15} /></button>
+                  <button type="button" data-on={device === 'mobile'} onClick={() => setDevice('mobile')} title="Mobile"><AdminIcon name="mobile" size={15} /></button>
+                </div>
+              </>
+            )}
+            {canDiscard && (
+              <Btn sm kind="ghost" icon="reset" onClick={onDiscard} title="Discard unpublished edits and revert draft to last published snapshot">Discard draft</Btn>
+            )}
+            {showSyncFromLive && (
+              <button type="button" className="btn btn--sm btn--danger" onClick={onSyncFromPublished} title="Replace draft with the live published snapshot"><AdminIcon name="sync" size={13} />Sync from live</button>
+            )}
+            <a className="btn btn--sm" href={openHref} target="_blank" rel="noreferrer"><AdminIcon name="link" size={13} />Open</a>
+            <button type="button" className="iconbtn preview-drawer__close" onClick={onClose} aria-label="Close preview"><AdminIcon name="x" size={15} /></button>
           </div>
-          {canDiscard && (
-            <Btn sm kind="ghost" icon="reset" onClick={onDiscard} title="Discard unpublished edits and revert draft to last published snapshot">Discard draft</Btn>
-          )}
-          {showSyncFromLive && (
-            <button className="btn btn--sm btn--danger" onClick={onSyncFromPublished} title="Replace draft with the live published snapshot"><AdminIcon name="sync" size={13} />Sync from live</button>
-          )}
-          <a className="btn btn--sm" href={openHref} target="_blank" rel="noreferrer"><AdminIcon name="link" size={13} />Open</a>
-          <button className="iconbtn" onClick={onClose}><AdminIcon name="x" size={15} /></button>
         </div>
         {open && (
-          device === 'mobile'
-            ? <div style={{ flex: 1, display: 'grid', placeItems: 'center', background: '#060704', overflow: 'auto' }}>
-              <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} style={{ width: 390, height: 760, border: '1px solid var(--line-2)', borderRadius: 14, background: '#000' }} />
+          phoneChrome
+            ? <div className="preview-drawer__phone">
+              <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} className="preview-drawer__frame preview-drawer__frame--phone" />
             </div>
-            : <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} />
+            : <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} className="preview-drawer__frame" />
         )}
       </div>
     </>
