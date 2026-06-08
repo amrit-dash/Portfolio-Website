@@ -106,7 +106,18 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const [testing, setTesting] = useBState(null);            // providerId currently being test-pinged
   const [testRes, setTestRes] = useBState({});              // { providerId: { ok, text } }
   const [saveState, setSaveState] = useBState(null);        // null | 'saving' | 'saved' | 'error'
+  const [expandedProv, setExpandedProv] = useBState(null);
+  useBEffect(() => {
+    if (tab !== 'providers') return;
+    let cancelled = false;
+    window.ADMIN_STORE.Store.hydrateModelCatalogs('bot').then((catalogs) => {
+      if (cancelled || !catalogs || !Object.keys(catalogs).length) return;
+      setFetchedModels((prev) => ({ ...prev, ...catalogs }));
+    });
+    return () => { cancelled = true; };
+  }, [tab]);
   const provDirty = JSON.stringify(pcfg) !== JSON.stringify(bot.providers);
+  const { ProviderCard } = window.ADMIN_PROVIDER_CARD || {};
 
   const localCfg = (id) => (pcfg.byProvider && id !== '__proto__' && id !== 'constructor' && id !== 'prototype' && Reflect.get(pcfg.byProvider, id)) || {};
   const setLocal = (id, key, val) => {
@@ -136,13 +147,23 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
     return h;
   };
 
+  const selectModel = (id, model) => {
+    setLocal(id, 'model', model);
+    window.ADMIN_STORE.Store.saveModelCatalogSelection('bot', id, model);
+  };
+
   const fetchModels = async (id) => {
     setFetching(id); setModelErr((m) => ({ ...m, [id]: null }));
     try {
       const r = await fetch(window.FUNCTIONS_BASE + '/models', { method: 'POST', headers: await authHeaders(), body: JSON.stringify({ provider: id, key: localCfg(id).apiKey || '' }) });
       const d = await r.json();
-      if (d.models && d.models.length) setFetchedModels((m) => ({ ...m, [id]: d.models }));
-      else setModelErr((m) => ({ ...m, [id]: d.error || 'No models returned' }));
+      if (d.models && d.models.length) {
+        const cur = localCfg(id).model || '';
+        const next = (cur && d.models.includes(cur)) ? cur : d.models[0];
+        if (next && next !== cur) setLocal(id, 'model', next);
+        await window.ADMIN_STORE.Store.saveModelCatalog('bot', id, d.models, { selectedModel: next || cur });
+        setFetchedModels((m) => ({ ...m, [id]: d.models }));
+      } else setModelErr((m) => ({ ...m, [id]: d.error || 'No models returned' }));
     } catch (e) { setModelErr((m) => ({ ...m, [id]: (e && e.message) || 'fetch failed' })); }
     finally { setFetching(null); }
   };
@@ -217,8 +238,14 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   // step — so you can navigate away and come back to ready suggestions.
   const aiProcess = () => {
     if (!questions || aiBusy) return;
-    const ids = questions.filter((q) => !suggestions[q.id] && !inboxRun.processed[q.id]).map((q) => q.id);
+    const ids = questions.filter((q) => !suggestions[q.id]).map((q) => q.id);
+    ids.forEach((id) => { if (inboxRun.processed[id]) inboxRun.resolve(id); });
     inboxRun.start(ids);
+  };
+  const retriageOne = (q) => {
+    if (aiBusy) return;
+    inboxRun.resolve(q.id);
+    inboxRun.start([q.id]);
   };
 
   // Delete the inbox question only AFTER the QA write is enqueued + the delete
@@ -253,9 +280,21 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
     await removeQuestion(q.id);
   };
   const dismissQ = (q) => { removeQuestion(q.id); };
-  const verdictLabel = (v) => v === 'existing_phrase' ? 'Already covered' : v === 'irrelevant' ? 'Not worth automating' : 'New question';
-  const verdictLabelShort = (v) => v === 'existing_phrase' ? 'Covered' : v === 'irrelevant' ? 'Skip' : 'New';
-  const unprocessedCount = () => (questions || []).filter((q) => !suggestions[q.id] && !inboxRun.processed[q.id]).length;
+  const verdictLabel = (s) => {
+    if (!s) return '';
+    if (s.incomplete) return 'No details';
+    if (s.verdict === 'existing_phrase') return 'Already covered';
+    if (s.verdict === 'irrelevant') return 'Not worth automating';
+    return 'New question';
+  };
+  const verdictLabelShort = (s) => {
+    if (!s) return '';
+    if (s.incomplete) return 'Retry';
+    if (s.verdict === 'existing_phrase') return 'Covered';
+    if (s.verdict === 'irrelevant') return 'Skip';
+    return 'New';
+  };
+  const unprocessedCount = () => (questions || []).filter((q) => !suggestions[q.id]).length;
 
   const qWhen = (q) => {
     const ms = q.at && q.at.toMillis ? q.at.toMillis() : (q.at && q.at.seconds ? q.at.seconds * 1000 : 0);
@@ -382,40 +421,38 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
             const cfg = localCfg(p.id);
             const opts = (fetchedModels && Reflect.get(fetchedModels, p.id)) || p.models;
             return (
-              <div key={p.id} className={'provcard' + (active ? ' provcard--active' : '')}>
-                <div className="provcard__hd">
-                  <div style={{ minWidth: 0 }}>
-                    <div className="provrow__nm">{p.label}{p.tag && <span className="tag">{p.tag}</span>}{active && <span className="tag tag--accent">DEFAULT</span>}</div>
-                    <div className="provrow__ep">{p.endpoint.replace('{model}', cfg.model || p.models[0])}</div>
-                  </div>
-                  <span className="spacer" style={{ flex: 1 }} />
-                  <span className={'keystate' + (cfg.apiKey ? ' has' : '')}><span className="d" />{cfg.apiKey ? 'key set' : 'no key'}</span>
-                  {active
-                    ? <span className="provcard__badge">✓ default</span>
-                    : <Btn sm kind="ghost" onClick={() => setActiveProvider(p.id)}>Set as default</Btn>}
-                </div>
-                <div className="provcard__bd">
-                  <Field label="API key" hint={p.keyHint}>
-                    <SecretInput name={'llm-key-' + p.id} value={cfg.apiKey || ''} placeholder={'paste your ' + p.label + ' key'} onChange={(v) => setLocal(p.id, 'apiKey', v)} />
-                  </Field>
-                  <Field label="Model" hint={(fetchedModels && Reflect.get(fetchedModels, p.id)) ? `${opts.length} models from ${p.label}` : 'pick a model, or refresh the list from the provider'}>
-                    <div className="modelrow">
-                      <Select value={cfg.model || ''} options={modelOptions(p, cfg)} onChange={(v) => setLocal(p.id, 'model', v)} />
-                      <div className="modelrow__actions">
-                        <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id} title="Refresh model list from provider"><span className="btn__label">{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</span></Btn>
-                        <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !cfg.apiKey || !cfg.model} title="Send a hello to this model — result also logged in AmritBot logs"><span className="btn__label">{testing === p.id ? 'Testing…' : 'Test model'}</span></Btn>
-                      </div>
+              <ProviderCard
+                key={p.id}
+                provider={p}
+                apiKey={cfg.apiKey}
+                model={cfg.model}
+                curatedDefault={(p.models && p.models[0]) || ''}
+                expanded={expandedProv === p.id}
+                onToggle={() => setExpandedProv(expandedProv === p.id ? null : p.id)}
+                defaultMode="simple"
+                isDefault={active}
+                onSetDefault={() => setActiveProvider(p.id)}
+              >
+                <Field label="API key" hint={p.keyHint}>
+                  <SecretInput name={'llm-key-' + p.id} value={cfg.apiKey || ''} placeholder={'paste your ' + p.label + ' key'} onChange={(v) => setLocal(p.id, 'apiKey', v)} />
+                </Field>
+                <Field label="Model" hint={(fetchedModels && Reflect.get(fetchedModels, p.id)) ? `${opts.length} models from ${p.label}` : 'pick a model, or refresh the list from the provider'}>
+                  <div className="modelrow">
+                    <Select value={cfg.model || ''} options={modelOptions(p, cfg)} onChange={(v) => selectModel(p.id, v)} />
+                    <div className="modelrow__actions">
+                      <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id} title="Refresh model list from provider"><span className="btn__label">{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</span></Btn>
+                      <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !cfg.apiKey || !cfg.model} title="Send a hello to this model — result also logged in AmritBot logs"><span className="btn__label">{testing === p.id ? 'Testing…' : 'Test model'}</span></Btn>
                     </div>
-                    {modelErr && Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
-                    {testRes && Reflect.get(testRes, p.id) && (
-                      <div className="helptext" style={{ marginTop: 6, color: Reflect.get(testRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
-                        {Reflect.get(testRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(testRes, p.id).text}
-                      </div>
-                    )}
-                  </Field>
-                  <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>
-                </div>
-              </div>
+                  </div>
+                  {modelErr && Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
+                  {testRes && Reflect.get(testRes, p.id) && (
+                    <div className="helptext" style={{ marginTop: 6, color: Reflect.get(testRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
+                      {Reflect.get(testRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(testRes, p.id).text}
+                    </div>
+                  )}
+                </Field>
+                <a className="helptext" href={p.docs} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}><AdminIcon name="link" size={13} />Get a key from {p.label}</a>
+              </ProviderCard>
             );
           })}
         </div>
@@ -456,21 +493,23 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
               : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
                 : questions.map((q) => {
                   const s = suggestions[q.id];
-                  const proc = aiBusy && !s;   // queued/processing in the background run
+                  const noDetails = !s && inboxRun.processed[q.id];
+                  const proc = aiBusy && !s;
                   const open = openInfo === q.id;
+                  const tagClass = s ? (s.incomplete ? 'verdicttag--incomplete' : 'verdicttag--' + s.verdict) : '';
                   return (
                     <div className="item" key={q.id}>
                       <div className="item__hd item__hd--inbox" style={{ cursor: 'default' }}>
                         <span className="miniico"><AdminIcon name="chat" size={15} /></span>
                         <div className="item__text">
                           <div className="item__title">{q.q}</div>
-                          <div className="item__sub">{qWhen(q)}{s ? <span className={'verdicttag verdicttag--' + s.verdict} title={verdictLabel(s.verdict)}><span className="verdicttag__full">{verdictLabel(s.verdict)}</span><span className="verdicttag__short">{verdictLabelShort(s.verdict)}</span></span> : null}</div>
+                          <div className="item__sub">{qWhen(q)}{s ? <span className={'verdicttag ' + tagClass} title={verdictLabel(s)}><span className="verdicttag__full">{verdictLabel(s)}</span><span className="verdicttag__short">{verdictLabelShort(s)}</span></span> : noDetails ? <span className="verdicttag verdicttag--incomplete" title="Triaged without stored details"><span className="verdicttag__full">No details</span><span className="verdicttag__short">Retry</span></span> : null}</div>
                         </div>
                         <span className="spacer" style={{ flex: 1 }} />
                         <div className="item__actions">
                           {proc ? <span className="helptext">processing…</span>
-                            : s ? <span className={'iconbtn infobtn infobtn--' + s.verdict} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion — review & add"><AdminIcon name="info" size={15} /></span>
-                              : inboxRun.processed[q.id] ? <span className="helptext" style={{ fontSize: 11, opacity: .7 }}>triaged</span>
+                            : s ? <span className={'iconbtn infobtn infobtn--' + (s.incomplete ? 'incomplete' : s.verdict)} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion — review details"><AdminIcon name="info" size={15} /></span>
+                              : noDetails ? <Btn sm kind="ghost" icon="reset" onClick={() => retriageOne(q)} title="Re-run triage for this question">Re-triage</Btn>
                                 : <span className="helptext" style={{ fontSize: 11, opacity: .7 }}>not triaged</span>}
                           <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
                         </div>
@@ -486,10 +525,14 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                             </div>
                           ) : null}
                           <div className="inboxsug__actions">
-                            {s.verdict === 'existing_phrase' && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
+                            {s.incomplete && <Btn sm kind="primary" icon="reset" onClick={() => retriageOne(q)}>Re-triage</Btn>}
+                            {s.verdict === 'existing_phrase' && !s.incomplete && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
                             {s.verdict === 'new_question' && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
-                            {s.verdict !== 'new_question' && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
-                            <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>
+                            {s.verdict !== 'new_question' && !s.incomplete && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
+                            {s.verdict === 'irrelevant' && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
+                            {s.incomplete && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
+                            {s.verdict === 'existing_phrase' && !s.incomplete && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss duplicate</Btn>}
+                            {s.verdict === 'new_question' && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
                           </div>
                         </div>
                       )}

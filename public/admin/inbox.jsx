@@ -55,11 +55,11 @@ const inboxRunner = {
     window.ADMIN_STORE.Store.fsSaveInboxRun({ suggestions: this.suggestions, processed: this.processed });
   },
 
-  // Classify the given question ids in the background. Skips anything already
-  // processed/suggested. Safe to call again to pick up newly-arrived questions.
+  // Classify the given question ids in the background. Skips ids that already
+  // have a stored suggestion; allows re-triage when processed but no suggestion.
   async start(ids) {
     if (this.running) return;
-    const todo = (ids || []).filter((id) => id && !this.processed[id]);
+    const todo = (ids || []).filter((id) => id && !this.suggestions[id]);
     if (!todo.length) return;
     this.running = true; this.error = null; this.total = todo.length; this.done = 0; this.emit();
     try {
@@ -67,11 +67,13 @@ const inboxRunner = {
         const chunk = todo.slice(i, i + INBOX_CHUNK);
         const res = await window.ADMIN_STORE.Store.inboxProcess(chunk);
         if (res && Array.isArray(res.suggestions)) {
-          res.suggestions.forEach((s) => { if (s && s.id) this.suggestions[s.id] = s; });
+          res.suggestions.forEach((s) => {
+            if (s && s.id) {
+              this.suggestions[s.id] = s;
+              this.processed[s.id] = true;
+            }
+          });
         }
-        // Mark every id in the chunk processed (even those the model deemed
-        // irrelevant / returned nothing for) so we never re-spend on them.
-        chunk.forEach((id) => { this.processed[id] = true; });
         this.done = Math.min(this.total, i + chunk.length);
         // A hard error with NO partial suggestions (e.g. daily cap, no config) —
         // stop the run and surface it.
