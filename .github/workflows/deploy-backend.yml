@@ -3,7 +3,7 @@ name: Deploy backend (functions + rules)
 # MANUAL ONLY. Deploys Cloud Functions + Firestore rules + Storage rules.
 # There is intentionally NO push trigger — the backend deploy cadence is owner-
 # controlled (the agent adds new endpoints, so we don't want it firing on every
-# master merge). Run it from the Actions tab via "Run workflow".
+# amrit-os merge). Run it from the Actions tab via "Run workflow".
 on:
   workflow_dispatch:
     inputs:

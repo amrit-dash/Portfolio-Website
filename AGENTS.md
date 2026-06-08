@@ -77,7 +77,7 @@ flowchart TB
 - `firestore.rules`, `storage.rules`
 - `scripts/build-dist.mjs` — esbuild JSX → `dist/site` + `dist/admin`
 - `scripts/deploy-{site,admin,backend}.sh` — deploy scripts
-- `.github/workflows/firebase-hosting-merge.yml` — auto-deploy hosting on push to `master`
+- `.github/workflows/deploy-{site,admin}.yml` — path-filtered hosting deploy on push to `amrit-os`
 - `.github/workflows/deploy-backend.yml` — manual `workflow_dispatch` for functions + rules
 
 ### Cloud Functions endpoints
@@ -251,7 +251,7 @@ npm run deploy:hosting   # both sites
 npm run deploy:backend   # functions + firestore:rules + storage (manual / workflow_dispatch)
 ```
 
-Hosting CI (`.github/workflows/firebase-hosting-merge.yml`) deploys on push to `master`. Backend deploy requires broader IAM — kept manual via `deploy:backend` or the GitHub Actions workflow.
+Hosting CI (`deploy-site.yml` / `deploy-admin.yml`) deploys on push to `amrit-os` when matching paths change. Backend deploy requires broader IAM — kept manual via `deploy:backend` or the GitHub Actions workflow.
 
 Local emulators: `firebase emulators:start` (Auth, Firestore, Functions, Storage, Hosting). Agent smoke: `node scripts/agent-smoke.cjs` with `AGENT_PROVIDER` / `AGENT_KEY` against the Firestore emulator.
 

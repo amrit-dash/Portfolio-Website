@@ -13,7 +13,7 @@ A retro-OS reimagining of my portfolio, with a private admin console and an owne
 - **AI agent** — chat-driven editing on the Agent page + floating dock. Writes only to `content/draft`, snapshots each turn for undo, supports multimodal attachments and inbox triage. Separate provider keys in `config/agent`.
 - **Firebase backend** — Firestore for draft/published content, Cloud Functions for the visitor bot (`/chat`), analytics (`/track`), and the agent loop (`/agent`, `/refine`). Storage for images and CVs. Owner-only Google Auth.
 - **Zero dev build step** — React 18 + Babel-standalone from a CDN in `public/`; edit `.jsx` and refresh. Production uses `npm run build` (esbuild) into `dist/`.
-- **Continuous delivery** — push to `master` auto-deploys hosting; backend deploy is manual (`npm run deploy:backend`).
+- **Continuous delivery** — push to `amrit-os` auto-deploys hosting (path-filtered site/admin workflows); backend deploy is manual (`npm run deploy:backend`).
 
 ## Run locally
 

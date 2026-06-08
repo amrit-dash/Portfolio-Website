@@ -1,14 +1,14 @@
 name: Deploy admin (amritos-admin)
 
 # Deploys ONLY the admin console (hosting:amritos-admin) when admin files change
-# on master. Site-only changes are handled by deploy-site.yml.
+# on amrit-os. Site-only changes are handled by deploy-site.yml.
 # Shared sources are listed here too (data.jsx, firebase-config.js,
 # firebase-init.js, the build script, firebase.json), because the admin bundle
 # embeds them — so a shared change redeploys the admin alongside the site.
 on:
   push:
     branches:
-      - master
+      - amrit-os
     paths:
       - 'public/admin/**'
       - 'public/admin.html'
@@ -39,6 +39,12 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '20'
+
+      - run: npm ci
 
       - run: npm install -g firebase-tools
 
