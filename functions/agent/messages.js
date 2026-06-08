@@ -69,6 +69,15 @@ function attachmentsMeta(attachments) {
   }));
 }
 
+function sanitizeTurnMeta(turnMeta) {
+  if (!turnMeta || typeof turnMeta !== 'object') return null;
+  const out = {};
+  for (const [key, value] of Object.entries(turnMeta)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 function toFirestore(msg) {
   const out = {
     role: msg.role,
@@ -78,7 +87,8 @@ function toFirestore(msg) {
     attachments: attachmentsMeta(msg.attachments),
     ts: msg.ts || Date.now(),
   };
-  if (msg.turnMeta && typeof msg.turnMeta === 'object') out.turnMeta = msg.turnMeta;
+  const turnMeta = sanitizeTurnMeta(msg.turnMeta);
+  if (turnMeta) out.turnMeta = turnMeta;
   if (Number.isFinite(msg.seq)) out.seq = msg.seq;
   return out;
 }

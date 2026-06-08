@@ -235,7 +235,7 @@ async function runAgentTurn({
     durationMs,
     repliedAt,
     bounded: iter >= MAX_TOOL_ITERS,
-    quickReplies: quickReplies.length ? quickReplies : undefined,
+    ...(quickReplies.length ? { quickReplies } : {}),
   };
   const newMessages = [
     makeUserMessage(message, attachments),
