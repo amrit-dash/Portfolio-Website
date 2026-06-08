@@ -970,7 +970,7 @@ function useContent() {
      cannot land on Firestore after ship and revert the draft via the listener. */
   const draftSaveGenRef = React.useRef(0);
   const draftSaveInFlightRef = React.useRef(null);
-  const publishingRef = React.useRef(false);
+  const publishInFlightRef = React.useRef(false);
   const publishCooldownUntilRef = React.useRef(0);
   const PUBLISH_LISTENER_GUARD_MS = 5000;
   const [publishing, setPublishing] = React.useState(false);
@@ -998,6 +998,8 @@ function useContent() {
     const gen = typeof saveGen === 'number' ? saveGen : draftSaveGenRef.current;
     return trackDraftSave((async () => {
       if (gen !== draftSaveGenRef.current) return;
+      // Re-check after any await queue delay — publish may have bumped gen meanwhile.
+      if (gen !== draftSaveGenRef.current) return;
       await Store.fsSaveDraft(canonical);
     })());
   }, [trackDraftSave]);
@@ -1012,12 +1014,6 @@ function useContent() {
   const awaitInFlightDraftSave = React.useCallback(async () => {
     const p = draftSaveInFlightRef.current;
     if (p) await p.catch(() => {});
-  }, []);
-  const releasePublishGuard = React.useCallback(() => {
-    const delay = Math.max(0, publishCooldownUntilRef.current - Date.now());
-    setTimeout(() => {
-      if (Date.now() >= publishCooldownUntilRef.current) publishingRef.current = false;
-    }, delay);
   }, []);
   const isEditingField = () => {
     const el = typeof document !== 'undefined' ? document.activeElement : null;
@@ -1152,7 +1148,7 @@ function useContent() {
         if (!remote) return;
         const json = contentStateJson(remote);
         if (json !== lastJsonRef.current) {
-          const guarded = publishingRef.current || Date.now() < publishCooldownUntilRef.current;
+          const guarded = Date.now() < publishCooldownUntilRef.current;
           if (guarded) {
             const pub = publishedSnapshotRef.current;
             if (pub && draftMatchesPublished(remote, pub)) {
@@ -1223,15 +1219,15 @@ function useContent() {
   }, [scheduleDraftSync, touchDraftUpdatedAt]);
 
   const publish = React.useCallback(async () => {
-    if (publishingRef.current) return false;
+    if (publishInFlightRef.current) return false;
     cancelPendingDraftSync();
-    publishingRef.current = true;
+    publishInFlightRef.current = true;
     publishCooldownUntilRef.current = Date.now() + PUBLISH_LISTENER_GUARD_MS;
     setPublishing(true);
     let snap = null;
     let pubSnap = null;
     try {
-      // Let any pre-cancel in-flight autosave finish; gen bump above makes it a no-op.
+      // Let any pre-cancel in-flight autosave finish; gen bump invalidates its write.
       await awaitInFlightDraftSave();
       setContent((cur) => {
         snap = mergeContentSnapshot(cur);
@@ -1259,10 +1255,10 @@ function useContent() {
       return true;
     } catch (e) { /* local publish already applied */ return false; }
     finally {
+      publishInFlightRef.current = false;
       setPublishing(false);
-      releasePublishGuard();
     }
-  }, [cancelPendingDraftSync, awaitInFlightDraftSave, touchDraftUpdatedAt, releasePublishGuard]);
+  }, [cancelPendingDraftSync, awaitInFlightDraftSave, touchDraftUpdatedAt]);
 
   const reset = React.useCallback(() => {
     const def = Store.resetDraft();
@@ -1359,7 +1355,8 @@ function useContent() {
     });
   }, []);
 
-  const canPublish = hasUnpublishedEdits && !publishing && !draftSaving;
+  /* publish() cancels/awaits draft autosave internally — don't block the button on draftSaving. */
+  const canPublish = hasUnpublishedEdits && !publishing;
 
   return {
     content, setAt, replace, publish, reset, discardDraft, syncDraftFromPublished, previewDraft,
