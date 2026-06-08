@@ -75,6 +75,45 @@ function normalizeSuggestion(s, validIds, qaLen) {
   };
 }
 
+// Ensure every triaged question has a stored suggestion — the model may omit ids
+// from its JSON batch reply (irrelevant / existing_phrase are common omissions).
+function completeSuggestionsForAll(qDocs, suggestions, qa) {
+  const byId = new Map();
+  (suggestions || []).forEach((s) => { if (s && s.id) byId.set(s.id, s); });
+  return qDocs.map((d) => {
+    if (byId.has(d.id)) return byId.get(d.id);
+    const normQ = normalizeInboxText(d.q);
+    for (let i = 0; i < qa.length; i++) {
+      const qs = qa[i].qs || [];
+      for (const phrasing of qs) {
+        if (normalizeInboxText(phrasing) === normQ) {
+          return {
+            id: d.id,
+            verdict: 'existing_phrase',
+            matchIndex: i,
+            matchQuestion: phrasing.slice(0, 300),
+            phrasing: d.q.slice(0, 400),
+            suggestedQuestions: [],
+            suggestedAnswers: [],
+            reason: 'Exact match to an existing Q&A phrasing',
+          };
+        }
+      }
+    }
+    return {
+      id: d.id,
+      verdict: 'irrelevant',
+      matchIndex: null,
+      matchQuestion: null,
+      phrasing: null,
+      suggestedQuestions: [],
+      suggestedAnswers: [],
+      reason: 'Classifier did not return a verdict — safe to dismiss or re-triage',
+      incomplete: true,
+    };
+  });
+}
+
 async function loadInboxRun(db) {
   try {
     const s = await db.doc('config/inboxRun').get();
@@ -212,13 +251,15 @@ async function triageQuestionBatch({
     (arr || []).forEach((s) => { const n = normalizeSuggestion(s, validIds, qa.length); if (n) suggestions.push(n); });
   }
 
+  const complete = completeSuggestionsForAll(qDocs, suggestions, qa);
   if (alog) {
+    const filled = complete.length - suggestions.length;
     alog('INFO', 'bot:inbox', {
       provider: providerId, model, ok: true,
-      summary: `triaged ${qDocs.length} question(s) → ${suggestions.length} suggestion(s)`,
+      summary: `triaged ${qDocs.length} question(s) → ${complete.length} suggestion(s)${filled ? ` (${filled} filled)` : ''}`,
     });
   }
-  return { suggestions, processed: qDocs.length, qDocs };
+  return { suggestions: complete, processed: qDocs.length, qDocs };
 }
 
 // Full weekly / scheduled pipeline: purge junk, triage unprocessed ids in loops.
@@ -287,9 +328,10 @@ async function runScheduledInboxTriage({
 
       const sugMap = {};
       res.suggestions.forEach((s) => { if (s && s.id) sugMap[s.id] = s; });
+      const processedChunkIds = res.suggestions.map((s) => s.id).filter(Boolean);
       await mergeInboxRun(db, FieldValue, {
         suggestions: sugMap,
-        processedIds: res.qDocs.map((d) => d.id),
+        processedIds: processedChunkIds,
       });
     }
   } catch (e) {
@@ -310,6 +352,7 @@ module.exports = {
   normalizeInboxText,
   extractJson,
   normalizeSuggestion,
+  completeSuggestionsForAll,
   loadInboxRun,
   mergeInboxRun,
   purgeInboxJunk,
