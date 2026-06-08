@@ -213,6 +213,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
         }
       }
       setQuestions(qs);
+      if (window.ADMIN_INBOX) window.ADMIN_INBOX.inboxRunner.syncQuestionIds((qs || []).map((q) => q.id));
     } catch (e) { setQuestions([]); }
     finally { setQLoading(false); }
   };
@@ -233,13 +234,23 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const [actErr, setActErr] = useBState(null);         // errors from apply/dismiss actions
   const [openInfo, setOpenInfo] = useBState(null);     // id whose suggestion panel is open
 
+  // Auto-triage when Review loads: classify every question that lacks a complete suggestion.
+  useBEffect(() => {
+    if (tab !== 'review' || !questions || !questions.length) return;
+    if (!inboxRun.hydrated || aiBusy) return;
+    inboxRun.syncQuestionIds(questions.map((q) => q.id));
+    const needs = window.ADMIN_INBOX.needsInboxTriage;
+    const ids = questions.filter((q) => needs(q.id, inboxRun.suggestions, inboxRun.processed, { allowIncomplete: false })).map((q) => q.id);
+    if (ids.length) inboxRun.start(ids);
+  }, [tab, questions, inboxRun.hydrated, aiBusy]);
+
   // Kick off background triage for every unprocessed question. The runner chunks
   // the work (5/call), keeps going after you leave this page, and persists each
   // step — so you can navigate away and come back to ready suggestions.
   const aiProcess = () => {
     if (!questions || aiBusy) return;
-    const ids = questions.filter((q) => !suggestions[q.id]).map((q) => q.id);
-    ids.forEach((id) => { if (inboxRun.processed[id]) inboxRun.resolve(id); });
+    const needs = window.ADMIN_INBOX.needsInboxTriage;
+    const ids = questions.filter((q) => needs(q.id, inboxRun.suggestions, inboxRun.processed)).map((q) => q.id);
     inboxRun.start(ids);
   };
   const retriageOne = (q) => {
@@ -280,21 +291,29 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
     await removeQuestion(q.id);
   };
   const dismissQ = (q) => { removeQuestion(q.id); };
+  const normSug = (raw) => (window.ADMIN_INBOX && window.ADMIN_INBOX.normalizeInboxSuggestion
+    ? window.ADMIN_INBOX.normalizeInboxSuggestion(raw) : raw);
   const verdictLabel = (s) => {
     if (!s) return '';
-    if (s.incomplete) return 'No details';
-    if (s.verdict === 'existing_phrase') return 'Already covered';
-    if (s.verdict === 'irrelevant') return 'Not worth automating';
+    const n = normSug(s);
+    if (n.incomplete) return 'No details';
+    if (n.verdict === 'existing_phrase') return 'Already covered';
+    if (n.verdict === 'irrelevant') return 'Not worth automating';
     return 'New question';
   };
   const verdictLabelShort = (s) => {
     if (!s) return '';
-    if (s.incomplete) return 'Retry';
-    if (s.verdict === 'existing_phrase') return 'Covered';
-    if (s.verdict === 'irrelevant') return 'Skip';
+    const n = normSug(s);
+    if (n.incomplete) return 'Retry';
+    if (n.verdict === 'existing_phrase') return 'Covered';
+    if (n.verdict === 'irrelevant') return 'Skip';
     return 'New';
   };
-  const unprocessedCount = () => (questions || []).filter((q) => !suggestions[q.id]).length;
+  const unprocessedCount = () => {
+    const needs = window.ADMIN_INBOX.needsInboxTriage;
+    return (questions || []).filter((q) => needs(q.id, inboxRun.suggestions, inboxRun.processed)).length;
+  };
+  const needsTriage = (id) => window.ADMIN_INBOX.needsInboxTriage(id, inboxRun.suggestions, inboxRun.processed);
 
   const qWhen = (q) => {
     const ms = q.at && q.at.toMillis ? q.at.toMillis() : (q.at && q.at.seconds ? q.at.seconds * 1000 : 0);
@@ -492,11 +511,12 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
             {questions === null ? <p className="helptext" style={{ margin: 0 }}>Loading…</p>
               : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
                 : questions.map((q) => {
-                  const s = suggestions[q.id];
+                  const s = suggestions[q.id] ? normSug(suggestions[q.id]) : null;
                   const noDetails = !s && inboxRun.processed[q.id];
-                  const proc = aiBusy && !s;
+                  const proc = aiBusy && needsTriage(q.id);
                   const open = openInfo === q.id;
                   const tagClass = s ? (s.incomplete ? 'verdicttag--incomplete' : 'verdicttag--' + s.verdict) : '';
+                  const hasPreview = s && (s.suggestedQuestions.length || s.suggestedAnswers.length);
                   return (
                     <div className="item" key={q.id}>
                       <div className="item__hd item__hd--inbox" style={{ cursor: 'default' }}>
@@ -518,21 +538,18 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                         <div className="item__bd inboxsug">
                           {s.reason && <p className="helptext" style={{ marginTop: 0 }}>{s.reason}</p>}
                           {s.verdict === 'existing_phrase' && <div className="inboxsug__match">Matches: <b>{s.matchQuestion || ('Q&A #' + s.matchIndex)}</b></div>}
-                          {s.verdict === 'new_question' && (s.suggestedQuestions.length || s.suggestedAnswers.length) ? (
+                          {hasPreview ? (
                             <div className="inboxsug__preview">
                               {!!s.suggestedQuestions.length && <div><span className="inboxsug__k">phrasings</span> {s.suggestedQuestions.join('  ·  ')}</div>}
                               {!!s.suggestedAnswers.length && <div><span className="inboxsug__k">answers</span> {s.suggestedAnswers.join('   /   ')}</div>}
                             </div>
                           ) : null}
                           <div className="inboxsug__actions">
-                            {s.incomplete && <Btn sm kind="primary" icon="reset" onClick={() => retriageOne(q)}>Re-triage</Btn>}
+                            {s.incomplete && !hasPreview && <Btn sm kind="primary" icon="reset" onClick={() => retriageOne(q)}>Re-triage</Btn>}
                             {s.verdict === 'existing_phrase' && !s.incomplete && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
-                            {s.verdict === 'new_question' && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
-                            {s.verdict !== 'new_question' && !s.incomplete && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
-                            {s.verdict === 'irrelevant' && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
-                            {s.incomplete && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
-                            {s.verdict === 'existing_phrase' && !s.incomplete && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss duplicate</Btn>}
-                            {s.verdict === 'new_question' && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
+                            {s.verdict === 'new_question' && !s.incomplete && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
+                            {s.verdict !== 'new_question' && !s.incomplete && hasPreview && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
+                            <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>{s.verdict === 'existing_phrase' && !s.incomplete ? 'Dismiss duplicate' : 'Dismiss'}</Btn>
                           </div>
                         </div>
                       )}

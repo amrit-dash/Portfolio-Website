@@ -374,7 +374,23 @@ const Store = {
   // survives navigation AND reload. config/{doc} is owner read/write.
   async fsSaveInboxRun(data) {
     if (!this.fsReady()) return;
-    try { await window.fb.db.doc('config/inboxRun').set({ ...data, updatedAt: window.fb.serverTimestamp() }, { merge: true }); } catch (e) { console.warn('[inboxRun] save', e && e.message); }
+    try {
+      const patch = { updatedAt: window.fb.serverTimestamp() };
+      const fv = window.fb && window.fb.FieldValue;
+      if (data && data.suggestions) {
+        Object.entries(data.suggestions).forEach(([id, s]) => { patch['suggestions.' + id] = s; });
+      }
+      if (data && data.processed) {
+        Object.entries(data.processed).forEach(([id, v]) => { patch['processed.' + id] = v; });
+      }
+      if (data && data.removeIds && fv && typeof fv.delete === 'function') {
+        data.removeIds.forEach((id) => {
+          patch['suggestions.' + id] = fv.delete();
+          patch['processed.' + id] = fv.delete();
+        });
+      }
+      await window.fb.db.doc('config/inboxRun').set(patch, { merge: true });
+    } catch (e) { console.warn('[inboxRun] save', e && e.message); }
   },
   async fsLoadInboxRun() {
     if (!this.fsReady()) return null;

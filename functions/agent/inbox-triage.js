@@ -63,16 +63,26 @@ function normalizeSuggestion(s, validIds, qaLen) {
   const matchQuestion = typeof s.matchQuestion === 'string' ? s.matchQuestion.slice(0, 300) : null;
   if (verdict === 'existing_phrase' && matchIndex == null && !matchQuestion) verdict = 'new_question';
   const strArr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim().slice(0, 400)).slice(0, 6) : []);
-  return {
+  const suggestedQuestions = strArr(s.suggestedQuestions || s.phrasings || s.questions);
+  const suggestedAnswers = strArr(s.suggestedAnswers || s.answers);
+  const out = {
     id,
     verdict,
     matchIndex,
     matchQuestion,
     phrasing: typeof s.phrasing === 'string' ? s.phrasing.slice(0, 400) : null,
-    suggestedQuestions: strArr(s.suggestedQuestions),
-    suggestedAnswers: strArr(s.suggestedAnswers),
+    suggestedQuestions,
+    suggestedAnswers,
     reason: typeof s.reason === 'string' ? s.reason.slice(0, 300) : '',
   };
+  if (suggestedQuestions.length && suggestedAnswers.length) {
+    out.verdict = 'new_question';
+  } else if (out.verdict === 'existing_phrase' && (matchQuestion || matchIndex != null)) {
+    /* complete */
+  } else if (suggestedQuestions.length && out.verdict !== 'existing_phrase') {
+    out.verdict = 'new_question';
+  }
+  return out;
 }
 
 // Ensure every triaged question has a stored suggestion — the model may omit ids

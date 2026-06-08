@@ -20,23 +20,87 @@ const { useState: useIxState, useEffect: useIxEffect } = React;
 // persisted progress. Daily cap counts per call, but the cap is generous (200).
 const INBOX_CHUNK = 5;
 
+const strArr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()) : []);
+
+// Normalize suggestion shape from API / Firestore — legacy field names, auto-upgrade incomplete.
+function normalizeInboxSuggestion(s) {
+  if (!s || typeof s !== 'object') return null;
+  const out = { ...s };
+  out.suggestedQuestions = strArr(out.suggestedQuestions || s.phrasings || s.questions);
+  out.suggestedAnswers = strArr(out.suggestedAnswers || s.answers);
+  if (typeof out.phrasing !== 'string' && typeof s.phrasing === 'string') out.phrasing = s.phrasing;
+  if (typeof out.matchQuestion !== 'string' && typeof s.matchQuestion === 'string') out.matchQuestion = s.matchQuestion;
+  if (typeof out.reason !== 'string') out.reason = out.reason ? String(out.reason) : '';
+
+  if (out.suggestedQuestions.length && out.suggestedAnswers.length) {
+    out.verdict = 'new_question';
+    delete out.incomplete;
+  } else if (out.verdict === 'existing_phrase' && (out.matchQuestion || Number.isInteger(out.matchIndex))) {
+    delete out.incomplete;
+  } else if (out.suggestedQuestions.length && !out.suggestedAnswers.length && out.verdict !== 'existing_phrase') {
+    out.verdict = 'new_question';
+    delete out.incomplete;
+  }
+  return out;
+}
+
+function normalizeInboxRunState(suggestions, processed) {
+  const sug = {};
+  const proc = { ...(processed || {}) };
+  Object.entries(suggestions || {}).forEach(([id, raw]) => {
+    const n = normalizeInboxSuggestion(raw);
+    if (n) sug[id] = n;
+  });
+  // Drop orphan processed marks (processed without a stored suggestion).
+  Object.keys(proc).forEach((id) => { if (!sug[id]) delete proc[id]; });
+  return { suggestions: sug, processed: proc };
+}
+
+function needsInboxTriage(id, suggestions, processed, opts) {
+  const allowIncomplete = !opts || opts.allowIncomplete !== false;
+  const s = suggestions[id];
+  if (s && !s.incomplete) return false;
+  if (s && s.incomplete) return allowIncomplete;
+  if (processed[id] && !s) return true;
+  return !processed[id];
+}
+
 const inboxRunner = {
   running: false,
   suggestions: {},   // questionId -> suggestion
   processed: {},     // questionId -> true (classified, even if no actionable suggestion)
+  questionIds: [],   // latest known inbox ids (for sidebar pending badge)
   total: 0,
   done: 0,
   error: null,
+  hydrated: false,
   listeners: new Set(),
   _loaded: false,
 
   emit() { this.listeners.forEach((l) => { try { l(); } catch (e) {} }); },
+
+  pendingCount() {
+    return (this.questionIds || []).filter((id) => needsInboxTriage(id, this.suggestions, this.processed)).length;
+  },
+
+  syncQuestionIds(ids) {
+    this.questionIds = (ids || []).filter(Boolean);
+    this.emit();
+  },
 
   // Restore a prior run once per session (so a reload shows ready suggestions).
   async loadPersisted() {
     if (this._loaded) return;
     this._loaded = true;
     await this.reloadPersisted();
+    this.refreshInboxIds();
+  },
+
+  async refreshInboxIds() {
+    try {
+      const qs = await window.ADMIN_STORE.Store.fsBotQuestions(100);
+      this.syncQuestionIds((qs || []).map((q) => q.id));
+    } catch (e) { /* ignore */ }
   },
 
   // Re-read config/inboxRun (e.g. after server purge or weekly auto-triage).
@@ -44,46 +108,65 @@ const inboxRunner = {
     try {
       const d = await window.ADMIN_STORE.Store.fsLoadInboxRun();
       if (d) {
-        this.suggestions = d.suggestions || {};
-        this.processed = d.processed || {};
+        const norm = normalizeInboxRunState(d.suggestions, d.processed);
+        const mergedSug = { ...this.suggestions };
+        Object.entries(norm.suggestions).forEach(([id, s]) => { mergedSug[id] = s; });
+        Object.keys(mergedSug).forEach((id) => {
+          const n = normalizeInboxSuggestion(mergedSug[id]);
+          if (n) mergedSug[id] = n; else delete mergedSug[id];
+        });
+        const mergedProc = { ...this.processed, ...norm.processed };
+        Object.keys(mergedProc).forEach((id) => { if (!mergedSug[id]) delete mergedProc[id]; });
+        this.suggestions = mergedSug;
+        this.processed = mergedProc;
         this.emit();
       }
     } catch (e) { /* ignore */ }
+    finally { this.hydrated = true; this.emit(); }
   },
 
-  _persist() {
-    window.ADMIN_STORE.Store.fsSaveInboxRun({ suggestions: this.suggestions, processed: this.processed });
+  _persist(removeIds) {
+    window.ADMIN_STORE.Store.fsSaveInboxRun({
+      suggestions: this.suggestions,
+      processed: this.processed,
+      removeIds: removeIds || [],
+    });
   },
 
-  // Classify the given question ids in the background. Skips ids that already
-  // have a stored suggestion; allows re-triage when processed but no suggestion.
+  _mergeSuggestions(list) {
+    (list || []).forEach((raw) => {
+      if (!raw || !raw.id) return;
+      const s = normalizeInboxSuggestion(raw);
+      if (!s) return;
+      this.suggestions[s.id] = s;
+      this.processed[s.id] = true;
+    });
+  },
+
+  // Classify the given question ids in the background. Skips complete suggestions;
+  // re-triages incomplete or ghost-processed rows.
   async start(ids) {
     if (this.running) return;
-    const todo = (ids || []).filter((id) => id && !this.suggestions[id]);
+    const todo = (ids || []).filter((id) => id && needsInboxTriage(id, this.suggestions, this.processed));
     if (!todo.length) return;
     this.running = true; this.error = null; this.total = todo.length; this.done = 0; this.emit();
     try {
       for (let i = 0; i < todo.length; i += INBOX_CHUNK) {
         const chunk = todo.slice(i, i + INBOX_CHUNK);
         const res = await window.ADMIN_STORE.Store.inboxProcess(chunk);
-        if (res && Array.isArray(res.suggestions)) {
-          res.suggestions.forEach((s) => {
-            if (s && s.id) {
-              this.suggestions[s.id] = s;
-              this.processed[s.id] = true;
-            }
-          });
-        }
+        if (res && Array.isArray(res.suggestions)) this._mergeSuggestions(res.suggestions);
         this.done = Math.min(this.total, i + chunk.length);
         // A hard error with NO partial suggestions (e.g. daily cap, no config) —
         // stop the run and surface it.
         if (res && res.error && !(res.suggestions && res.suggestions.length)) {
           this.error = res.message || res.error;
-          this._persist();
+          this._persistChunk(chunk);
           if (res.error === 'daily-cap' || res.error === 'no-config' || res.error === 'unreachable' || res.error === 'forbidden') break;
         }
         this.emit();
-        this._persist();
+        this._persistChunk(chunk);
+        // Reconcile with server merge so a concurrent weekly job isn't clobbered.
+        await this.reloadPersisted();
       }
     } catch (e) {
       this.error = (e && e.message) || 'inbox processing failed';
@@ -92,18 +175,32 @@ const inboxRunner = {
     }
   },
 
+  // Field-level Firestore patch for just-written ids (avoids replacing the whole map).
+  _persistChunk(ids) {
+    const sugPatch = {};
+    const procPatch = {};
+    (ids || []).forEach((id) => {
+      if (this.suggestions[id]) sugPatch[id] = this.suggestions[id];
+      if (this.processed[id]) procPatch[id] = this.processed[id];
+    });
+    if (Object.keys(sugPatch).length || Object.keys(procPatch).length) {
+      window.ADMIN_STORE.Store.fsSaveInboxRun({ suggestions: sugPatch, processed: procPatch });
+    }
+  },
+
   // A question was added to Q&A or dismissed — drop its run state.
   resolve(id) {
     if (!(id in this.suggestions) && !(id in this.processed)) return;
     delete this.suggestions[id]; delete this.processed[id];
-    this.emit(); this._persist();
+    this.emit(); this._persist([id]);
   },
 
   clearError() { if (this.error) { this.error = null; this.emit(); } },
 
   clear() {
+    const removeIds = [...new Set([...Object.keys(this.suggestions), ...Object.keys(this.processed)])];
     this.suggestions = {}; this.processed = {}; this.total = 0; this.done = 0; this.error = null;
-    this.emit(); this._persist();
+    this.emit(); this._persist(removeIds);
   },
 };
 
@@ -132,4 +229,4 @@ function InboxRunnerIndicator({ go, placement = 'sidebar' }) {
   );
 }
 
-window.ADMIN_INBOX = { inboxRunner, useInboxRunner, InboxRunnerIndicator };
+window.ADMIN_INBOX = { inboxRunner, useInboxRunner, InboxRunnerIndicator, normalizeInboxSuggestion, needsInboxTriage };
