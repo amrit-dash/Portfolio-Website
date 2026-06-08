@@ -532,7 +532,7 @@ const NAV = [
   {
     group: 'ASSISTANT', items: [
       { id: 'agent', label: 'Agent', icon: 'chip' },
-      { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'inbox.pending' },
+      { id: 'bot', label: 'AmritBot', icon: 'bot', count: 'bot.qa' },
     ]
   },
   { group: 'SYSTEM', items: [{ id: 'sync', label: 'Sync & deploy', icon: 'sync' }] },
@@ -542,7 +542,6 @@ const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & int
 
 function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
-  const inboxRun = window.ADMIN_INBOX ? window.ADMIN_INBOX.useInboxRunner() : null;
   return (
     <aside className={'side' + (open ? ' side--open' : '')}>
       <div className="side__brand">
@@ -557,9 +556,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setA
             <div className="side__group">{g.group}</div>
             {g.items.map((it) => {
               let cnt = null;
-              if (it.count === 'inbox.pending' && inboxRun) {
-                cnt = inboxRun.pendingCount();
-              } else if (it.count) {
+              if (it.count) {
                 const arr = it.count.split('.').reduce((o, k) => (o != null && k !== '__proto__' && k !== 'constructor' && k !== 'prototype' ? Reflect.get(o, k) : undefined), content);
                 cnt = Array.isArray(arr) ? arr.length : null;
               }
@@ -567,7 +564,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setA
                 <button key={it.id} className="navitem" data-active={route === it.id} onClick={() => go(it.id)}>
                   <AdminIcon name={it.icon} size={16} />
                   <span>{it.label}</span>
-                  {it.count === 'inbox.pending' ? (cnt > 0 && <span className="cnt">{cnt}</span>) : (cnt != null && <span className="cnt">{cnt}</span>)}
+                  {cnt != null && <span className="cnt">{cnt}</span>}
                 </button>
               );
             })}
