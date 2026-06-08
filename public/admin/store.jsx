@@ -26,8 +26,10 @@ const LS = {
   draftUpdatedAt:'amritos.draftUpdatedAt',
 };
 
-/* Runtime vision probe result — keyed to provider+model; overrides static supportsVision. */
-const VISION_TEST_KEY = 'amritos.visionTest';
+/* Runtime vision probe + model catalogs — local cache with Firestore sync (config/agentMeta). */
+const VISION_TEST_KEY = 'amritos.visionTest'; // legacy sessionStorage (migrated on read)
+const LS_MODEL_CATALOG = 'amritos.modelCatalog';
+const LS_VISION_SUPPORT = 'amritos.visionSupport';
 
 /* ---------- Default content (seed) ----------
    Data-driven sections (expertise / experience / projects / socials) are
@@ -480,15 +482,17 @@ const Store = {
      SEPARATE from the bot's config/llm. The owner pastes billable keys here for
      better models; the public bot never reads them, and they are owner-only in
      firestore.rules (config/{doc}). Shape mirrors config/llm:
-       { active, byProvider:{ [id]:{ apiKey, model } }, refinerModel } */
+       { active, refinerActive, byProvider:{ [id]:{ apiKey, model } }, refinerModel } */
   async fsLoadAgentConfig() {
-    const defaults = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.AGENT_CONFIG_DEFAULTS) || { active: 'gemini', byProvider: {} };
+    const defaults = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.AGENT_CONFIG_DEFAULTS) || { active: 'gemini', refinerActive: 'gemini', byProvider: {} };
     if (!this.fsReady()) return JSON.parse(JSON.stringify(defaults));
     try {
       const s = await window.fb.db.doc('config/agent').get();
       const data = s.exists ? s.data() : {};
+      const active = data.active || defaults.active;
       return {
-        active: data.active || defaults.active,
+        active,
+        refinerActive: data.refinerActive || active || defaults.refinerActive || defaults.active,
         byProvider: (data.byProvider && typeof data.byProvider === 'object') ? data.byProvider : (defaults.byProvider || {}),
         refinerModel: data.refinerModel || '',
       };
@@ -499,12 +503,198 @@ const Store = {
     try {
       await window.fb.db.doc('config/agent').set({
         active: config.active || 'gemini',
+        refinerActive: config.refinerActive || config.active || 'gemini',
         byProvider: config.byProvider || {},
         refinerModel: config.refinerModel || '',
         updatedAt: window.fb.serverTimestamp(),
       }, { merge: true });
       return true;
     } catch (e) { console.warn('[store] fsSaveAgentConfig failed', e && e.message); return false; }
+  },
+
+  /* ---------- Agent meta (model catalogs + vision probes — config/agentMeta) ----------
+     Owner-only via config/{doc} rules. Keys/models stay in config/agent; catalogs and
+     vision test results live here so they sync across devices without touching secrets. */
+  _readModelCatalogLocal() {
+    const raw = this.read(LS_MODEL_CATALOG);
+    return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  },
+  _writeModelCatalogLocal(catalog) {
+    this.write(LS_MODEL_CATALOG, catalog);
+  },
+  _readVisionSupportLocal() {
+    this._migrateVisionSessionStorage();
+    const raw = this.read(LS_VISION_SUPPORT);
+    return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  },
+  _writeVisionSupportLocal(map) {
+    this.write(LS_VISION_SUPPORT, map);
+  },
+  _migrateVisionSessionStorage() {
+    try {
+      const raw = sessionStorage.getItem(VISION_TEST_KEY);
+      if (!raw) return;
+      const hit = JSON.parse(raw);
+      if (hit && hit.ok && hit.providerId && hit.model) {
+        const map = this.read(LS_VISION_SUPPORT);
+        const base = (map && typeof map === 'object' && !Array.isArray(map)) ? map : {};
+        const agent = { ...(base.agent || {}) };
+        const prov = String(hit.providerId);
+        const model = String(hit.model);
+        agent[prov] = { ...(agent[prov] || {}), [model]: { verified: true, at: hit.at || Date.now(), source: 'test' } };
+        this.write(LS_VISION_SUPPORT, { ...base, agent });
+      }
+      sessionStorage.removeItem(VISION_TEST_KEY);
+    } catch (e) { /* ignore */ }
+  },
+  async fsLoadAgentMeta() {
+    if (!this.fsReady()) return {};
+    try {
+      const s = await window.fb.db.doc('config/agentMeta').get();
+      return s.exists ? s.data() : {};
+    } catch (e) { console.warn('[store] fsLoadAgentMeta failed', e && e.message); return {}; }
+  },
+  async fsSaveAgentMeta(patch) {
+    if (!this.fsReady()) return false;
+    try {
+      await window.fb.db.doc('config/agentMeta').set(
+        { ...patch, updatedAt: window.fb.serverTimestamp() },
+        { merge: true }
+      );
+      return true;
+    } catch (e) { console.warn('[store] fsSaveAgentMeta failed', e && e.message); return false; }
+  },
+  _cloudModelCatalogEntry(entry) {
+    const out = { models: entry.models.slice(), fetchedAt: entry.fetchedAt || Date.now() };
+    if (entry.selectedModel) out.selectedModel = entry.selectedModel;
+    return out;
+  },
+  _localModelCatalogEntry(cloudEntry) {
+    return {
+      models: cloudEntry.models.slice(),
+      fetchedAt: cloudEntry.fetchedAt || Date.now(),
+      syncedFromCloud: true,
+      ...(cloudEntry.selectedModel ? { selectedModel: cloudEntry.selectedModel } : {}),
+    };
+  },
+  async _persistModelCatalogEntry(scope, providerId, entry) {
+    const catalog = this._readModelCatalogLocal();
+    if (!catalog[scope]) catalog[scope] = {};
+    catalog[scope][providerId] = entry;
+    this._writeModelCatalogLocal(catalog);
+    if (!this.fsReady()) return true;
+    try {
+      const meta = await this.fsLoadAgentMeta();
+      const modelCatalog = { ...(meta.modelCatalog || {}) };
+      if (!modelCatalog[scope]) modelCatalog[scope] = {};
+      modelCatalog[scope][providerId] = this._cloudModelCatalogEntry(entry);
+      return this.fsSaveAgentMeta({ modelCatalog });
+    } catch (e) { return false; }
+  },
+  getModelCatalogEntry(scope, providerId) {
+    const scopeCat = this._readModelCatalogLocal()[scope] || {};
+    const entry = scopeCat[providerId];
+    return (entry && Array.isArray(entry.models) && entry.models.length) ? entry : null;
+  },
+  async loadModelCatalog(scope, providerId) {
+    const localEntry = this.getModelCatalogEntry(scope, providerId);
+    if (localEntry) return localEntry;
+    if (!this.fsReady()) return null;
+    try {
+      const meta = await this.fsLoadAgentMeta();
+      const cloudEntry = meta.modelCatalog && meta.modelCatalog[scope] && meta.modelCatalog[scope][providerId];
+      if (!cloudEntry || !Array.isArray(cloudEntry.models) || !cloudEntry.models.length) return null;
+      const catalog = this._readModelCatalogLocal();
+      if (!catalog[scope]) catalog[scope] = {};
+      catalog[scope][providerId] = this._localModelCatalogEntry(cloudEntry);
+      this._writeModelCatalogLocal(catalog);
+      return catalog[scope][providerId];
+    } catch (e) { return null; }
+  },
+  async saveModelCatalog(scope, providerId, models, opts = {}) {
+    const list = Array.isArray(models) ? models.filter((m) => typeof m === 'string' && m) : [];
+    if (!list.length) return false;
+    const catalog = this._readModelCatalogLocal();
+    const prev = (catalog[scope] || {})[providerId] || {};
+    const selectedModel = opts.selectedModel !== undefined ? opts.selectedModel : prev.selectedModel;
+    const entry = { models: list.slice(), fetchedAt: Date.now(), syncedFromCloud: false };
+    if (selectedModel) entry.selectedModel = selectedModel;
+    return this._persistModelCatalogEntry(scope, providerId, entry);
+  },
+  async saveModelCatalogSelection(scope, providerId, selectedModel) {
+    const model = typeof selectedModel === 'string' ? selectedModel : '';
+    const catalog = this._readModelCatalogLocal();
+    const prev = (catalog[scope] || {})[providerId];
+    if (prev && Array.isArray(prev.models) && prev.models.length) {
+      const entry = { ...prev };
+      if (model) entry.selectedModel = model;
+      else delete entry.selectedModel;
+      return this._persistModelCatalogEntry(scope, providerId, entry);
+    }
+    if (!model) return false;
+    return this.saveModelCatalog(scope, providerId, [model], { selectedModel: model });
+  },
+  async hydrateModelCatalogs(scope) {
+    const catalog = this._readModelCatalogLocal();
+    const scopeCat = { ...(catalog[scope] || {}) };
+    const out = {};
+    for (const pid of Object.keys(scopeCat)) {
+      const entry = scopeCat[pid];
+      if (entry && Array.isArray(entry.models) && entry.models.length) out[pid] = entry.models.slice();
+    }
+    if (!this.fsReady()) return out;
+    try {
+      const meta = await this.fsLoadAgentMeta();
+      const cloudScope = (meta.modelCatalog && meta.modelCatalog[scope]) || {};
+      let localChanged = false;
+      for (const pid of Object.keys(cloudScope)) {
+        const cloudEntry = cloudScope[pid];
+        if (!cloudEntry || !Array.isArray(cloudEntry.models) || !cloudEntry.models.length) continue;
+        if (out[pid] && out[pid].length) continue;
+        scopeCat[pid] = this._localModelCatalogEntry(cloudEntry);
+        out[pid] = cloudEntry.models.slice();
+        localChanged = true;
+      }
+      if (localChanged) {
+        catalog[scope] = scopeCat;
+        this._writeModelCatalogLocal(catalog);
+      }
+    } catch (e) { /* keep local */ }
+    return out;
+  },
+  _visionScopeMap(scope) {
+    const map = this._readVisionSupportLocal();
+    const scoped = map[scope];
+    return (scoped && typeof scoped === 'object' && !Array.isArray(scoped)) ? scoped : {};
+  },
+  async hydrateVisionSupport(scope) {
+    const map = this._readVisionSupportLocal();
+    const scoped = { ...this._visionScopeMap(scope) };
+    if (!this.fsReady()) return scoped;
+    try {
+      const meta = await this.fsLoadAgentMeta();
+      const cloudScope = meta.visionSupport && meta.visionSupport[scope];
+      if (!cloudScope || typeof cloudScope !== 'object') return scoped;
+      let localChanged = false;
+      for (const pid of Object.keys(cloudScope)) {
+        if (pid === '__proto__' || pid === 'constructor' || pid === 'prototype') continue;
+        const cloudModels = cloudScope[pid];
+        if (!cloudModels || typeof cloudModels !== 'object') continue;
+        const localModels = { ...(scoped[pid] || {}) };
+        for (const mid of Object.keys(cloudModels)) {
+          if (mid === '__proto__' || mid === 'constructor' || mid === 'prototype') continue;
+          if (localModels[mid]) continue;
+          localModels[mid] = cloudModels[mid];
+          localChanged = true;
+        }
+        if (Object.keys(localModels).length) scoped[pid] = localModels;
+      }
+      if (localChanged) {
+        map[scope] = scoped;
+        this._writeVisionSupportLocal(map);
+      }
+    } catch (e) { /* keep local */ }
+    return scoped;
   },
 
   /* ---------- Agent endpoint calls (owner idToken; key stays server-side) ---------- */
@@ -549,29 +739,66 @@ const Store = {
     }
     return data != null ? data : { error: 'bad-response', message: 'Empty/invalid response from ' + path };
   },
-  readVisionTest() {
-    try {
-      const raw = sessionStorage.getItem(VISION_TEST_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
-  },
-  saveVisionTest({ providerId, model, ok }) {
-    const entry = {
-      providerId: String(providerId || ''),
-      model: String(model || ''),
-      ok: !!ok,
-      at: Date.now(),
-    };
-    try { sessionStorage.setItem(VISION_TEST_KEY, JSON.stringify(entry)); } catch (e) { /* quota */ }
+  saveVisionTest({ providerId, model, ok, scope = 'agent' }) {
+    const pid = String(providerId || '');
+    const mid = String(model || '');
+    if (!pid || !mid || !ok) return null;
+    const at = Date.now();
+    const map = this._readVisionSupportLocal();
+    const scoped = { ...this._visionScopeMap(scope) };
+    scoped[pid] = { ...(scoped[pid] || {}), [mid]: { verified: true, at, source: 'test' } };
+    map[scope] = scoped;
+    this._writeVisionSupportLocal(map);
+    const entry = { providerId: pid, model: mid, ok: true, at, source: 'test' };
+    if (this.fsReady()) {
+      this.fsLoadAgentMeta().then((meta) => {
+        const visionSupport = { ...(meta.visionSupport || {}) };
+        const vsScope = { ...(visionSupport[scope] || {}) };
+        vsScope[pid] = { ...(vsScope[pid] || {}), [mid]: { verified: true, at, source: 'test' } };
+        visionSupport[scope] = vsScope;
+        this.fsSaveAgentMeta({ visionSupport });
+      }).catch(() => {});
+    }
     return entry;
   },
-  clearVisionTest() {
+  clearVisionTest({ providerId, model, scope = 'agent' } = {}) {
+    const pid = providerId != null ? String(providerId) : '';
+    const mid = model != null ? String(model) : '';
+    if (pid && mid) {
+      const map = this._readVisionSupportLocal();
+      const scoped = { ...this._visionScopeMap(scope) };
+      const prov = scoped[pid];
+      if (prov && prov[mid]) {
+        const nextProv = { ...prov };
+        delete nextProv[mid];
+        if (Object.keys(nextProv).length) scoped[pid] = nextProv;
+        else delete scoped[pid];
+        map[scope] = scoped;
+        this._writeVisionSupportLocal(map);
+        if (this.fsReady()) {
+          this.fsLoadAgentMeta().then((meta) => {
+            const visionSupport = { ...(meta.visionSupport || {}) };
+            const vsScope = { ...(visionSupport[scope] || {}) };
+            const cloudProv = { ...(vsScope[pid] || {}) };
+            delete cloudProv[mid];
+            if (Object.keys(cloudProv).length) vsScope[pid] = cloudProv;
+            else delete vsScope[pid];
+            visionSupport[scope] = vsScope;
+            this.fsSaveAgentMeta({ visionSupport });
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
     try { sessionStorage.removeItem(VISION_TEST_KEY); } catch (e) { /* ignore */ }
   },
-  visionTestPassed(providerId, model) {
-    const hit = this.readVisionTest();
-    if (!hit || !hit.ok) return false;
-    return hit.providerId === String(providerId || '') && hit.model === String(model || '');
+  visionTestPassed(providerId, model, scope = 'agent') {
+    const pid = String(providerId || '');
+    const mid = String(model || '');
+    if (!pid || !mid) return false;
+    const hit = this._visionScopeMap(scope)[pid];
+    const entry = hit && hit[mid];
+    return !!(entry && entry.verified);
   },
   agentSupportsVision(cfg) {
     const SCHEMA = window.SHARED_SCHEMA || {};
