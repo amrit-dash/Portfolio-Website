@@ -3139,6 +3139,59 @@ body::before {
    max-width: 60ch;
 }
 
+/* Floating dock — narrow panel: keep bubbles inside the column, scroll long copy,
+   and scale image attachments to the panel width (full Agent page unchanged). */
+.agentchat--compact .agentchat__scroll {
+   padding: 12px 14px;
+   gap: 10px;
+}
+
+.agentchat--compact .composer {
+   margin: 8px;
+}
+
+.agentchat--compact .agentmsg {
+   min-width: 0;
+   max-width: 100%;
+}
+
+.agentchat--compact .agentmsg--user {
+   max-width: 100%;
+}
+
+.agentchat--compact .agentmsg--user .agentmsg__body {
+   max-width: 100%;
+   max-height: min(220px, 38vh);
+   overflow-x: hidden;
+   overflow-y: auto;
+   white-space: pre-wrap;
+   overflow-wrap: anywhere;
+   word-break: break-word;
+   -webkit-overflow-scrolling: touch;
+}
+
+.agentchat--compact .agentmsg--bot .agentmsg__reveal {
+   max-height: min(280px, 42vh);
+   overflow: auto;
+   overflow-wrap: anywhere;
+   word-break: break-word;
+   -webkit-overflow-scrolling: touch;
+}
+
+.agentchat--compact .agentattach--sent {
+   max-width: 100%;
+}
+
+.agentchat--compact .agentattach--sent .agentattach__thumb {
+   width: auto;
+   height: auto;
+   min-width: 0;
+   max-width: 100%;
+   max-height: 160px;
+   aspect-ratio: auto;
+   object-fit: contain;
+}
+
 /* Composer — one rounded box; textarea on top, toolbar (inbox + settings + send)
    inside the same box so Send lives "inside the input". */
 .composer {
