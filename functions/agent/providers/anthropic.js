@@ -55,6 +55,7 @@ function canonicalToMessages(messages) {
 
 function parseResponse(data) {
   const content = data?.content || [];
+  const finishReason = data?.stop_reason || null;
   let text = '';
   const toolCalls = [];
   for (const block of content) {
@@ -63,7 +64,7 @@ function parseResponse(data) {
       toolCalls.push({ id: block.id || newId('tc'), name: block.name, args: block.input || {} });
     }
   }
-  return { text: text.trim(), toolCalls };
+  return { text: text.trim(), toolCalls, finishReason };
 }
 
 async function generate({ endpoint, model, key, systemPrompt, messages, tools, temperature, maxTokens }) {

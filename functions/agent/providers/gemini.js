@@ -74,10 +74,14 @@ function canonicalToContents(messages) {
 }
 
 function parseResponse(data) {
-  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const candidate = data?.candidates?.[0] || {};
+  const parts = candidate.content?.parts || [];
+  const finishReason = candidate.finishReason || candidate.finish_reason || null;
   let text = '';
   const toolCalls = [];
   for (const part of parts) {
+    /* Skip internal reasoning parts — probes and chat UI only want visible text. */
+    if (part.thought === true || part.thought === 'true') continue;
     if (part.text) text += part.text;
     if (part.functionCall) {
       const sig = part.thoughtSignature || part.thought_signature || null;
@@ -91,18 +95,24 @@ function parseResponse(data) {
   }
   /* Deep-clone so later history edits cannot mutate signatures. */
   const modelParts = parts.length ? JSON.parse(JSON.stringify(parts)) : [];
-  return { text: text.trim(), toolCalls, modelParts };
+  return { text: text.trim(), toolCalls, modelParts, finishReason };
 }
 
-async function generate({ endpoint, model, key, systemPrompt, messages, tools, temperature, maxTokens }) {
+async function generate({ endpoint, model, key, systemPrompt, messages, tools, temperature, maxTokens, probeMode }) {
   const url = endpoint.replace('{model}', model) + '?key=' + encodeURIComponent(key);
+  const generationConfig = {
+    temperature: temperature ?? 0.4,
+    maxOutputTokens: maxTokens ?? 2048,
+  };
+  /* Short probes with tiny maxOutputTokens otherwise get empty visible text on
+     Gemini 2.5+/3.x thinking models — thinking consumes the shared budget. */
+  if (probeMode) {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  }
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: canonicalToContents(messages),
-    generationConfig: {
-      temperature: temperature ?? 0.4,
-      maxOutputTokens: maxTokens ?? 2048,
-    },
+    generationConfig,
   };
   if (tools && tools.length) {
     body.tools = [{ functionDeclarations: toDeclarations(tools) }];

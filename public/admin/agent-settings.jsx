@@ -47,12 +47,25 @@ function normalizeAgentCfg(c) {
 
 function formatCapabilityResult(res) {
   if (!res || res.skipped) return null;
-  const label = res.ok ? 'ok' : 'fail';
-  const detail = res.ok
-    ? (res.reply ? ': ' + res.reply : '')
-    : (res.error || res.reply || 'failed');
   const ms = res.ms ? ` (${res.ms}ms)` : '';
-  return `${label}${detail ? ' — ' + detail : ''}${ms}`;
+  if (res.ok) {
+    return `ok${res.reply ? ' — ' + res.reply : ''}${ms}`;
+  }
+  const detail = res.error
+    || (res.failReason ? res.failReason.replace(/-/g, ' ') : '')
+    || (res.reply ? `reply: ${res.reply.slice(0, 100)}` : 'failed');
+  const extra = res.finishReason && res.finishReason !== 'STOP' && res.finishReason !== 'end_turn'
+    ? ` [${res.finishReason}]`
+    : '';
+  return `fail — ${detail}${extra}${ms}`;
+}
+
+function capabilityProbesOk(res) {
+  if (!res) return false;
+  return ['vision', 'url'].every((cap) => {
+    const r = res[cap];
+    return !r || r.skipped || r.ok;
+  });
 }
 
 function AgentSettingsPage({ modal }) {
@@ -182,8 +195,8 @@ function AgentSettingsPage({ modal }) {
       probes: ['vision', 'url'],
     });
     setTestingCaps(null);
-    const ok = res && res.ok;
-    if (ok) {
+    const capsOk = capabilityProbesOk(res);
+    if (capsOk) {
       Store.saveCapabilityTests({
         providerId: id,
         model,
@@ -205,10 +218,10 @@ function AgentSettingsPage({ modal }) {
       if (t) lines.push('url ' + t);
     }
     if (res && res.search && res.search.skipped) lines.push('search skipped');
-    const text = ok
+    const text = capsOk
       ? (lines.length ? lines.join(' · ') : 'capabilities ok') + (res.ms ? ` (${res.ms}ms)` : '')
-      : (res && (res.message || res.error)) || 'failed';
-    setCapsRes((r) => ({ ...r, [id]: { ok, text } }));
+      : (lines.length ? lines.join(' · ') : ((res && (res.message || res.error)) || 'failed')) + (res && res.ms ? ` (${res.ms}ms)` : '');
+    setCapsRes((r) => ({ ...r, [id]: { ok: capsOk, text } }));
   };
 
   const save = async () => {

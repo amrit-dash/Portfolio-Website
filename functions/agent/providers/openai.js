@@ -70,6 +70,7 @@ function canonicalToMessages(systemPrompt, messages) {
 
 function parseResponse(data) {
   const msg = data?.choices?.[0]?.message || {};
+  const finishReason = data?.choices?.[0]?.finish_reason || null;
   const text = msg.content || '';
   const toolCalls = (msg.tool_calls || []).map((tc) => {
     let args = {};
@@ -77,7 +78,7 @@ function parseResponse(data) {
     catch (e) { args = { _parseError: true, raw: String(tc.function && tc.function.arguments).slice(0, 500) }; }
     return { id: tc.id || newId('tc'), name: tc.function && tc.function.name, args };
   });
-  return { text: String(text || '').trim(), toolCalls };
+  return { text: String(text || '').trim(), toolCalls, finishReason };
 }
 
 async function generate({ endpoint, model, key, systemPrompt, messages, tools, temperature, maxTokens, provider }) {

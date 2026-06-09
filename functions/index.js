@@ -826,7 +826,7 @@ exports.logs = onRequest({ invoker: 'public' }, async (req, res) => {
 /*  key (agent config or bot config/llm), logs the result  */
 /*  (so it appears in the Logs view) and returns the reply. */
 /* ===================================================== */
-const { runCapabilityProbes, probeVision } = require('./agent/capability-probes');
+const { runCapabilityProbes, probeVision, probesAllOk } = require('./agent/capability-probes');
 
 async function resolveProviderTestConfig(body) {
   const providerId = body.provider || 'gemini';
@@ -874,16 +874,17 @@ exports.testCapabilities = onRequest({ invoker: 'public' }, async (req, res) => 
       probes,
     });
     const ms = Date.now() - t0;
+    const capsOk = probesAllOk(results);
     const parts = [];
     if (results.vision) parts.push(`vision ${results.vision.ok ? 'ok' : 'fail'}`);
     if (results.url) parts.push(`url ${results.url.ok ? 'ok' : (results.url.skipped ? 'skip' : 'fail')}`);
     if (results.search) parts.push(`search ${results.search.skipped ? 'skip' : (results.search.ok ? 'ok' : 'fail')}`);
-    alog(parts.every((p) => p.includes('ok') || p.includes('skip')) ? 'INFO' : 'WARNING', kind, {
-      provider: providerId, model, ok: true, test: true, capabilities: true,
+    alog(capsOk ? 'INFO' : 'WARNING', kind, {
+      provider: providerId, model, ok: capsOk, test: true, capabilities: true,
       summary: `test capabilities (${ms}ms): ${parts.join(', ')}`,
     });
     return res.status(200).json({
-      ok: true,
+      ok: capsOk,
       provider: providerId,
       model,
       ms,
