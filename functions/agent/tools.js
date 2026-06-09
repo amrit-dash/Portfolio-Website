@@ -7,8 +7,6 @@ const {
   normalizeImpactEntry,
   validateImpactWrite,
   normalizeProjectItem,
-  applyProjectDefaults,
-  validateProjectItem,
 } = schema;
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
@@ -86,14 +84,14 @@ const GENERIC_TOOLS = [
 ];
 
 const STRUCTURED_TOOLS = [
-  { name: 'addItem', description: 'Append an item to a named collection (projects, expertise, experience, about.meta, about.impact, cards, contact.socials, bot.qa, bot.commands). For collection=projects, item MUST include desc (meaningful 2–4 sentence summary) and tags (non-empty string array of tech/skills, e.g. ["Next.js","Firebase"]). Use desc not description.',
+  { name: 'addItem', description: 'Append an item to a named collection (projects, expertise, experience, about.meta, about.impact, cards, contact.socials, bot.qa, bot.commands). For collection=projects, include desc (2–4 sentence summary) and tags (tech/skills array) when you know them; both are optional — add succeeds without them. Use desc not description.',
     parameters: {
       type: 'object',
       properties: {
         collection: { type: 'string' },
         item: {
           type: 'string',
-          description: 'JSON string of the object to append. projects shape: {id?, title, cat?, type?, desc, tags[], skills?, links?, image?, gallery?} — desc and tags are required.',
+          description: 'JSON string of the object to append. projects shape: {id?, title, cat?, type?, desc?, tags[]?, skills?, links?, image?, gallery?} — populate desc/tags when available.',
         },
       },
       required: ['collection', 'item'],
@@ -350,7 +348,6 @@ function tryMergeIndexedObject(session, pathStr, val) {
 }
 
 function validateNewItem(collectionName, item) {
-  if (collectionName === 'projects') return validateProjectItem(item);
   if (collectionName === 'expertise' && item.icon && !schema.validateExpertiseIcon(item.icon)) {
     return { ok: false, error: 'invalid-expertise-icon', icon: item.icon };
   }
@@ -367,12 +364,6 @@ function execAddItem(a, session) {
   if (!item || typeof item !== 'object') return { ok: false, error: 'invalid-item' };
   if (a.collection === 'projects') {
     item = normalizeProjectItem(item);
-    let check = validateNewItem(a.collection, item);
-    if (!check.ok && (check.error === 'missing-project-desc' || check.error === 'missing-project-tags')) {
-      item = applyProjectDefaults(item);
-      check = validateNewItem(a.collection, item);
-    }
-    if (!check.ok) return check;
   } else {
     const check = validateNewItem(a.collection, item);
     if (!check.ok) return check;
@@ -380,7 +371,20 @@ function execAddItem(a, session) {
   if (a.collection === 'about.impact') item = normalizeImpactEntry(item, col.arr.length);
   let next = col.arr.concat([deepClone(item)]);
   next = applyRenumber(col.meta, next);
-  return session.setPath(col.path, next);
+  const result = session.setPath(col.path, next);
+  if (a.collection === 'projects' && result.ok) {
+    const missing = [];
+    if (!String(item.desc || '').trim()) missing.push('desc');
+    if (!item.tags.length) missing.push('tags');
+    if (missing.length) {
+      return {
+        ...result,
+        projectFieldsIncomplete: missing,
+        hint: `Project added. Ask the owner to complete ${missing.join(' and ')} in the Projects editor (#projects).`,
+      };
+    }
+  }
+  return result;
 }
 
 function execRemoveItem(a, session) {

@@ -350,7 +350,7 @@
     return row;
   }
 
-  /* Last-resort fill when the agent omits desc/tags (prefer supplying both in addItem). */
+  /* Optional soft fill when a caller wants placeholder desc/tags from title/cat. */
   function applyProjectDefaults(item) {
     const row = normalizeProjectItem(item);
     const title = String(row.title || 'New project').trim();
@@ -365,22 +365,7 @@
   }
 
   function validateProjectItem(item) {
-    const row = normalizeProjectItem(item);
-    const desc = String(row.desc || '').trim();
-    if (!desc) {
-      return {
-        ok: false,
-        error: 'missing-project-desc',
-        message: 'projects require desc (2–4 sentences: what it does, stack, outcome). Pass desc in the addItem JSON — not description.',
-      };
-    }
-    if (!row.tags.length) {
-      return {
-        ok: false,
-        error: 'missing-project-tags',
-        message: 'projects require a non-empty tags array (e.g. ["Next.js","Firebase","Automation"]). Match site expertise/skills when relevant.',
-      };
-    }
+    normalizeProjectItem(item);
     return { ok: true };
   }
 
