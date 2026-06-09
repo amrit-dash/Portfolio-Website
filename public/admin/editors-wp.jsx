@@ -105,7 +105,7 @@ function WorkEditor({ content, setAt }) {
 
 /* ============ PROJECTS ============ */
 function ProjectBody({ p, expertise, onChange }) {
-  const { Field, Input, TextArea, TagInput, AdminIcon } = window.ADMIN_UI;
+  const { Field, Input, TagInput, AdminIcon } = window.ADMIN_UI;
   const { ImageSlot } = window.ADMIN_CROP;
   const { TARGETS } = window.ADMIN_EDITORS;
   const set = (key, val) => onChange({ ...p, [key]: val });
@@ -120,7 +120,7 @@ function ProjectBody({ p, expertise, onChange }) {
         <Field label="Category"><Input value={p.cat} onChange={(v) => set('cat', v)} /></Field>
         <Field label="Type" hint=".ext badge"><Input value={p.type} onChange={(v) => set('type', v)} /></Field>
       </div>
-      <Field label="Description"><TextArea rows={3} value={p.desc} onChange={(v) => set('desc', v)} /></Field>
+      <Field label="Description" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="Project description" context="The project description shown in the portfolio project folder modal — what it is, what was built, and the outcome." rows={3} value={p.desc} onChange={(v) => set('desc', v)} /></Field>
       <div className="grid2">
         <ImageSlot label="Folder / thumbnail image" value={p.image} target={TARGETS.projThumb} outputType="image/png" storageKey={'projects/' + (p.id || 'p') + '-thumb'}
           hint="Shown on the project desktop" onChange={(url) => set('image', url)} />
