@@ -297,6 +297,11 @@ const agentChat = {
     this.messages = this.messages.slice(0, index).concat([{ ...this.messages[index], ...patch }]).concat(this.messages.slice(index + 1));
     this.emit();
   },
+  removeMessage(index) {
+    if (index < 0 || index >= this.messages.length) return;
+    this.messages = this.messages.slice(0, index).concat(this.messages.slice(index + 1));
+    this.emit();
+  },
   setSending(b) { this.sending = b; this.emit(); },
   reset() {
     this.messages = [];
@@ -414,6 +419,57 @@ function pathToRoute(path) {
   return null;
 }
 
+/* Human-readable agent failure copy — never surface raw JSON.parse errors. */
+function agentErrorText(res, fallback) {
+  if (res && res.message != null && String(res.message).trim()) return String(res.message);
+  if (res && res.error != null && String(res.error).trim()) return String(res.error);
+  return fallback || 'Request failed — try again.';
+}
+
+function turnAttachmentsForApi(attachments) {
+  if (!attachments || !attachments.length) return undefined;
+  const out = attachments
+    .filter((a) => a && a.data && a.mime)
+    .map((a) => ({ mime: a.mime, data: a.data }));
+  return out.length ? out : undefined;
+}
+
+function applyAgentTurnResult(res, patchFn) {
+  if (res && res.error) {
+    patchFn({
+      pending: false,
+      text: '',
+      error: agentErrorText(res),
+      errorCode: res.error,
+      quickReplies: undefined,
+    });
+    return;
+  }
+  const assistantMsg = {
+    role: 'assistant',
+    pending: false,
+    text: (res && res.reply) || '(no reply)',
+    toolCalls: (res && res.toolCalls) || [],
+    changedPaths: (res && res.changedPaths) || [],
+    perPathUndo: (res && res.perPathUndo) || [],
+    turnId: res && res.turnId,
+    provider: res && res.provider,
+    model: res && res.model,
+    durationMs: res && res.durationMs,
+    repliedAt: res && res.repliedAt,
+    bounded: res && res.bounded,
+    quickReplies: (res && res.quickReplies) || undefined,
+    ts: Date.now(),
+    error: undefined,
+    errorCode: undefined,
+  };
+  if (turnClearedHistory(res.toolCalls)) {
+    agentChat.collapseToCurrentTurn(assistantMsg);
+  } else {
+    patchFn(assistantMsg);
+  }
+}
+
 /* ---------- the send action (shared) ---------- */
 async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
   const Store = window.ADMIN_STORE.Store;
@@ -424,7 +480,9 @@ async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
   agentChat.push({
     role: 'user',
     text: text || '',
-    attachments: hasAttach ? attachments.map((a) => ({ mime: a.mime, preview: a.preview })) : null,
+    attachments: hasAttach
+      ? attachments.map((a) => ({ mime: a.mime, preview: a.preview, data: a.data }))
+      : null,
     ts,
   });
   agentChat.push({ role: 'assistant', text: '', pending: true, ts: ts + 1 });
@@ -433,43 +491,65 @@ async function sendAgentMessage({ text, attachments, route, setAgentBusy }) {
   try {
     const res = await Store.agentTurn({
       message: text || '',
-      attachments: hasAttach ? attachments.map((a) => ({ mime: a.mime, data: a.data })) : undefined,
+      attachments: turnAttachmentsForApi(attachments),
       currentRoute: route,
       chatId: 'default',
     });
-    if (res && res.error) {
-      agentChat.patchLast({ pending: false, text: '', error: res.message || res.error });
-    } else {
-      const assistantMsg = {
-        role: 'assistant',
-        pending: false,
-        text: res.reply || '(no reply)',
-        toolCalls: res.toolCalls || [],
-        changedPaths: res.changedPaths || [],
-        perPathUndo: res.perPathUndo || [],
-        turnId: res.turnId,
-        provider: res.provider,
-        model: res.model,
-        durationMs: res.durationMs,
-        repliedAt: res.repliedAt,
-        bounded: res.bounded,
-        quickReplies: res.quickReplies || undefined,
-        ts: Date.now(),
-      };
-      if (turnClearedHistory(res.toolCalls)) {
-        agentChat.collapseToCurrentTurn(assistantMsg);
-      } else {
-        agentChat.patchLast(assistantMsg);
-      }
-      // Pull the server draft immediately so open editors update even when the
-      // agent composer (or another non-content field) still has focus.
+    applyAgentTurnResult(res, (patch) => agentChat.patchLast(patch));
+    if (!(res && res.error)) {
       try {
         const remote = await Store.fsLoadDraft();
         if (remote) await Store.adoptRemoteDraft(remote);
       } catch (e) { /* offline */ }
     }
   } catch (e) {
-    agentChat.patchLast({ pending: false, error: e.message });
+    agentChat.patchLast({
+      pending: false,
+      text: '',
+      error: agentErrorText(null, (e && e.message) || 'Request failed — try again.'),
+    });
+  } finally {
+    agentChat.setSending(false);
+    if (setAgentBusy) setAgentBusy(false);
+  }
+}
+
+/* Re-send the user turn before a failed assistant bubble — no duplicate user row. */
+async function retryAgentMessage({ failedIndex, route, setAgentBusy }) {
+  const Store = window.ADMIN_STORE.Store;
+  if (agentChat.sending || failedIndex < 1 || failedIndex >= agentChat.messages.length) return;
+  const failed = agentChat.messages[failedIndex];
+  if (!failed || failed.role !== 'assistant' || failed.pending) return;
+  const userMsg = agentChat.messages[failedIndex - 1];
+  if (!userMsg || userMsg.role !== 'user') return;
+  const hasText = !!(userMsg.text || '').trim();
+  const hasAttach = !!(userMsg.attachments && userMsg.attachments.length);
+  if (!hasText && !hasAttach) return;
+
+  agentChat.removeMessage(failedIndex);
+  agentChat.push({ role: 'assistant', text: '', pending: true, ts: Date.now() });
+  agentChat.setSending(true);
+  if (setAgentBusy) setAgentBusy(true);
+  try {
+    const res = await Store.agentTurn({
+      message: userMsg.text || '',
+      attachments: turnAttachmentsForApi(userMsg.attachments),
+      currentRoute: route,
+      chatId: 'default',
+    });
+    applyAgentTurnResult(res, (patch) => agentChat.patchLast(patch));
+    if (!(res && res.error)) {
+      try {
+        const remote = await Store.fsLoadDraft();
+        if (remote) await Store.adoptRemoteDraft(remote);
+      } catch (e) { /* offline */ }
+    }
+  } catch (e) {
+    agentChat.patchLast({
+      pending: false,
+      text: '',
+      error: agentErrorText(null, (e && e.message) || 'Request failed — try again.'),
+    });
   } finally {
     agentChat.setSending(false);
     if (setAgentBusy) setAgentBusy(false);
@@ -508,7 +588,7 @@ function Thinking() {
 }
 
 /* ---------- one turn's message bubble ---------- */
-function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, onQuickReply, quickReplyDisabled }) {
+function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, onQuickReply, onRetry, quickReplyDisabled }) {
   const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
   const [diffOpen, setDiffOpen] = useState(false);
@@ -578,6 +658,14 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
           : msg.error ? <span className="login__err">⚠ {msg.error}</span>
             : <div className="agentmsg__reveal">{mdInline ? mdInline(displayText) : displayText}</div>}
         {msg.bounded && <div className="helptext" style={{ marginTop: 4 }}>⚠ stopped at the tool-iteration limit.</div>}
+
+        {!!msg.error && !msg.pending && (
+          <div className="agentmsg__retry" onMouseDown={(e) => e.stopPropagation()}>
+            <Btn sm kind="ghost" icon="reset" disabled={quickReplyDisabled} onClick={() => onRetry && onRetry(msgIndex)}>
+              Retry
+            </Btn>
+          </div>
+        )}
 
         {hasTools && !msg.pending && (
           <div className="agenttools-section">
@@ -809,6 +897,11 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
     sendAgentMessage({ text: String(value), attachments: [], route, setAgentBusy });
   };
 
+  const onRetry = (failedIndex) => {
+    if (chat.sending) return;
+    retryAgentMessage({ failedIndex, route, setAgentBusy });
+  };
+
   return (
     <div className={'agentchat' + (compact ? ' agentchat--compact' : '')}>
       <div className="agentchat__scroll" ref={scroller}>
@@ -828,6 +921,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
             openPreview={openPreview}
             compact={compact}
             onQuickReply={onQuickReply}
+            onRetry={onRetry}
             quickReplyDisabled={chat.sending}
           />
         ))}

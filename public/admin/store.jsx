@@ -853,13 +853,24 @@ const Store = {
     let body = '';
     try { body = await r.text(); } catch (e) { /* no body */ }
     let data = null;
-    if (body) { try { data = JSON.parse(body); } catch (e) { /* non-JSON */ } }
-    if (!r.ok) {
-      const msg = (data && (data.message || data.error))
-        || `HTTP ${r.status} from ${path}${body ? ' — ' + body.slice(0, 400) : ''}`;
-      return { error: data && data.error ? data.error : ('http-' + r.status), message: msg, status: r.status };
+    let parseErr = null;
+    if (body) {
+      try { data = JSON.parse(body); } catch (e) { parseErr = (e && e.message) || 'invalid JSON'; }
     }
-    return data != null ? data : { error: 'bad-response', message: 'Empty/invalid response from ' + path };
+    const structuredErr = (payload) => {
+      const err = (payload && payload.error) ? String(payload.error) : ('http-' + r.status);
+      const msg = (payload && payload.message != null && String(payload.message).trim())
+        ? String(payload.message)
+        : (payload && payload.error ? String(payload.error) : null)
+          || (parseErr ? `${path} returned invalid JSON` : null)
+          || `HTTP ${r.status} from ${path}${body ? ' — ' + body.slice(0, 400) : ''}`;
+      return { error: err, message: msg, status: r.status };
+    };
+    if (!r.ok) return structuredErr(data);
+    if (parseErr) return structuredErr(null);
+    if (data && typeof data === 'object' && data.error) return structuredErr(data);
+    if (data != null && typeof data === 'object') return data;
+    return { error: 'bad-response', message: 'Empty/invalid response from ' + path, status: r.status };
   },
   _persistCapabilitiesScope(scope, scoped) {
     const map = this._readCapabilitiesSupportLocal();

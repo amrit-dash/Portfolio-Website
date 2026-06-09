@@ -3644,6 +3644,10 @@ body::before {
    cursor: not-allowed;
 }
 
+.agentmsg__retry {
+   margin-top: 10px;
+}
+
 .toolchip {
    display: inline-flex;
    align-items: center;

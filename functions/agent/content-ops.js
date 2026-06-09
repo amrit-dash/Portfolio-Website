@@ -16,6 +16,10 @@ const { coerceImpactArray, validateImpactWrite } = require(path.join(__dirname, 
 const SNAPSHOT_RING = 10;
 
 function deepClone(v) {
+  /* JSON.stringify(undefined) is undefined (not a string) — JSON.parse then throws
+     `"undefined" is not valid JSON`. Per-path undo snapshots legitimately store
+     missing/empty fields as undefined. */
+  if (v === undefined) return undefined;
   return JSON.parse(JSON.stringify(v));
 }
 
