@@ -1007,9 +1007,9 @@ const Store = {
   testVision({ scope, provider, model, key }) {
     return this._agentFetch('/testVision', { scope: scope || 'agent', provider, model, key });
   },
-  testCapabilities({ scope, provider, model, key, testUrl, probes }) {
+  testCapabilities({ scope, provider, model, key, probes }) {
     return this._agentFetch('/testCapabilities', {
-      scope: scope || 'agent', provider, model, key, testUrl, probes,
+      scope: scope || 'agent', provider, model, key, probes,
     });
   },
   // Chat history + clear (owner-only Firestore reads).

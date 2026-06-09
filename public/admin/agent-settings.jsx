@@ -270,16 +270,6 @@ function AgentSettingsPage({ modal }) {
           </span>
         </div>
 
-        <Field label="Capability probe URL" hint="Used by Test capabilities for the URL-context check (public http(s) only)">
-          <input
-            className="input capabilities-probe-url"
-            type="url"
-            value={probeUrl}
-            placeholder={DEFAULT_PROBE_URL}
-            onChange={(e) => setProbeUrl(e.target.value)}
-          />
-        </Field>
-
         {PROVS.map((p) => {
           const c = pcfg(p.id);
           const curatedDefault = (Reflect.get(TOOL_MODELS, p.id)[0] || {}).id || '';

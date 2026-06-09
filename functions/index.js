@@ -871,7 +871,6 @@ exports.testCapabilities = onRequest({ invoker: 'public' }, async (req, res) => 
       endpoint: prov.endpoint,
       model,
       key,
-      testUrl: body.testUrl,
       probes,
     });
     const ms = Date.now() - t0;

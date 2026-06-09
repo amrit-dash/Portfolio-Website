@@ -3,7 +3,7 @@
 const { fetchUrlText } = require('./url-fetch');
 
 const VISION_PROBE_PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-const DEFAULT_PROBE_URL = 'https://example.com';
+const DEFAULT_CAPABILITY_PROBE_URL = 'https://github.com/amrit-dash';
 
 async function probeVision({ agentProviders, providerId, endpoint, model, key }) {
   const t0 = Date.now();
@@ -34,7 +34,7 @@ async function probeVision({ agentProviders, providerId, endpoint, model, key })
 async function probeUrl({ agentProviders, providerId, endpoint, model, key, testUrl }) {
   const t0 = Date.now();
   try {
-    const fetched = await fetchUrlText(testUrl || DEFAULT_PROBE_URL);
+    const fetched = await fetchUrlText(testUrl || DEFAULT_CAPABILITY_PROBE_URL);
     const prompt = [
       'You are a URL-context connectivity test.',
       `Source URL: ${fetched.url}`,
@@ -85,7 +85,7 @@ async function runCapabilityProbes(opts) {
 
 module.exports = {
   VISION_PROBE_PNG_B64,
-  DEFAULT_PROBE_URL,
+  DEFAULT_CAPABILITY_PROBE_URL,
   probeVision,
   probeUrl,
   probeSearch,
