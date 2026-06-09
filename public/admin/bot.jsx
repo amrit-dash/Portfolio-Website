@@ -558,9 +558,8 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                             {s.incomplete && !hasContent && <Btn sm kind="primary" icon="reset" onClick={() => retriageOne(q)}>Re-triage</Btn>}
                             {s.verdict === 'existing_phrase' && (!s.incomplete || hasContent) && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
                             {s.verdict === 'new_question' && (!s.incomplete || hasContent) && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
-                            {s.verdict === 'irrelevant' && (!s.incomplete || hasContent) && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
-                            {s.verdict !== 'new_question' && s.verdict !== 'irrelevant' && (!s.incomplete || hasContent) && hasPreview && (s.suggestedQuestions && s.suggestedQuestions.length || s.suggestedAnswers && s.suggestedAnswers.length) && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
-                            {s.verdict !== 'irrelevant' && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>{s.verdict === 'existing_phrase' && (!s.incomplete || hasContent) ? 'Dismiss duplicate' : 'Dismiss'}</Btn>}
+                            {s.verdict !== 'new_question' && (!s.incomplete || hasContent) && (s.suggestedQuestions && s.suggestedQuestions.length || s.suggestedAnswers && s.suggestedAnswers.length) && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
+                            <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>{s.verdict === 'existing_phrase' && (!s.incomplete || hasContent) ? 'Dismiss duplicate' : 'Dismiss'}</Btn>
                           </div>
                         </div>
                       )}

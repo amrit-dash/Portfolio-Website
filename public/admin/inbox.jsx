@@ -63,8 +63,8 @@ function normalizeInboxSuggestion(s) {
   if (!s || typeof s !== 'object') return null;
   const out = { ...s };
   if (!out.id && s.id) out.id = s.id;
-  out.suggestedQuestions = strArr(out.suggestedQuestions || s.phrasings || s.questions);
-  out.suggestedAnswers = strArr(out.suggestedAnswers || s.answers);
+  out.suggestedQuestions = strArr(out.suggestedQuestions || s.phrasings || s.questions || s.questionVariations);
+  out.suggestedAnswers = strArr(out.suggestedAnswers || s.answers || s.answerVariations);
   if (typeof out.phrasing !== 'string' && typeof s.phrasing === 'string') out.phrasing = s.phrasing;
   if (typeof out.matchQuestion !== 'string' && typeof s.matchQuestion === 'string') out.matchQuestion = s.matchQuestion;
   if (typeof out.reason !== 'string') out.reason = out.reason ? String(out.reason) : '';
