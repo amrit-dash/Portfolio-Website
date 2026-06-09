@@ -10,6 +10,7 @@
     "build": "node scripts/build-dist.mjs",
     "preview": "npm run build && npx --yes serve dist/site -l 3001",
     "smoke": "npm run build && node scripts/smoke-dist.mjs",
+    "test:inbox-triage": "node scripts/inbox-triage-test.cjs",
     "deploy:site": "bash scripts/deploy-site.sh",
     "deploy:admin": "bash scripts/deploy-admin.sh",
     "deploy:backend": "bash scripts/deploy-backend.sh",

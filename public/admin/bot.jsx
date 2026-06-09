@@ -293,10 +293,12 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const dismissQ = (q) => { removeQuestion(q.id); };
   const normSug = (raw) => (window.ADMIN_INBOX && window.ADMIN_INBOX.normalizeInboxSuggestion
     ? window.ADMIN_INBOX.normalizeInboxSuggestion(raw) : raw);
+  const sugHasContent = (s) => (window.ADMIN_INBOX && window.ADMIN_INBOX.inboxSuggestionHasContent
+    ? window.ADMIN_INBOX.inboxSuggestionHasContent(s) : false);
   const verdictLabel = (s) => {
     if (!s) return '';
     const n = normSug(s);
-    if (n.incomplete) return 'No details';
+    if (n.incomplete && !sugHasContent(n)) return 'No details';
     if (n.verdict === 'existing_phrase') return 'Already covered';
     if (n.verdict === 'irrelevant') return 'Not worth automating';
     return 'New question';
@@ -304,7 +306,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const verdictLabelShort = (s) => {
     if (!s) return '';
     const n = normSug(s);
-    if (n.incomplete) return 'Retry';
+    if (n.incomplete && !sugHasContent(n)) return 'Retry';
     if (n.verdict === 'existing_phrase') return 'Covered';
     if (n.verdict === 'irrelevant') return 'Skip';
     return 'New';
@@ -515,8 +517,16 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                   const noDetails = !s && inboxRun.processed[q.id];
                   const proc = aiBusy && needsTriage(q.id);
                   const open = openInfo === q.id;
-                  const tagClass = s ? (s.incomplete ? 'verdicttag--incomplete' : 'verdicttag--' + s.verdict) : '';
-                  const hasPreview = s && (s.suggestedQuestions.length || s.suggestedAnswers.length);
+                  const hasContent = s && sugHasContent(s);
+                  const tagClass = s ? ((s.incomplete && !hasContent) ? 'verdicttag--incomplete' : 'verdicttag--' + (s.verdict || 'new_question')) : '';
+                  const hasPreview = s && (
+                    (s.suggestedQuestions && s.suggestedQuestions.length)
+                    || (s.suggestedAnswers && s.suggestedAnswers.length)
+                    || (s.reason && String(s.reason).trim())
+                    || s.matchQuestion
+                    || Number.isInteger(s.matchIndex)
+                    || s.phrasing
+                  );
                   return (
                     <div className="item" key={q.id}>
                       <div className="item__hd item__hd--inbox" style={{ cursor: 'default' }}>
@@ -528,7 +538,7 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                         <span className="spacer" style={{ flex: 1 }} />
                         <div className="item__actions">
                           {proc ? <span className="helptext">processing…</span>
-                            : s ? <span className={'iconbtn infobtn infobtn--' + (s.incomplete ? 'incomplete' : s.verdict)} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion — review details"><AdminIcon name="info" size={15} /></span>
+                            : s ? <span className={'iconbtn infobtn infobtn--' + ((s.incomplete && !hasContent) ? 'incomplete' : (s.verdict || 'new_question'))} onClick={() => setOpenInfo(open ? null : q.id)} title="AI suggestion — review details"><AdminIcon name="info" size={15} /></span>
                               : noDetails ? <Btn sm kind="ghost" icon="reset" onClick={() => retriageOne(q)} title="Re-run triage for this question">Re-triage</Btn>
                                 : <span className="helptext" style={{ fontSize: 11, opacity: .7 }}>not triaged</span>}
                           <span className="iconbtn iconbtn--danger" onClick={() => dismissQ(q)} title="Dismiss"><AdminIcon name="trash" size={14} /></span>
@@ -545,11 +555,12 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
                             </div>
                           ) : null}
                           <div className="inboxsug__actions">
-                            {s.incomplete && !hasPreview && <Btn sm kind="primary" icon="reset" onClick={() => retriageOne(q)}>Re-triage</Btn>}
-                            {s.verdict === 'existing_phrase' && !s.incomplete && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
-                            {s.verdict === 'new_question' && !s.incomplete && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
-                            {s.verdict !== 'new_question' && !s.incomplete && hasPreview && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
-                            <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>{s.verdict === 'existing_phrase' && !s.incomplete ? 'Dismiss duplicate' : 'Dismiss'}</Btn>
+                            {s.incomplete && !hasContent && <Btn sm kind="primary" icon="reset" onClick={() => retriageOne(q)}>Re-triage</Btn>}
+                            {s.verdict === 'existing_phrase' && (!s.incomplete || hasContent) && <Btn sm kind="primary" icon="plus" onClick={() => applyPhrase(q, s)}>Add as phrase</Btn>}
+                            {s.verdict === 'new_question' && (!s.incomplete || hasContent) && <Btn sm kind="primary" icon="plus" onClick={() => applyNew(q, s)}>Add to Q&amp;A</Btn>}
+                            {s.verdict === 'irrelevant' && (!s.incomplete || hasContent) && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>Dismiss</Btn>}
+                            {s.verdict !== 'new_question' && s.verdict !== 'irrelevant' && (!s.incomplete || hasContent) && hasPreview && (s.suggestedQuestions && s.suggestedQuestions.length || s.suggestedAnswers && s.suggestedAnswers.length) && <Btn sm kind="ghost" icon="plus" onClick={() => applyNew(q, s)}>Add as new instead</Btn>}
+                            {s.verdict !== 'irrelevant' && <Btn sm kind="ghost" icon="trash" onClick={() => dismissQ(q)}>{s.verdict === 'existing_phrase' && (!s.incomplete || hasContent) ? 'Dismiss duplicate' : 'Dismiss'}</Btn>}
                           </div>
                         </div>
                       )}

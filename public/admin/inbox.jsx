@@ -21,11 +21,48 @@ const { useState: useIxState, useEffect: useIxEffect } = React;
 const INBOX_CHUNK = 5;
 
 const strArr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()) : []);
+const INBOX_FALLBACK_REASON = 'Classifier did not return a verdict';
+
+function inboxSuggestionHasContent(n) {
+  if (!n || typeof n !== 'object') return false;
+  return !!(
+    (n.suggestedQuestions && n.suggestedQuestions.length)
+    || (n.suggestedAnswers && n.suggestedAnswers.length)
+    || (n.matchQuestion && String(n.matchQuestion).trim())
+    || Number.isInteger(n.matchIndex)
+    || (n.phrasing && String(n.phrasing).trim())
+    || (n.reason && String(n.reason).trim() && !String(n.reason).includes(INBOX_FALLBACK_REASON))
+  );
+}
+
+function inboxSuggestionScore(s) {
+  const n = normalizeInboxSuggestion(s);
+  if (!n) return -1;
+  if (n.incomplete && !inboxSuggestionHasContent(n)) return 0;
+  let score = 1;
+  if (!n.incomplete) score += 4;
+  if (n.suggestedQuestions && n.suggestedQuestions.length) score += 3;
+  if (n.suggestedAnswers && n.suggestedAnswers.length) score += 3;
+  if (n.matchQuestion || Number.isInteger(n.matchIndex)) score += 2;
+  if (n.phrasing) score += 1;
+  if (n.reason) score += 1;
+  if (n.verdict === 'new_question' || n.verdict === 'existing_phrase' || n.verdict === 'irrelevant') score += 1;
+  return score;
+}
+
+function pickBetterInboxSuggestion(a, b) {
+  const sa = inboxSuggestionScore(a);
+  const sb = inboxSuggestionScore(b);
+  if (sb > sa) return normalizeInboxSuggestion(b);
+  if (sa > sb) return normalizeInboxSuggestion(a);
+  return normalizeInboxSuggestion(b) || normalizeInboxSuggestion(a);
+}
 
 // Normalize suggestion shape from API / Firestore — legacy field names, auto-upgrade incomplete.
 function normalizeInboxSuggestion(s) {
   if (!s || typeof s !== 'object') return null;
   const out = { ...s };
+  if (!out.id && s.id) out.id = s.id;
   out.suggestedQuestions = strArr(out.suggestedQuestions || s.phrasings || s.questions);
   out.suggestedAnswers = strArr(out.suggestedAnswers || s.answers);
   if (typeof out.phrasing !== 'string' && typeof s.phrasing === 'string') out.phrasing = s.phrasing;
@@ -35,10 +72,14 @@ function normalizeInboxSuggestion(s) {
   if (out.suggestedQuestions.length && out.suggestedAnswers.length) {
     out.verdict = 'new_question';
     delete out.incomplete;
-  } else if (out.verdict === 'existing_phrase' && (out.matchQuestion || Number.isInteger(out.matchIndex))) {
+  } else if (out.verdict === 'existing_phrase' && (out.matchQuestion || Number.isInteger(out.matchIndex) || out.phrasing)) {
     delete out.incomplete;
   } else if (out.suggestedQuestions.length && !out.suggestedAnswers.length && out.verdict !== 'existing_phrase') {
     out.verdict = 'new_question';
+    delete out.incomplete;
+  } else if (out.verdict === 'irrelevant' && out.reason && !out.reason.includes(INBOX_FALLBACK_REASON)) {
+    delete out.incomplete;
+  } else if (inboxSuggestionHasContent(out)) {
     delete out.incomplete;
   }
   return out;
@@ -58,7 +99,7 @@ function normalizeInboxRunState(suggestions, processed) {
 
 function needsInboxTriage(id, suggestions, processed, opts) {
   const allowIncomplete = !opts || opts.allowIncomplete !== false;
-  const s = suggestions[id];
+  const s = suggestions[id] ? normalizeInboxSuggestion(suggestions[id]) : null;
   if (s && !s.incomplete) return false;
   if (s && s.incomplete) return allowIncomplete;
   if (processed[id] && !s) return true;
@@ -110,7 +151,9 @@ const inboxRunner = {
       if (d) {
         const norm = normalizeInboxRunState(d.suggestions, d.processed);
         const mergedSug = { ...this.suggestions };
-        Object.entries(norm.suggestions).forEach(([id, s]) => { mergedSug[id] = s; });
+        Object.entries(norm.suggestions).forEach(([id, remote]) => {
+          mergedSug[id] = pickBetterInboxSuggestion(mergedSug[id], remote);
+        });
         Object.keys(mergedSug).forEach((id) => {
           const n = normalizeInboxSuggestion(mergedSug[id]);
           if (n) mergedSug[id] = n; else delete mergedSug[id];
@@ -125,8 +168,8 @@ const inboxRunner = {
     finally { this.hydrated = true; this.emit(); }
   },
 
-  _persist(removeIds) {
-    window.ADMIN_STORE.Store.fsSaveInboxRun({
+  async _persist(removeIds) {
+    await window.ADMIN_STORE.Store.fsSaveInboxRun({
       suggestions: this.suggestions,
       processed: this.processed,
       removeIds: removeIds || [],
@@ -160,11 +203,11 @@ const inboxRunner = {
         // stop the run and surface it.
         if (res && res.error && !(res.suggestions && res.suggestions.length)) {
           this.error = res.message || res.error;
-          this._persistChunk(chunk);
+          await this._persistChunk(chunk);
           if (res.error === 'daily-cap' || res.error === 'no-config' || res.error === 'unreachable' || res.error === 'forbidden') break;
         }
         this.emit();
-        this._persistChunk(chunk);
+        await this._persistChunk(chunk);
         // Reconcile with server merge so a concurrent weekly job isn't clobbered.
         await this.reloadPersisted();
       }
@@ -176,7 +219,7 @@ const inboxRunner = {
   },
 
   // Field-level Firestore patch for just-written ids (avoids replacing the whole map).
-  _persistChunk(ids) {
+  async _persistChunk(ids) {
     const sugPatch = {};
     const procPatch = {};
     (ids || []).forEach((id) => {
@@ -184,7 +227,7 @@ const inboxRunner = {
       if (this.processed[id]) procPatch[id] = this.processed[id];
     });
     if (Object.keys(sugPatch).length || Object.keys(procPatch).length) {
-      window.ADMIN_STORE.Store.fsSaveInboxRun({ suggestions: sugPatch, processed: procPatch });
+      await window.ADMIN_STORE.Store.fsSaveInboxRun({ suggestions: sugPatch, processed: procPatch });
     }
   },
 
@@ -229,4 +272,7 @@ function InboxRunnerIndicator({ go, placement = 'sidebar' }) {
   );
 }
 
-window.ADMIN_INBOX = { inboxRunner, useInboxRunner, InboxRunnerIndicator, normalizeInboxSuggestion, needsInboxTriage };
+window.ADMIN_INBOX = {
+  inboxRunner, useInboxRunner, InboxRunnerIndicator,
+  normalizeInboxSuggestion, needsInboxTriage, inboxSuggestionHasContent,
+};

@@ -54,17 +54,185 @@ function extractJson(text) {
   return null;
 }
 
-function normalizeSuggestion(s, validIds, qaLen) {
+const VERDICT_ALIASES = {
+  existing: 'existing_phrase',
+  existing_phrase: 'existing_phrase',
+  existingphrase: 'existing_phrase',
+  duplicate: 'existing_phrase',
+  match: 'existing_phrase',
+  covered: 'existing_phrase',
+  new: 'new_question',
+  new_question: 'new_question',
+  newquestion: 'new_question',
+  question: 'new_question',
+  irrelevant: 'irrelevant',
+  junk: 'irrelevant',
+  spam: 'irrelevant',
+  skip: 'irrelevant',
+  dismiss: 'irrelevant',
+};
+
+function normalizeVerdict(raw) {
+  const k = String(raw || '').toLowerCase().replace(/[^a-z_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  if (INBOX_VERDICTS.has(k)) return k;
+  return VERDICT_ALIASES[k] || null;
+}
+
+function extractJsonArray(text) {
+  const parsed = extractJson(text);
+  if (!parsed) return null;
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === 'object') {
+    for (const key of ['suggestions', 'results', 'classifications', 'items', 'questions', 'data', 'responses']) {
+      if (Array.isArray(parsed[key])) return parsed[key];
+    }
+    if (parsed.id || parsed.verdict || parsed.matchIndex != null) return [parsed];
+  }
+  return null;
+}
+
+function resolveSuggestionId(raw, validIds, fallbackId) {
+  const candidates = [raw.id, raw.questionId, raw.inboxId, raw.question_id, raw.inbox_id]
+    .filter((x) => x != null && String(x).trim())
+    .map((x) => String(x).trim().replace(/^\[|\]$/g, ''));
+  for (const id of candidates) {
+    if (validIds.has(id)) return id;
+    for (const vid of validIds) {
+      if (vid === id || vid.endsWith(id) || id.endsWith(vid)) return vid;
+    }
+  }
+  return fallbackId && validIds.has(fallbackId) ? fallbackId : null;
+}
+
+function strArr(v) {
+  return (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim().slice(0, 400)).slice(0, 6) : []);
+}
+
+function parseMatchIndex(raw, qaLen) {
+  if (Number.isInteger(raw) && raw >= 0 && raw < qaLen) return raw;
+  const n = Number.parseInt(String(raw ?? ''), 10);
+  return Number.isInteger(n) && n >= 0 && n < qaLen ? n : null;
+}
+
+function findExactQaMatch(q, qa) {
+  const normQ = normalizeInboxText(q);
+  if (!normQ) return null;
+  for (let i = 0; i < qa.length; i++) {
+    for (const phrasing of (qa[i].qs || [])) {
+      if (normalizeInboxText(phrasing) === normQ) {
+        return { matchIndex: i, matchQuestion: phrasing.slice(0, 300), phrasing: q.slice(0, 400) };
+      }
+    }
+  }
+  return null;
+}
+
+function tokenSet(text) {
+  return new Set(normalizeInboxText(text).split(' ').filter((t) => t.length > 2));
+}
+
+function findFuzzyQaMatch(q, qa) {
+  const qTokens = tokenSet(q);
+  if (qTokens.size < 2) return null;
+  let best = null;
+  let bestScore = 0;
+  for (let i = 0; i < qa.length; i++) {
+    for (const phrasing of (qa[i].qs || [])) {
+      const pTokens = tokenSet(phrasing);
+      if (!pTokens.size) continue;
+      let overlap = 0;
+      qTokens.forEach((t) => { if (pTokens.has(t)) overlap++; });
+      const score = overlap / Math.max(qTokens.size, pTokens.size);
+      if (score > bestScore && score >= 0.6) {
+        bestScore = score;
+        best = { matchIndex: i, matchQuestion: phrasing.slice(0, 300), phrasing: q.slice(0, 400) };
+      }
+    }
+  }
+  return best;
+}
+
+function inferVerdict(out) {
+  const explicit = normalizeVerdict(out.verdict) || out.verdict;
+  if (out.suggestedQuestions.length && out.suggestedAnswers.length) return 'new_question';
+  if (explicit === 'existing_phrase' && (out.matchQuestion || out.matchIndex != null)) return 'existing_phrase';
+  if (out.suggestedQuestions.length) return 'new_question';
+  if (out.matchQuestion || out.matchIndex != null) return 'existing_phrase';
+  if (explicit === 'new_question') return 'new_question';
+  if (explicit === 'irrelevant') return 'irrelevant';
+  if (out.reason && out.reason.trim()) return 'irrelevant';
+  return explicit || 'new_question';
+}
+
+function finalizeSuggestion(out, qDoc, qa) {
+  if (!out || !out.id) return null;
+  out.verdict = inferVerdict(out);
+
+  if (out.verdict === 'existing_phrase') {
+    if (out.matchIndex == null && out.matchQuestion) {
+      const t = out.matchQuestion.trim().toLowerCase();
+      out.matchIndex = qa.findIndex((x) => (((x.qs && x.qs[0]) || '').trim().toLowerCase()) === t);
+      if (out.matchIndex < 0) out.matchIndex = null;
+    }
+    if (out.matchIndex != null && !out.matchQuestion && qa[out.matchIndex]) {
+      out.matchQuestion = ((qa[out.matchIndex].qs && qa[out.matchIndex].qs[0]) || '').slice(0, 300);
+    }
+    if (out.matchIndex == null && !out.matchQuestion && qDoc) {
+      const hit = findExactQaMatch(qDoc.q, qa) || findFuzzyQaMatch(qDoc.q, qa);
+      if (hit) {
+        out.matchIndex = hit.matchIndex;
+        out.matchQuestion = hit.matchQuestion;
+        out.phrasing = out.phrasing || hit.phrasing;
+      } else {
+        out.verdict = 'new_question';
+      }
+    }
+    if (out.verdict === 'existing_phrase') {
+      out.phrasing = out.phrasing || (qDoc && qDoc.q ? qDoc.q.slice(0, 400) : null);
+      out.reason = out.reason || 'Matches an existing Q&A phrasing';
+      out.suggestedQuestions = [];
+      out.suggestedAnswers = [];
+    }
+  }
+
+  if (out.verdict === 'new_question') {
+    const visitorQ = qDoc && qDoc.q ? qDoc.q.trim().slice(0, 400) : '';
+    if (!out.suggestedQuestions.length && visitorQ) out.suggestedQuestions = [visitorQ];
+    if (!out.suggestedAnswers.length) {
+      out.suggestedAnswers = ['thanks for asking — reach out directly if you want more detail on this.'];
+    }
+    out.reason = out.reason || 'New visitor question worth adding to Q&A';
+    out.matchIndex = null;
+    out.matchQuestion = null;
+  }
+
+  if (out.verdict === 'irrelevant') {
+    out.reason = out.reason || 'Not worth automating in the Q&A knowledge base';
+    out.suggestedQuestions = [];
+    out.suggestedAnswers = [];
+    out.matchIndex = null;
+    out.matchQuestion = null;
+  }
+
+  delete out.incomplete;
+  return out;
+}
+
+function normalizeSuggestion(s, validIds, qaLen, qDoc, qa) {
   if (!s || typeof s !== 'object') return null;
-  const id = String(s.id || '');
-  if (!validIds.has(id)) return null;
-  let verdict = INBOX_VERDICTS.has(s.verdict) ? s.verdict : 'new_question';
-  let matchIndex = Number.isInteger(s.matchIndex) && s.matchIndex >= 0 && s.matchIndex < qaLen ? s.matchIndex : null;
-  const matchQuestion = typeof s.matchQuestion === 'string' ? s.matchQuestion.slice(0, 300) : null;
+  const id = resolveSuggestionId(s, validIds, qDoc && qDoc.id);
+  if (!id) return null;
+
+  let verdict = normalizeVerdict(s.verdict);
+  let matchIndex = parseMatchIndex(s.matchIndex, qaLen);
+  if (matchIndex == null && s.match_index != null) matchIndex = parseMatchIndex(s.match_index, qaLen);
+  const matchQuestion = typeof s.matchQuestion === 'string' ? s.matchQuestion.slice(0, 300)
+    : (typeof s.match_question === 'string' ? s.match_question.slice(0, 300) : null);
+  if (!verdict) verdict = 'new_question';
   if (verdict === 'existing_phrase' && matchIndex == null && !matchQuestion) verdict = 'new_question';
-  const strArr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim().slice(0, 400)).slice(0, 6) : []);
-  const suggestedQuestions = strArr(s.suggestedQuestions || s.phrasings || s.questions);
-  const suggestedAnswers = strArr(s.suggestedAnswers || s.answers);
+
+  const suggestedQuestions = strArr(s.suggestedQuestions || s.phrasings || s.questions || s.questionVariations);
+  const suggestedAnswers = strArr(s.suggestedAnswers || s.answers || s.answerVariations);
   const out = {
     id,
     verdict,
@@ -73,55 +241,139 @@ function normalizeSuggestion(s, validIds, qaLen) {
     phrasing: typeof s.phrasing === 'string' ? s.phrasing.slice(0, 400) : null,
     suggestedQuestions,
     suggestedAnswers,
-    reason: typeof s.reason === 'string' ? s.reason.slice(0, 300) : '',
+    reason: typeof s.reason === 'string' ? s.reason.slice(0, 300) : (typeof s.explanation === 'string' ? s.explanation.slice(0, 300) : ''),
   };
-  if (suggestedQuestions.length && suggestedAnswers.length) {
-    out.verdict = 'new_question';
-  } else if (out.verdict === 'existing_phrase' && (matchQuestion || matchIndex != null)) {
-    /* complete */
-  } else if (suggestedQuestions.length && out.verdict !== 'existing_phrase') {
-    out.verdict = 'new_question';
+  return finalizeSuggestion(out, qDoc, qa || []);
+}
+
+function parseTriageResponse(text, batch, validIds, qa) {
+  const arr = extractJsonArray(text);
+  if (!arr || !arr.length) return [];
+  const qaLen = qa.length;
+  const out = [];
+  const used = new Set();
+  arr.forEach((raw, i) => {
+    const qDoc = batch[i] || null;
+    const n = normalizeSuggestion(raw, validIds, qaLen, qDoc, qa);
+    if (n && !used.has(n.id)) {
+      used.add(n.id);
+      out.push(n);
+    }
+  });
+  // Position-aligned fallback when the model returns the right count but wrong/missing ids.
+  if (out.length < batch.length && arr.length === batch.length) {
+    batch.forEach((d, i) => {
+      if (used.has(d.id)) return;
+      const n = normalizeSuggestion(arr[i], validIds, qaLen, d, qa);
+      if (n && !used.has(n.id)) {
+        used.add(n.id);
+        out.push(n);
+      }
+    });
   }
   return out;
 }
 
-// Ensure every triaged question has a stored suggestion — the model may omit ids
-// from its JSON batch reply (irrelevant / existing_phrase are common omissions).
-function completeSuggestionsForAll(qDocs, suggestions, qa) {
-  const byId = new Map();
-  (suggestions || []).forEach((s) => { if (s && s.id) byId.set(s.id, s); });
-  return qDocs.map((d) => {
-    if (byId.has(d.id)) return byId.get(d.id);
-    const normQ = normalizeInboxText(d.q);
-    for (let i = 0; i < qa.length; i++) {
-      const qs = qa[i].qs || [];
-      for (const phrasing of qs) {
-        if (normalizeInboxText(phrasing) === normQ) {
-          return {
-            id: d.id,
-            verdict: 'existing_phrase',
-            matchIndex: i,
-            matchQuestion: phrasing.slice(0, 300),
-            phrasing: d.q.slice(0, 400),
-            suggestedQuestions: [],
-            suggestedAnswers: [],
-            reason: 'Exact match to an existing Q&A phrasing',
-          };
-        }
-      }
-    }
-    return {
-      id: d.id,
+function ruleBasedSuggestion(qDoc, qa) {
+  const junk = classifyInboxJunk(qDoc.q);
+  if (junk.junk) {
+    return finalizeSuggestion({
+      id: qDoc.id,
       verdict: 'irrelevant',
       matchIndex: null,
       matchQuestion: null,
       phrasing: null,
       suggestedQuestions: [],
       suggestedAnswers: [],
-      reason: 'Classifier did not return a verdict — safe to dismiss or re-triage',
-      incomplete: true,
-    };
+      reason: junk.reason,
+    }, qDoc, qa);
+  }
+  const exact = findExactQaMatch(qDoc.q, qa);
+  if (exact) {
+    return finalizeSuggestion({
+      id: qDoc.id,
+      verdict: 'existing_phrase',
+      matchIndex: exact.matchIndex,
+      matchQuestion: exact.matchQuestion,
+      phrasing: exact.phrasing,
+      suggestedQuestions: [],
+      suggestedAnswers: [],
+      reason: 'Exact match to an existing Q&A phrasing',
+    }, qDoc, qa);
+  }
+  const fuzzy = findFuzzyQaMatch(qDoc.q, qa);
+  if (fuzzy) {
+    return finalizeSuggestion({
+      id: qDoc.id,
+      verdict: 'existing_phrase',
+      matchIndex: fuzzy.matchIndex,
+      matchQuestion: fuzzy.matchQuestion,
+      phrasing: fuzzy.phrasing,
+      suggestedQuestions: [],
+      suggestedAnswers: [],
+      reason: 'Close match to an existing Q&A phrasing',
+    }, qDoc, qa);
+  }
+  return finalizeSuggestion({
+    id: qDoc.id,
+    verdict: 'new_question',
+    matchIndex: null,
+    matchQuestion: null,
+    phrasing: null,
+    suggestedQuestions: [],
+    suggestedAnswers: [],
+    reason: 'Classifier parse failed — draft suggestion from visitor text (review before publishing)',
+  }, qDoc, qa);
+}
+
+// Ensure every triaged question has a complete stored suggestion.
+function completeSuggestionsForAll(qDocs, suggestions, qa) {
+  const byId = new Map();
+  (suggestions || []).forEach((s) => {
+    if (!s || !s.id) return;
+    const qDoc = qDocs.find((d) => d.id === s.id);
+    byId.set(s.id, finalizeSuggestion({ ...s }, qDoc, qa));
   });
+  return qDocs.map((d) => {
+    if (byId.has(d.id)) return byId.get(d.id);
+    return ruleBasedSuggestion(d, qa);
+  });
+}
+
+const INBOX_RETRY_SUFFIX = '\n\nReply with ONLY a JSON array — no prose, no code fences. Each object MUST include "id" exactly as shown in [brackets] and a valid "verdict".';
+
+async function classifyBatch({
+  batch, messages, agentProviders, providerId, provider, key, model, systemPrompt, retry,
+}) {
+  const block = wrapVisitorText(batch.map((d) => `[${d.id}] ${d.q}`).join('\n'));
+  const userText = retry
+    ? `Batch (retry — include every id):\n${block}${INBOX_RETRY_SUFFIX}`
+    : `Batch:\n${block}`;
+  messages.push({ role: 'user', text: userText, toolCalls: [], toolResults: [] });
+  const gen = await agentProviders.generate(providerId, {
+    endpoint: provider.endpoint, model, key,
+    systemPrompt, messages, tools: [], temperature: 0.3, maxTokens: 1400,
+  });
+  messages.push({ role: 'assistant', text: gen.text || '', toolCalls: [], toolResults: [] });
+  return gen.text || '';
+}
+
+async function classifySingleQuestion({
+  qDoc, qa, commands, agentProviders, providerId, provider, key, model, systemPrompt,
+}) {
+  const qaList = qa.map((x, i) => `${i}: ${((x.qs && x.qs[0]) || '').slice(0, 120)}`).filter((s) => s.split(': ')[1]).slice(0, 80);
+  const cmdList = commands.map((c) => c && c.id).filter(Boolean).slice(0, 40);
+  const block = wrapVisitorText(`[${qDoc.id}] ${qDoc.q}`);
+  const messages = [{
+    role: 'user',
+    text: `EXISTING Q&A (index: first phrasing):\n${qaList.join('\n') || '(none)'}\n\nCOMMANDS: ${cmdList.join(', ') || '(none)'}\n\nClassify this single visitor question:\n${block}${INBOX_RETRY_SUFFIX}`,
+    toolCalls: [], toolResults: [],
+  }];
+  const gen = await agentProviders.generate(providerId, {
+    endpoint: provider.endpoint, model, key,
+    systemPrompt, messages, tools: [], temperature: 0.3, maxTokens: 800,
+  });
+  return gen.text || '';
 }
 
 async function loadInboxRun(db) {
@@ -249,24 +501,42 @@ async function triageQuestionBatch({
   const suggestions = [];
   for (let i = 0; i < qDocs.length; i += INBOX_BATCH) {
     const batch = qDocs.slice(i, i + INBOX_BATCH);
-    const block = wrapVisitorText(batch.map((d) => `[${d.id}] ${d.q}`).join('\n'));
-    messages.push({ role: 'user', text: `Batch:\n${block}`, toolCalls: [], toolResults: [] });
-    const gen = await agentProviders.generate(providerId, {
-      endpoint: provider.endpoint, model, key,
-      systemPrompt: INBOX_SYSTEM, messages, tools: [], temperature: 0.3, maxTokens: 1400,
+    let text = await classifyBatch({
+      batch, messages, agentProviders, providerId, provider, key, model,
+      systemPrompt: INBOX_SYSTEM, retry: false,
     });
-    messages.push({ role: 'assistant', text: gen.text || '', toolCalls: [], toolResults: [] });
-    let arr = extractJson(gen.text);
-    if (arr && !Array.isArray(arr)) arr = [arr];
-    (arr || []).forEach((s) => { const n = normalizeSuggestion(s, validIds, qa.length); if (n) suggestions.push(n); });
+    let parsed = parseTriageResponse(text, batch, validIds, qa);
+    if (parsed.length < batch.length) {
+      text = await classifyBatch({
+        batch, messages, agentProviders, providerId, provider, key, model,
+        systemPrompt: INBOX_SYSTEM, retry: true,
+      });
+      parsed = parseTriageResponse(text, batch, validIds, qa);
+    }
+    const got = new Set(parsed.map((s) => s.id));
+    for (const d of batch) {
+      if (got.has(d.id)) continue;
+      const singleText = await classifySingleQuestion({
+        qDoc: d, qa, commands, agentProviders, providerId, provider, key, model,
+        systemPrompt: INBOX_SYSTEM,
+      });
+      parseTriageResponse(singleText, [d], validIds, qa).forEach((s) => {
+        if (s && s.id && !got.has(s.id)) {
+          got.add(s.id);
+          parsed.push(s);
+        }
+      });
+    }
+    parsed.forEach((s) => suggestions.push(s));
   }
 
   const complete = completeSuggestionsForAll(qDocs, suggestions, qa);
   if (alog) {
-    const filled = complete.length - suggestions.length;
+    const fromLlm = suggestions.length;
+    const ruleFilled = complete.filter((s) => !suggestions.some((x) => x.id === s.id)).length;
     alog('INFO', 'bot:inbox', {
       provider: providerId, model, ok: true,
-      summary: `triaged ${qDocs.length} question(s) → ${complete.length} suggestion(s)${filled ? ` (${filled} filled)` : ''}`,
+      summary: `triaged ${qDocs.length} question(s) → ${complete.length} suggestion(s) (${fromLlm} from LLM${ruleFilled ? `, ${ruleFilled} rule-filled` : ''})`,
     });
   }
   return { suggestions: complete, processed: qDocs.length, qDocs };
@@ -361,8 +631,13 @@ module.exports = {
   classifyInboxJunk,
   normalizeInboxText,
   extractJson,
+  extractJsonArray,
+  normalizeVerdict,
   normalizeSuggestion,
+  parseTriageResponse,
+  finalizeSuggestion,
   completeSuggestionsForAll,
+  ruleBasedSuggestion,
   loadInboxRun,
   mergeInboxRun,
   purgeInboxJunk,
