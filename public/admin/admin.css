@@ -2661,6 +2661,31 @@ body::before {
    padding: 2px 6px !important;
 }
 
+.tag--vision {
+   color: var(--accent-fg) !important;
+   background: var(--accent) !important;
+   border: 0 !important;
+}
+
+.tag--url {
+   color: #0b1a12 !important;
+   background: color-mix(in srgb, #5ec8ff 72%, var(--accent) 28%) !important;
+   border: 1px solid color-mix(in srgb, #5ec8ff 55%, transparent) !important;
+}
+
+.capabilities-probe-url {
+   width: 100%;
+   max-width: 520px;
+   margin-bottom: 12px;
+}
+
+.capabilities-result {
+   font-family: var(--font-mono);
+   font-size: 11px;
+   line-height: 1.45;
+   word-break: break-word;
+}
+
 /* Model dropdown + refresh button row — equal heights, aligned */
 .modelrow {
    display: flex;

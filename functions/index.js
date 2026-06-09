@@ -826,21 +826,13 @@ exports.logs = onRequest({ invoker: 'public' }, async (req, res) => {
 /*  key (agent config or bot config/llm), logs the result  */
 /*  (so it appears in the Logs view) and returns the reply. */
 /* ===================================================== */
-/* Tiny 1×1 PNG used to probe multimodal support without shipping a real asset. */
-const VISION_PROBE_PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const { runCapabilityProbes, probeVision } = require('./agent/capability-probes');
 
-exports.testVision = onRequest({ invoker: 'public' }, async (req, res) => {
-  cors(req, res);
-  if (req.method === 'OPTIONS') return res.status(204).send('');
-  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
-  if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
-
-  const body = req.body || {};
+async function resolveProviderTestConfig(body) {
   const providerId = body.provider || 'gemini';
   const scope = body.scope === 'bot' ? 'bot' : 'agent';
   const prov = PROVIDERS[providerId];
-  if (!prov) return res.status(400).json({ error: 'unknown-provider' });
-
+  if (!prov) return { error: 'unknown-provider', status: 400 };
   const overrideKey = (typeof body.key === 'string' && body.key.trim()) ? body.key.trim() : null;
   let key, model;
   if (scope === 'bot') {
@@ -853,35 +845,83 @@ exports.testVision = onRequest({ invoker: 'public' }, async (req, res) => {
     const pc = (c.byProvider && c.byProvider[providerId]) || {};
     model = body.model || pc.model;
   }
-  if (!key) return res.status(400).json({ error: 'no-key', message: `No ${scope} key saved for ${providerId}.` });
-  if (!model) return res.status(400).json({ error: 'no-model', message: `No model selected for ${providerId}.` });
+  if (!key) return { error: 'no-key', status: 400, message: `No ${scope} key saved for ${providerId}.` };
+  if (!model) return { error: 'no-model', status: 400, message: `No model selected for ${providerId}.` };
+  return { providerId, scope, prov, key, model };
+}
 
+exports.testCapabilities = onRequest({ invoker: 'public' }, async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+  if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
+
+  const body = req.body || {};
+  const cfg = await resolveProviderTestConfig(body);
+  if (cfg.error) return res.status(cfg.status || 400).json({ error: cfg.error, message: cfg.message });
+
+  const { providerId, scope, prov, key, model } = cfg;
   const kind = scope === 'bot' ? 'bot:llm' : 'agent:llm';
   const t0 = Date.now();
-  const probeAttachments = [{ mime: 'image/png', data: VISION_PROBE_PNG_B64 }];
+  const probes = Array.isArray(body.probes) ? body.probes : ['vision', 'url'];
   try {
-    const gen = await agentProviders.generate(providerId, {
-      endpoint: prov.endpoint, model, key,
-      systemPrompt: 'You are a vision connectivity test. If you can see the attached image, reply with exactly OK.',
-      messages: [{
-        role: 'user',
-        text: 'Can you see the tiny test image? Reply with exactly OK if yes.',
-        attachments: probeAttachments,
-        toolCalls: [],
-        toolResults: [],
-      }],
-      tools: [],
-      temperature: 0,
-      maxTokens: 16,
+    const results = await runCapabilityProbes({
+      agentProviders,
+      providerId,
+      endpoint: prov.endpoint,
+      model,
+      key,
+      testUrl: body.testUrl,
+      probes,
     });
-    const reply = (gen.text || '').trim();
-    const ok = /\bok\b/i.test(reply);
     const ms = Date.now() - t0;
+    const parts = [];
+    if (results.vision) parts.push(`vision ${results.vision.ok ? 'ok' : 'fail'}`);
+    if (results.url) parts.push(`url ${results.url.ok ? 'ok' : (results.url.skipped ? 'skip' : 'fail')}`);
+    if (results.search) parts.push(`search ${results.search.skipped ? 'skip' : (results.search.ok ? 'ok' : 'fail')}`);
+    alog(parts.every((p) => p.includes('ok') || p.includes('skip')) ? 'INFO' : 'WARNING', kind, {
+      provider: providerId, model, ok: true, test: true, capabilities: true,
+      summary: `test capabilities (${ms}ms): ${parts.join(', ')}`,
+    });
+    return res.status(200).json({
+      ok: true,
+      provider: providerId,
+      model,
+      ms,
+      vision: results.vision || null,
+      url: results.url || null,
+      search: results.search || null,
+    });
+  } catch (e) {
+    alog('ERROR', kind, { provider: providerId, model, ok: false, test: true, capabilities: true, summary: `test capabilities failed: ${(e && e.message) || 'error'}` });
+    return res.status(200).json({ ok: false, error: (e && e.message) || 'failed', provider: providerId, model });
+  }
+});
+
+exports.testVision = onRequest({ invoker: 'public' }, async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+  if (!(await verifyOwner(req))) return res.status(403).json({ error: 'forbidden' });
+
+  const body = req.body || {};
+  const cfg = await resolveProviderTestConfig(body);
+  if (cfg.error) return res.status(cfg.status || 400).json({ error: cfg.error, message: cfg.message });
+
+  const { providerId, scope, prov, key, model } = cfg;
+  const kind = scope === 'bot' ? 'bot:llm' : 'agent:llm';
+  const t0 = Date.now();
+  try {
+    const result = await probeVision({
+      agentProviders, providerId, endpoint: prov.endpoint, model, key,
+    });
+    const ok = !!result.ok;
+    const ms = result.ms || (Date.now() - t0);
     alog(ok ? 'INFO' : 'WARNING', kind, {
       provider: providerId, model, ok, test: true, vision: true,
-      summary: ok ? `test vision ok (${ms}ms): ${reply.slice(0, 80)}` : `test vision failed (${ms}ms): ${reply.slice(0, 120) || 'empty reply'}`,
+      summary: ok ? `test vision ok (${ms}ms): ${(result.reply || '').slice(0, 80)}` : `test vision failed (${ms}ms): ${(result.reply || result.error || '').slice(0, 120) || 'empty reply'}`,
     });
-    return res.status(200).json({ ok, reply, provider: providerId, model, ms });
+    return res.status(200).json({ ok, reply: result.reply, error: result.error, provider: providerId, model, ms });
   } catch (e) {
     alog('ERROR', kind, { provider: providerId, model, ok: false, test: true, vision: true, summary: `test vision failed: ${(e && e.message) || 'error'}` });
     return res.status(200).json({ ok: false, error: (e && e.message) || 'failed', provider: providerId, model });

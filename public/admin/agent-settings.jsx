@@ -15,6 +15,7 @@ const SCHEMA = (typeof window !== 'undefined' && window.SHARED_SCHEMA) || {};
 const TOOL_MODELS = SCHEMA.AGENT_TOOL_MODELS || {};
 const AGENT_DEFAULTS = SCHEMA.AGENT_CONFIG_DEFAULTS || { active: 'gemini', refinerActive: 'gemini', byProvider: {} };
 const { ProviderCard, providerDefaultState, setProviderDefault } = window.ADMIN_PROVIDER_CARD || {};
+const DEFAULT_PROBE_URL = 'https://example.com';
 
 function agentProviders() {
   const catalog = (window.LLM_PROVIDERS || []);
@@ -45,6 +46,16 @@ function normalizeAgentCfg(c) {
   };
 }
 
+function formatCapabilityResult(res) {
+  if (!res || res.skipped) return null;
+  const label = res.ok ? 'ok' : 'fail';
+  const detail = res.ok
+    ? (res.reply ? ': ' + res.reply : '')
+    : (res.error || res.reply || 'failed');
+  const ms = res.ms ? ` (${res.ms}ms)` : '';
+  return `${label}${detail ? ' — ' + detail : ''}${ms}`;
+}
+
 function AgentSettingsPage({ modal }) {
   const { PageHead, Field, Select, Btn, AdminIcon, SecretInput } = window.ADMIN_UI;
   const { Store } = window.ADMIN_STORE;
@@ -61,21 +72,22 @@ function AgentSettingsPage({ modal }) {
   const [modelErr, setModelErr] = useState({});
   const [testing, setTesting] = useState(null);
   const [testRes, setTestRes] = useState({});
-  const [testingVision, setTestingVision] = useState(null);
-  const [visionRes, setVisionRes] = useState({});
-  const [visionTick, setVisionTick] = useState(0);
+  const [testingCaps, setTestingCaps] = useState(null);
+  const [capsRes, setCapsRes] = useState({});
+  const [capsTick, setCapsTick] = useState(0);
+  const [probeUrl, setProbeUrl] = useState(DEFAULT_PROBE_URL);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       Store.fsLoadAgentConfig(),
       Store.hydrateModelCatalogs('agent'),
-      Store.hydrateVisionSupport('agent'),
+      Store.hydrateCapabilitiesSupport('agent'),
     ]).then(([c, catalogs]) => {
       if (cancelled) return;
       setCfg(normalizeAgentCfg(c));
       if (catalogs && Object.keys(catalogs).length) setFetched(catalogs);
-      setVisionTick((t) => t + 1);
+      setCapsTick((t) => t + 1);
       setLoading(false);
     });
     return () => { cancelled = true; };
@@ -84,7 +96,8 @@ function AgentSettingsPage({ modal }) {
   const pcfg = (id) => (cfg.byProvider && Reflect.get(cfg.byProvider, id)) || {};
   const setLocal = (id, key, val) => {
     if (key === 'model') {
-      setVisionRes((r) => ({ ...r, [id]: null }));
+      setCapsRes((r) => ({ ...r, [id]: null }));
+      Store.clearCapabilityTests({ providerId: id, model: pcfg(id).model, scope: 'agent' });
       Store.saveModelCatalogSelection('agent', id, val);
     }
     setCfg((c) => {
@@ -130,28 +143,74 @@ function AgentSettingsPage({ modal }) {
     setTestRes((r) => ({ ...r, [id]: { ok, text: ok ? (res.reply || 'ok') + (res.ms ? ` (${res.ms}ms)` : '') : (res && (res.message || res.error)) || 'failed' } }));
   };
 
-  const showVisionTag = (id, { defaultState, apiKey, model }) => {
-    void visionTick;
-    if (defaultState === 'none' || !apiKey || !model) return false;
-    if (SCHEMA.supportsVision && SCHEMA.supportsVision(id, model)) return true;
-    return Store.visionTestPassed(id, model, 'agent');
+  const providerReady = (id, { defaultState, apiKey, model }) => (
+    defaultState !== 'none' && !!apiKey && !!model
+  );
+
+  const showVisionTag = (id, ctx) => {
+    void capsTick;
+    if (!providerReady(id, ctx)) return false;
+    if (SCHEMA.supportsVision && SCHEMA.supportsVision(id, ctx.model)) return true;
+    return Store.capabilityTestPassed(id, ctx.model, 'vision', 'agent');
   };
 
-  const testVision = async (id) => {
-    setTestingVision(id); setVisionRes((r) => ({ ...r, [id]: null }));
+  const showUrlTag = (id, ctx) => {
+    void capsTick;
+    if (!providerReady(id, ctx)) return false;
+    if (SCHEMA.supportsUrlContext && SCHEMA.supportsUrlContext(id, ctx.model)) return true;
+    return Store.capabilityTestPassed(id, ctx.model, 'url', 'agent');
+  };
+
+  const capabilityTags = (id, ctx) => {
+    const tags = [];
+    if (showVisionTag(id, ctx)) {
+      tags.push(<span key="vision" className="tag tag--vision" title="Supports image attachments in agent chat">vision</span>);
+    }
+    if (showUrlTag(id, ctx)) {
+      tags.push(<span key="url" className="tag tag--url" title="Can use server-fetched URL/page context">url</span>);
+    }
+    return tags.length ? <>{tags}</> : null;
+  };
+
+  const testCapabilities = async (id) => {
+    setTestingCaps(id); setCapsRes((r) => ({ ...r, [id]: null }));
     const c = pcfg(id);
     const model = c.model || '';
-    const res = await Store.testVision({ scope: 'agent', provider: id, model, key: c.apiKey || '' });
-    setTestingVision(null);
+    const res = await Store.testCapabilities({
+      scope: 'agent',
+      provider: id,
+      model,
+      key: c.apiKey || '',
+      testUrl: probeUrl || DEFAULT_PROBE_URL,
+      probes: ['vision', 'url'],
+    });
+    setTestingCaps(null);
     const ok = res && res.ok;
     if (ok) {
-      Store.saveVisionTest({ providerId: id, model, ok: true, scope: 'agent' });
-      setVisionTick((t) => t + 1);
-    } else Store.clearVisionTest({ providerId: id, model, scope: 'agent' });
+      Store.saveCapabilityTests({
+        providerId: id,
+        model,
+        scope: 'agent',
+        results: { vision: res.vision, url: res.url, search: res.search },
+      });
+      setCapsTick((t) => t + 1);
+    } else {
+      Store.clearCapabilityTests({ providerId: id, model, scope: 'agent' });
+    }
+    const lines = [];
+    if (res && res.vision) {
+      const t = formatCapabilityResult(res.vision);
+      if (t) lines.push('vision ' + t);
+    }
+    if (res && res.url) {
+      const t = formatCapabilityResult(res.url);
+      if (t) lines.push('url ' + t);
+    }
+    if (res && res.search && res.search.skipped) lines.push('search skipped');
     const text = ok
-      ? `vision ok${res.reply ? ': ' + res.reply : ''}${res.ms ? ` (${res.ms}ms)` : ''}`
-      : (res && (res.message || res.error || res.reply)) || 'failed';
-    setVisionRes((r) => ({ ...r, [id]: { ok, text } }));
+      ? (lines.length ? lines.join(' · ') : 'capabilities ok') + (res.ms ? ` (${res.ms}ms)` : '')
+      : (res && (res.message || res.error)) || 'failed';
+    setCapsRes((r) => ({ ...r, [id]: { ok, text } }));
   };
 
   const save = async () => {
@@ -213,10 +272,21 @@ function AgentSettingsPage({ modal }) {
           </span>
         </div>
 
+        <Field label="Capability probe URL" hint="Used by Test capabilities for the URL-context check (public http(s) only)">
+          <input
+            className="input capabilities-probe-url"
+            type="url"
+            value={probeUrl}
+            placeholder={DEFAULT_PROBE_URL}
+            onChange={(e) => setProbeUrl(e.target.value)}
+          />
+        </Field>
+
         {PROVS.map((p) => {
           const c = pcfg(p.id);
           const curatedDefault = (Reflect.get(TOOL_MODELS, p.id)[0] || {}).id || '';
           const dState = providerDefaultState(p.id, cfg);
+          const tagCtx = { defaultState: dState, apiKey: c.apiKey, model: c.model };
           return (
             <ProviderCard
               key={p.id}
@@ -229,9 +299,7 @@ function AgentSettingsPage({ modal }) {
               defaultMode="three-state"
               defaultState={dState}
               onSetDefaultState={(target) => setDefault(p.id, target)}
-              extraTags={showVisionTag(p.id, { defaultState: dState, apiKey: c.apiKey, model: c.model })
-                ? <span className="tag" title="Supports image attachments in agent chat">vision</span>
-                : null}
+              extraTags={capabilityTags(p.id, tagCtx)}
             >
               <Field label="API key" hint={p.keyHint ? ('e.g. ' + p.keyHint) : 'your billable key for this provider'}>
                 <SecretInput name={'agent-key-' + p.id} value={c.apiKey || ''} placeholder={'paste your ' + p.label + ' key'} onChange={(v) => setLocal(p.id, 'apiKey', v)} />
@@ -242,7 +310,7 @@ function AgentSettingsPage({ modal }) {
                   <div className="modelrow__actions">
                     <Btn icon="reset" onClick={() => fetchModels(p.id)} disabled={fetching === p.id} title="Refresh model list from provider"><span className="btn__label">{fetching === p.id ? 'Refreshing…' : 'Refresh list'}</span></Btn>
                     <Btn icon="play" kind="ghost" onClick={() => testModel(p.id)} disabled={testing === p.id || !c.apiKey || !c.model} title="Send a hello to this model — result also logged in Agent logs"><span className="btn__label">{testing === p.id ? 'Testing…' : 'Test model'}</span></Btn>
-                    <Btn icon="image" kind="ghost" onClick={() => testVision(p.id)} disabled={testingVision === p.id || testing === p.id || !c.apiKey || !c.model} title="Send a tiny test image — shows the vision tag when the model list has no known mapping"><span className="btn__label">{testingVision === p.id ? 'Testing…' : 'Test vision'}</span></Btn>
+                    <Btn icon="sparkles" kind="ghost" onClick={() => testCapabilities(p.id)} disabled={testingCaps === p.id || testing === p.id || !c.apiKey || !c.model} title="Probe vision + URL context — updates capability tags when the model list has no known mapping"><span className="btn__label">{testingCaps === p.id ? 'Testing…' : 'Test capabilities'}</span></Btn>
                   </div>
                 </div>
                 {Reflect.get(modelErr, p.id) && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {Reflect.get(modelErr, p.id)}</div>}
@@ -251,9 +319,9 @@ function AgentSettingsPage({ modal }) {
                     {Reflect.get(testRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(testRes, p.id).text}
                   </div>
                 )}
-                {Reflect.get(visionRes, p.id) && (
-                  <div className="helptext" style={{ marginTop: 6, color: Reflect.get(visionRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
-                    {Reflect.get(visionRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(visionRes, p.id).text}
+                {Reflect.get(capsRes, p.id) && (
+                  <div className="helptext capabilities-result" style={{ marginTop: 6, color: Reflect.get(capsRes, p.id).ok ? 'var(--accent)' : '#e0a341' }}>
+                    {Reflect.get(capsRes, p.id).ok ? '✓' : '⚠'} {Reflect.get(capsRes, p.id).text}
                   </div>
                 )}
               </Field>

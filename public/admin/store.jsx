@@ -30,6 +30,8 @@ const LS = {
 const VISION_TEST_KEY = 'amritos.visionTest'; // legacy sessionStorage (migrated on read)
 const LS_MODEL_CATALOG = 'amritos.modelCatalog';
 const LS_VISION_SUPPORT = 'amritos.visionSupport';
+const LS_CAPABILITIES_SUPPORT = 'amritos.capabilitiesSupport';
+const CAPABILITY_KEYS = ['vision', 'url', 'search'];
 
 /* ---------- Default content (seed) ----------
    Data-driven sections (expertise / experience / projects / socials) are
@@ -546,6 +548,55 @@ const Store = {
   _writeVisionSupportLocal(map) {
     this.write(LS_VISION_SUPPORT, map);
   },
+  _readCapabilitiesSupportLocal() {
+    const raw = this.read(LS_CAPABILITIES_SUPPORT);
+    const map = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+    this._mergeLegacyVisionIntoCapabilities(map);
+    return map;
+  },
+  _writeCapabilitiesSupportLocal(map) {
+    this.write(LS_CAPABILITIES_SUPPORT, map);
+  },
+  _capabilitiesScopeMap(scope) {
+    const map = this._readCapabilitiesSupportLocal();
+    const scoped = map[scope];
+    return (scoped && typeof scoped === 'object' && !Array.isArray(scoped)) ? scoped : {};
+  },
+  _capEntry(scope, providerId, model) {
+    const scoped = this._capabilitiesScopeMap(scope);
+    const prov = scoped[providerId];
+    const row = prov && prov[model];
+    return (row && typeof row === 'object') ? row : {};
+  },
+  _mergeLegacyVisionIntoCapabilities(map) {
+    const legacy = this._readVisionSupportLocal();
+    let changed = false;
+    for (const scope of Object.keys(legacy)) {
+      if (scope === '__proto__' || scope === 'constructor' || scope === 'prototype') continue;
+      const legacyScope = legacy[scope];
+      if (!legacyScope || typeof legacyScope !== 'object') continue;
+      const scoped = { ...(map[scope] || {}) };
+      for (const pid of Object.keys(legacyScope)) {
+        if (pid === '__proto__' || pid === 'constructor' || pid === 'prototype') continue;
+        const legacyModels = legacyScope[pid];
+        if (!legacyModels || typeof legacyModels !== 'object') continue;
+        const prov = { ...(scoped[pid] || {}) };
+        for (const mid of Object.keys(legacyModels)) {
+          if (mid === '__proto__' || mid === 'constructor' || mid === 'prototype') continue;
+          const hit = legacyModels[mid];
+          if (!hit || !hit.verified) continue;
+          const row = { ...(prov[mid] || {}) };
+          if (row.vision && row.vision.verified) continue;
+          row.vision = { verified: true, at: hit.at || Date.now(), source: hit.source || 'test' };
+          prov[mid] = row;
+          changed = true;
+        }
+        if (Object.keys(prov).length) scoped[pid] = prov;
+      }
+      if (Object.keys(scoped).length) map[scope] = scoped;
+    }
+    if (changed) this._writeCapabilitiesSupportLocal(map);
+  },
   _migrateVisionSessionStorage() {
     try {
       const raw = sessionStorage.getItem(VISION_TEST_KEY);
@@ -684,12 +735,16 @@ const Store = {
     return (scoped && typeof scoped === 'object' && !Array.isArray(scoped)) ? scoped : {};
   },
   async hydrateVisionSupport(scope) {
-    const map = this._readVisionSupportLocal();
-    const scoped = { ...this._visionScopeMap(scope) };
+    return this.hydrateCapabilitiesSupport(scope);
+  },
+  async hydrateCapabilitiesSupport(scope) {
+    const map = this._readCapabilitiesSupportLocal();
+    const scoped = { ...this._capabilitiesScopeMap(scope) };
     if (!this.fsReady()) return scoped;
     try {
       const meta = await this.fsLoadAgentMeta();
-      const cloudScope = meta.visionSupport && meta.visionSupport[scope];
+      const cloudScope = (meta.capabilitiesSupport && meta.capabilitiesSupport[scope])
+        || (meta.visionSupport && meta.visionSupport[scope]);
       if (!cloudScope || typeof cloudScope !== 'object') return scoped;
       let localChanged = false;
       for (const pid of Object.keys(cloudScope)) {
@@ -699,15 +754,29 @@ const Store = {
         const localModels = { ...(scoped[pid] || {}) };
         for (const mid of Object.keys(cloudModels)) {
           if (mid === '__proto__' || mid === 'constructor' || mid === 'prototype') continue;
-          if (localModels[mid]) continue;
-          localModels[mid] = cloudModels[mid];
-          localChanged = true;
+          const cloudRow = cloudModels[mid];
+          if (!cloudRow || typeof cloudRow !== 'object') continue;
+          const localRow = { ...(localModels[mid] || {}) };
+          let rowChanged = false;
+          if (cloudRow.verified && !localRow.vision) {
+            localRow.vision = { verified: true, at: cloudRow.at || Date.now(), source: cloudRow.source || 'test' };
+            rowChanged = true;
+          }
+          for (const cap of CAPABILITY_KEYS) {
+            if (!cloudRow[cap] || !cloudRow[cap].verified || localRow[cap]) continue;
+            localRow[cap] = cloudRow[cap];
+            rowChanged = true;
+          }
+          if (rowChanged) {
+            localModels[mid] = localRow;
+            localChanged = true;
+          }
         }
         if (Object.keys(localModels).length) scoped[pid] = localModels;
       }
       if (localChanged) {
         map[scope] = scoped;
-        this._writeVisionSupportLocal(map);
+        this._writeCapabilitiesSupportLocal(map);
       }
     } catch (e) { /* keep local */ }
     return scoped;
@@ -755,66 +824,84 @@ const Store = {
     }
     return data != null ? data : { error: 'bad-response', message: 'Empty/invalid response from ' + path };
   },
-  saveVisionTest({ providerId, model, ok, scope = 'agent' }) {
+  _persistCapabilitiesScope(scope, scoped) {
+    const map = this._readCapabilitiesSupportLocal();
+    map[scope] = scoped;
+    this._writeCapabilitiesSupportLocal(map);
+    if (!this.fsReady()) return;
+    this.fsLoadAgentMeta().then((meta) => {
+      const capabilitiesSupport = { ...(meta.capabilitiesSupport || {}) };
+      capabilitiesSupport[scope] = scoped;
+      this.fsSaveAgentMeta({ capabilitiesSupport });
+    }).catch(() => {});
+  },
+  saveCapabilityTests({ providerId, model, results, scope = 'agent' }) {
     const pid = String(providerId || '');
     const mid = String(model || '');
-    if (!pid || !mid || !ok) return null;
+    if (!pid || !mid || !results || typeof results !== 'object') return null;
     const at = Date.now();
-    const map = this._readVisionSupportLocal();
-    const scoped = { ...this._visionScopeMap(scope) };
-    scoped[pid] = { ...(scoped[pid] || {}), [mid]: { verified: true, at, source: 'test' } };
-    map[scope] = scoped;
-    this._writeVisionSupportLocal(map);
-    const entry = { providerId: pid, model: mid, ok: true, at, source: 'test' };
-    if (this.fsReady()) {
-      this.fsLoadAgentMeta().then((meta) => {
-        const visionSupport = { ...(meta.visionSupport || {}) };
-        const vsScope = { ...(visionSupport[scope] || {}) };
-        vsScope[pid] = { ...(vsScope[pid] || {}), [mid]: { verified: true, at, source: 'test' } };
-        visionSupport[scope] = vsScope;
-        this.fsSaveAgentMeta({ visionSupport });
-      }).catch(() => {});
+    const scoped = { ...this._capabilitiesScopeMap(scope) };
+    const prov = { ...(scoped[pid] || {}) };
+    const row = { ...(prov[mid] || {}) };
+    let changed = false;
+    for (const cap of CAPABILITY_KEYS) {
+      const hit = results[cap];
+      if (!hit || hit.skipped) continue;
+      if (hit.ok) {
+        row[cap] = { verified: true, at, source: 'test' };
+        changed = true;
+      } else if (row[cap]) {
+        delete row[cap];
+        changed = true;
+      }
     }
-    return entry;
+    if (!Object.keys(row).length) delete prov[mid];
+    else prov[mid] = row;
+    if (Object.keys(prov).length) scoped[pid] = prov;
+    else delete scoped[pid];
+    if (changed) this._persistCapabilitiesScope(scope, scoped);
+    return changed ? { providerId: pid, model: mid, row } : null;
   },
-  clearVisionTest({ providerId, model, scope = 'agent' } = {}) {
+  saveVisionTest({ providerId, model, ok, scope = 'agent' }) {
+    if (!ok) return this.clearCapabilityTests({ providerId, model, scope, caps: ['vision'] });
+    return this.saveCapabilityTests({ providerId, model, scope, results: { vision: { ok: true } } });
+  },
+  clearCapabilityTests({ providerId, model, scope = 'agent', caps } = {}) {
     const pid = providerId != null ? String(providerId) : '';
     const mid = model != null ? String(model) : '';
+    const drop = Array.isArray(caps) && caps.length ? caps : CAPABILITY_KEYS;
     if (pid && mid) {
-      const map = this._readVisionSupportLocal();
-      const scoped = { ...this._visionScopeMap(scope) };
+      const scoped = { ...this._capabilitiesScopeMap(scope) };
       const prov = scoped[pid];
-      if (prov && prov[mid]) {
-        const nextProv = { ...prov };
-        delete nextProv[mid];
-        if (Object.keys(nextProv).length) scoped[pid] = nextProv;
-        else delete scoped[pid];
-        map[scope] = scoped;
-        this._writeVisionSupportLocal(map);
-        if (this.fsReady()) {
-          this.fsLoadAgentMeta().then((meta) => {
-            const visionSupport = { ...(meta.visionSupport || {}) };
-            const vsScope = { ...(visionSupport[scope] || {}) };
-            const cloudProv = { ...(vsScope[pid] || {}) };
-            delete cloudProv[mid];
-            if (Object.keys(cloudProv).length) vsScope[pid] = cloudProv;
-            else delete vsScope[pid];
-            visionSupport[scope] = vsScope;
-            this.fsSaveAgentMeta({ visionSupport });
-          }).catch(() => {});
-        }
-      }
+      if (!prov || !prov[mid]) return;
+      const row = { ...(prov[mid] || {}) };
+      drop.forEach((cap) => { delete row[cap]; });
+      const nextProv = { ...prov };
+      if (Object.keys(row).length) nextProv[mid] = row;
+      else delete nextProv[mid];
+      if (Object.keys(nextProv).length) scoped[pid] = nextProv;
+      else delete scoped[pid];
+      this._persistCapabilitiesScope(scope, scoped);
       return;
     }
     try { sessionStorage.removeItem(VISION_TEST_KEY); } catch (e) { /* ignore */ }
   },
-  visionTestPassed(providerId, model, scope = 'agent') {
+  clearVisionTest(opts = {}) {
+    return this.clearCapabilityTests({ ...opts, caps: ['vision'] });
+  },
+  capabilityTestPassed(providerId, model, cap, scope = 'agent') {
     const pid = String(providerId || '');
     const mid = String(model || '');
-    if (!pid || !mid) return false;
-    const hit = this._visionScopeMap(scope)[pid];
-    const entry = hit && hit[mid];
+    if (!pid || !mid || !cap) return false;
+    const row = this._capEntry(scope, pid, mid);
+    const entry = row[cap];
     return !!(entry && entry.verified);
+  },
+  visionTestPassed(providerId, model, scope = 'agent') {
+    return this.capabilityTestPassed(providerId, model, 'vision', scope);
+  },
+  urlTestPassed(providerId, model, scope = 'agent') {
+    return this.capabilityTestPassed(providerId, model, 'url', scope);
   },
   agentSupportsVision(cfg) {
     const SCHEMA = window.SHARED_SCHEMA || {};
@@ -870,6 +957,11 @@ const Store = {
   },
   testVision({ scope, provider, model, key }) {
     return this._agentFetch('/testVision', { scope: scope || 'agent', provider, model, key });
+  },
+  testCapabilities({ scope, provider, model, key, testUrl, probes }) {
+    return this._agentFetch('/testCapabilities', {
+      scope: scope || 'agent', provider, model, key, testUrl, probes,
+    });
   },
   // Chat history + clear (owner-only Firestore reads).
   async fsLoadAgentMessages(chatId, n) {

@@ -7,6 +7,7 @@ const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
 const multimodal = require('./multimodal');
+const { fetchUrlText } = require('./url-fetch');
 const { attachLinks } = require('./admin-links');
 const {
   purgeInboxJunk,
@@ -258,6 +259,17 @@ const STRUCTURED_TOOLS = [
     },
     mutates: true,
     sideEffect: true,
+  },
+  { name: 'fetchUrl', description: 'Fetch a public HTTP(S) URL server-side and return a text excerpt for reasoning (size/time capped; blocks private hosts).',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Public http(s) URL to fetch' },
+        maxChars: { type: 'number', description: 'Max excerpt characters (default 8000)' },
+      },
+      required: ['url'],
+    },
+    mutates: false,
   },
 ];
 
@@ -903,6 +915,22 @@ async function execClearChatHistory(a, ctx) {
   return { ok: true, chatId: cid, deleted: snap.size };
 }
 
+async function execFetchUrl(a) {
+  try {
+    const fetched = await fetchUrlText(a.url, { maxChars: a.maxChars });
+    return {
+      ok: true,
+      url: fetched.url,
+      marker: fetched.marker,
+      bytes: fetched.bytes,
+      excerpt: fetched.excerpt,
+      chars: fetched.chars,
+    };
+  } catch (e) {
+    return { ok: false, error: 'fetch-failed', message: e.message };
+  }
+}
+
 async function execReadAgentLogs(a) {
   try {
     const data = await fetchAgentLogs({
@@ -1008,6 +1036,7 @@ async function executeTool(name, args, ctx) {
     generateInboxVariations: () => execGenerateInboxVariations(a, ctx),
     dismissInboxQuestion: () => execDismissInbox(a, ctx),
     acceptInboxToQA: () => execAcceptInbox(a, session, ctx),
+    fetchUrl: () => execFetchUrl(a),
   };
 
   if (handlers[name]) return handlers[name]();

@@ -94,7 +94,7 @@ flowchart TB
 | `POST /logs` | owner | Paginated app logs for admin Logs view |
 | `POST /inboxPurge` | owner | Rules-only inbox junk cleanup |
 | `POST /inboxProcess` | owner | Purge + AI triage → `config/inboxRun` |
-| `POST /testModel`, `/testVision` | owner | Provider smoke tests |
+| `POST /testModel`, `/testVision`, `/testCapabilities` | owner | Provider smoke + capability probes (vision, URL) |
 | `(scheduled) inboxWeekly` | — | Monday 03:00 IST auto-triage |
 
 Region: `asia-south1`. Keys live in Firestore (`config/llm`, `config/agent`); Functions read via Admin SDK — never returned to the browser.
@@ -217,7 +217,7 @@ Hybrid catalog: generic `readContent` / `setContentPath` for most edits; structu
 | `clearAnalytics` | Owner wipe (wraps `/clearStats`) |
 | `searchContent` | Text search across draft paths |
 
-**39 tools** total in `ALL_TOOLS`. Tool results may include `links[]` admin deep links (rendered in Agent chat). Helpers: `functions/agent/admin-links.js`.
+**40 tools** total in `ALL_TOOLS` (includes `fetchUrl`). Tool results may include `links[]` admin deep links (rendered in Agent chat). Helpers: `functions/agent/admin-links.js`.
 
 #### Removed (replaced)
 
