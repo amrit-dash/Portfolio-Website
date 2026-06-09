@@ -991,9 +991,11 @@ function useContent() {
   const PUBLISH_LISTENER_GUARD_MS = 5000;
   const [publishing, setPublishing] = React.useState(false);
   const [draftSaving, setDraftSaving] = React.useState(false);
+  const contentRef = React.useRef(content);
   const publishedSnapshotRef = React.useRef(publishedSnapshot);
   const publishedAtRef = React.useRef(publishedAt);
   const draftUpdatedAtRef = React.useRef(draftUpdatedAt);
+  React.useEffect(() => { contentRef.current = content; }, [content]);
   React.useEffect(() => { publishedSnapshotRef.current = publishedSnapshot; }, [publishedSnapshot]);
   React.useEffect(() => { publishedAtRef.current = publishedAt; }, [publishedAt]);
   React.useEffect(() => { draftUpdatedAtRef.current = draftUpdatedAt; }, [draftUpdatedAt]);
@@ -1013,8 +1015,6 @@ function useContent() {
   const runDraftSave = React.useCallback((canonical, saveGen) => {
     const gen = typeof saveGen === 'number' ? saveGen : draftSaveGenRef.current;
     return trackDraftSave((async () => {
-      if (gen !== draftSaveGenRef.current) return;
-      // Re-check after any await queue delay — publish may have bumped gen meanwhile.
       if (gen !== draftSaveGenRef.current) return;
       await Store.fsSaveDraft(canonical);
     })());
@@ -1236,32 +1236,26 @@ function useContent() {
 
   const publish = React.useCallback(async () => {
     if (publishInFlightRef.current) return false;
-    cancelPendingDraftSync();
     publishInFlightRef.current = true;
     publishCooldownUntilRef.current = Date.now() + PUBLISH_LISTENER_GUARD_MS;
     setPublishing(true);
-    let snap = null;
-    let pubSnap = null;
     try {
-      // Let any pre-cancel in-flight autosave finish; gen bump invalidates its write.
+      // Let in-flight autosaves finish, then cancel debounced work and bump gen.
       await awaitInFlightDraftSave();
-      setContent((cur) => {
-        snap = mergeContentSnapshot(cur);
-        pubSnap = canonicalPublishedFromDraft(snap);
-        Store.saveDraft(snap);
-        lastJsonRef.current = contentStateJson(snap);
-        return snap;
-      });
+      cancelPendingDraftSync();
+      const snap = mergeContentSnapshot(contentRef.current);
+      const pubSnap = canonicalPublishedFromDraft(snap);
       if (!snap || !pubSnap) return false;
+      lastJsonRef.current = contentStateJson(snap);
+      Store.saveDraft(snap);
+      contentRef.current = snap;
+      setContent(snap);
       const ts = new Date().toISOString();
       // Sync refs before any await so the draft listener can heal echoes immediately.
       publishedSnapshotRef.current = pubSnap;
       publishedAtRef.current = ts;
       draftUpdatedAtRef.current = ts;
-      // Local published cache matches the public Firestore doc (key-stripped).
       Store.publish(pubSnap);
-      // In-memory published baseline is the canonical public snapshot (no apiKeys).
-      // Draft keeps keys for editing; fingerprint compare strips them on both sides.
       setPublishedSnapshot(pubSnap);
       Store.write('amritos.publishedAt', ts);
       setPublishedAt(ts);
@@ -1269,8 +1263,10 @@ function useContent() {
       setDirty(false);
       await Store.fsPublish(snap);
       return true;
-    } catch (e) { /* local publish already applied */ return false; }
-    finally {
+    } catch (e) {
+      console.warn('[admin] publish failed', e && e.message);
+      return false;
+    } finally {
       publishInFlightRef.current = false;
       setPublishing(false);
     }

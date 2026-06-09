@@ -713,9 +713,13 @@ function AdminApp() {
   const changePreviewMode = (mode) => { setPreviewMode(mode); if (mode === 'draft') previewDraft(); else window.ADMIN_STORE.Store.clearPreview(); };
 
   const doPublish = async () => {
-    if (!hasUnpublishedEdits || publishing) return;
+    if (!canPublish) return;
     const ok = await publish();
-    if (!ok) return;
+    if (!ok) {
+      setFlash('Publish failed — try again');
+      setTimeout(() => setFlash(null), 2800);
+      return;
+    }
     setFlash('Published to site ✓');
     setTimeout(() => setFlash(null), 2600);
   };
