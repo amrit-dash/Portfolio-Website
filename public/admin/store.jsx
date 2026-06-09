@@ -631,9 +631,41 @@ const Store = {
       return true;
     } catch (e) { console.warn('[store] fsSaveAgentMeta failed', e && e.message); return false; }
   },
+  _resolveSelectedCapabilities(providerId, model, scope = 'agent') {
+    const SCHEMA = window.SHARED_SCHEMA || {};
+    const pid = String(providerId || '');
+    const mid = String(model || '');
+    if (!pid || !mid) return null;
+    const out = {};
+    if (SCHEMA.supportsVision && SCHEMA.supportsVision(pid, mid)) out.vision = true;
+    else if (this.capabilityTestPassed(pid, mid, 'vision', scope)) out.vision = true;
+    if (SCHEMA.supportsUrlContext && SCHEMA.supportsUrlContext(pid, mid)) out.url = true;
+    else if (this.capabilityTestPassed(pid, mid, 'url', scope)) out.url = true;
+    return Object.keys(out).length ? out : null;
+  },
+  _attachSelectedCapabilities(entry, providerId, model, scope = 'agent') {
+    if (!entry || typeof entry !== 'object') return entry;
+    if (scope !== 'agent' || !model) {
+      delete entry.selectedCapabilities;
+      return entry;
+    }
+    const caps = this._resolveSelectedCapabilities(providerId, model, scope);
+    if (caps) entry.selectedCapabilities = caps;
+    else delete entry.selectedCapabilities;
+    return entry;
+  },
+  _refreshCatalogCapabilities(scope, providerId, model) {
+    if (scope !== 'agent') return false;
+    const catalog = this._readModelCatalogLocal();
+    const entry = (catalog[scope] || {})[providerId];
+    if (!entry || entry.selectedModel !== model) return false;
+    this._attachSelectedCapabilities(entry, providerId, model, scope);
+    return this._persistModelCatalogEntry(scope, providerId, entry);
+  },
   _cloudModelCatalogEntry(entry) {
     const out = { models: entry.models.slice(), fetchedAt: entry.fetchedAt || Date.now() };
     if (entry.selectedModel) out.selectedModel = entry.selectedModel;
+    if (entry.selectedCapabilities) out.selectedCapabilities = entry.selectedCapabilities;
     return out;
   },
   _localModelCatalogEntry(cloudEntry) {
@@ -642,6 +674,7 @@ const Store = {
       fetchedAt: cloudEntry.fetchedAt || Date.now(),
       syncedFromCloud: true,
       ...(cloudEntry.selectedModel ? { selectedModel: cloudEntry.selectedModel } : {}),
+      ...(cloudEntry.selectedCapabilities ? { selectedCapabilities: cloudEntry.selectedCapabilities } : {}),
     };
   },
   async _persistModelCatalogEntry(scope, providerId, entry) {
@@ -685,7 +718,10 @@ const Store = {
     const prev = (catalog[scope] || {})[providerId] || {};
     const selectedModel = opts.selectedModel !== undefined ? opts.selectedModel : prev.selectedModel;
     const entry = { models: list.slice(), fetchedAt: Date.now(), syncedFromCloud: false };
-    if (selectedModel) entry.selectedModel = selectedModel;
+    if (selectedModel) {
+      entry.selectedModel = selectedModel;
+      this._attachSelectedCapabilities(entry, providerId, selectedModel, scope);
+    }
     return this._persistModelCatalogEntry(scope, providerId, entry);
   },
   async saveModelCatalogSelection(scope, providerId, selectedModel) {
@@ -696,6 +732,7 @@ const Store = {
       const entry = { ...prev };
       if (model) entry.selectedModel = model;
       else delete entry.selectedModel;
+      this._attachSelectedCapabilities(entry, providerId, model, scope);
       return this._persistModelCatalogEntry(scope, providerId, entry);
     }
     if (!model) return false;
@@ -859,7 +896,10 @@ const Store = {
     else prov[mid] = row;
     if (Object.keys(prov).length) scoped[pid] = prov;
     else delete scoped[pid];
-    if (changed) this._persistCapabilitiesScope(scope, scoped);
+    if (changed) {
+      this._persistCapabilitiesScope(scope, scoped);
+      this._refreshCatalogCapabilities(scope, pid, mid);
+    }
     return changed ? { providerId: pid, model: mid, row } : null;
   },
   saveVisionTest({ providerId, model, ok, scope = 'agent' }) {
@@ -882,6 +922,7 @@ const Store = {
       if (Object.keys(nextProv).length) scoped[pid] = nextProv;
       else delete scoped[pid];
       this._persistCapabilitiesScope(scope, scoped);
+      if (pid && mid) this._refreshCatalogCapabilities(scope, pid, mid);
       return;
     }
     try { sessionStorage.removeItem(VISION_TEST_KEY); } catch (e) { /* ignore */ }
@@ -902,6 +943,14 @@ const Store = {
   },
   urlTestPassed(providerId, model, scope = 'agent') {
     return this.capabilityTestPassed(providerId, model, 'url', scope);
+  },
+  agentSupportsUrl(cfg) {
+    const SCHEMA = window.SHARED_SCHEMA || {};
+    if (!cfg) return false;
+    const id = cfg.active || 'gemini';
+    const model = (cfg.byProvider && cfg.byProvider[id] && cfg.byProvider[id].model) || '';
+    if (SCHEMA.supportsUrlContext && SCHEMA.supportsUrlContext(id, model)) return true;
+    return this.urlTestPassed(id, model);
   },
   agentSupportsVision(cfg) {
     const SCHEMA = window.SHARED_SCHEMA || {};

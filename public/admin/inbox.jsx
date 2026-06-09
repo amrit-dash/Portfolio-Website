@@ -134,7 +134,8 @@ const inboxRunner = {
     if (this._loaded) return;
     this._loaded = true;
     await this.reloadPersisted();
-    this.refreshInboxIds();
+    // Badge ids come from Review tab — avoids a second fsBotQuestions on admin boot.
+    if (!this.questionIds.length) this.refreshInboxIds();
   },
 
   async refreshInboxIds() {

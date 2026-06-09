@@ -15,7 +15,6 @@ const SCHEMA = (typeof window !== 'undefined' && window.SHARED_SCHEMA) || {};
 const TOOL_MODELS = SCHEMA.AGENT_TOOL_MODELS || {};
 const AGENT_DEFAULTS = SCHEMA.AGENT_CONFIG_DEFAULTS || { active: 'gemini', refinerActive: 'gemini', byProvider: {} };
 const { ProviderCard, providerDefaultState, setProviderDefault } = window.ADMIN_PROVIDER_CARD || {};
-const DEFAULT_PROBE_URL = 'https://example.com';
 
 function agentProviders() {
   const catalog = (window.LLM_PROVIDERS || []);
@@ -75,7 +74,6 @@ function AgentSettingsPage({ modal }) {
   const [testingCaps, setTestingCaps] = useState(null);
   const [capsRes, setCapsRes] = useState({});
   const [capsTick, setCapsTick] = useState(0);
-  const [probeUrl, setProbeUrl] = useState(DEFAULT_PROBE_URL);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,7 +95,7 @@ function AgentSettingsPage({ modal }) {
   const setLocal = (id, key, val) => {
     if (key === 'model') {
       setCapsRes((r) => ({ ...r, [id]: null }));
-      Store.clearCapabilityTests({ providerId: id, model: pcfg(id).model, scope: 'agent' });
+      Store.clearCapabilityTests({ providerId: id, model: pcfg(id).model, scope: 'agent', caps: ['vision', 'url'] });
       Store.saveModelCatalogSelection('agent', id, val);
     }
     setCfg((c) => {
@@ -181,7 +179,6 @@ function AgentSettingsPage({ modal }) {
       provider: id,
       model,
       key: c.apiKey || '',
-      testUrl: probeUrl || DEFAULT_PROBE_URL,
       probes: ['vision', 'url'],
     });
     setTestingCaps(null);
@@ -195,7 +192,8 @@ function AgentSettingsPage({ modal }) {
       });
       setCapsTick((t) => t + 1);
     } else {
-      Store.clearCapabilityTests({ providerId: id, model, scope: 'agent' });
+      const failedCaps = ['vision', 'url'].filter((cap) => res && res[cap] && !res[cap].skipped && !res[cap].ok);
+      if (failedCaps.length) Store.clearCapabilityTests({ providerId: id, model, scope: 'agent', caps: failedCaps });
     }
     const lines = [];
     if (res && res.vision) {

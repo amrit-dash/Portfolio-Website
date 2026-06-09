@@ -6,6 +6,10 @@
    ===================================================== */
 const { useState: useBState, useRef: useBRef, useEffect: useBEffect } = React;
 
+/* In-memory cache so Review/Inbox reopens instantly; explicit Refresh bypasses. */
+const INBOX_QUESTIONS_LIMIT = 60;
+const inboxQuestionsCache = { rows: null, at: 0 };
+
 const BOT_TABS = [
   { id: 'context', label: 'Context' },
   { id: 'qa', label: 'Q&A pairs' },
@@ -200,27 +204,51 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   // ---- Review / Inbox: visitor bot questions captured server-side ----
   const [questions, setQuestions] = useBState(null); // null = not loaded
   const [qLoading, setQLoading] = useBState(false);
-  const loadQuestions = async () => {
+  const syncInboxIds = (qs) => {
+    if (window.ADMIN_INBOX) window.ADMIN_INBOX.inboxRunner.syncQuestionIds((qs || []).map((q) => q.id));
+  };
+  const applyQuestionList = (qs) => {
+    const rows = qs || [];
+    setQuestions(rows);
+    inboxQuestionsCache.rows = rows;
+    inboxQuestionsCache.at = Date.now();
+    syncInboxIds(rows);
+  };
+  const runBackgroundPurge = (qs) => {
+    if (!qs || !qs.length) return;
+    window.ADMIN_STORE.Store.inboxPurge(qs.map((q) => q.id)).then((purgeRes) => {
+      if (purgeRes && purgeRes.purged && purgeRes.purged.length) {
+        const gone = new Set(purgeRes.purged.map((p) => p.id));
+        const filtered = qs.filter((q) => !gone.has(q.id));
+        applyQuestionList(filtered);
+        if (window.ADMIN_INBOX) window.ADMIN_INBOX.inboxRunner.reloadPersisted();
+      }
+    }).catch(() => {});
+  };
+  const loadQuestions = async (opts = {}) => {
+    const force = !!(opts && opts.force);
+    if (!force && inboxQuestionsCache.rows) {
+      applyQuestionList(inboxQuestionsCache.rows);
+      runBackgroundPurge(inboxQuestionsCache.rows);
+      return;
+    }
     setQLoading(true);
     try {
-      let qs = await window.ADMIN_STORE.Store.fsBotQuestions(100);
-      if (qs.length) {
-        const purgeRes = await window.ADMIN_STORE.Store.inboxPurge(qs.map((q) => q.id));
-        if (purgeRes && purgeRes.purged && purgeRes.purged.length) {
-          const gone = new Set(purgeRes.purged.map((p) => p.id));
-          qs = qs.filter((q) => !gone.has(q.id));
-          if (window.ADMIN_INBOX) await window.ADMIN_INBOX.inboxRunner.reloadPersisted();
-        }
-      }
-      setQuestions(qs);
-      if (window.ADMIN_INBOX) window.ADMIN_INBOX.inboxRunner.syncQuestionIds((qs || []).map((q) => q.id));
-    } catch (e) { setQuestions([]); }
-    finally { setQLoading(false); }
+      const qs = await window.ADMIN_STORE.Store.fsBotQuestions(INBOX_QUESTIONS_LIMIT);
+      applyQuestionList(qs);
+      runBackgroundPurge(qs);
+    } catch (e) {
+      applyQuestionList([]);
+    } finally { setQLoading(false); }
   };
   useBEffect(() => {
     if (tab !== 'review') return;
-    if (window.ADMIN_INBOX) window.ADMIN_INBOX.inboxRunner.reloadPersisted();
-    if (questions === null) loadQuestions();
+    if (questions === null) {
+      if (inboxQuestionsCache.rows) {
+        applyQuestionList(inboxQuestionsCache.rows);
+        runBackgroundPurge(inboxQuestionsCache.rows);
+      } else loadQuestions();
+    }
   }, [tab]);
 
   // ---- AI triage: classify visitor questions in batches of 5 (server-side
@@ -234,15 +262,18 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const [actErr, setActErr] = useBState(null);         // errors from apply/dismiss actions
   const [openInfo, setOpenInfo] = useBState(null);     // id whose suggestion panel is open
 
-  // Auto-triage when Review loads: classify every question that lacks a complete suggestion.
+  // Auto-triage after the list paints — don't compete with the initial Firestore fetch.
   useBEffect(() => {
-    if (tab !== 'review' || !questions || !questions.length) return;
+    if (tab !== 'review' || !questions || !questions.length || qLoading) return;
     if (!inboxRun.hydrated || aiBusy) return;
-    inboxRun.syncQuestionIds(questions.map((q) => q.id));
-    const needs = window.ADMIN_INBOX.needsInboxTriage;
-    const ids = questions.filter((q) => needs(q.id, inboxRun.suggestions, inboxRun.processed, { allowIncomplete: false })).map((q) => q.id);
-    if (ids.length) inboxRun.start(ids);
-  }, [tab, questions, inboxRun.hydrated, aiBusy]);
+    const timer = setTimeout(() => {
+      inboxRun.syncQuestionIds(questions.map((q) => q.id));
+      const needs = window.ADMIN_INBOX.needsInboxTriage;
+      const ids = questions.filter((q) => needs(q.id, inboxRun.suggestions, inboxRun.processed, { allowIncomplete: false })).map((q) => q.id);
+      if (ids.length) inboxRun.start(ids);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [tab, questions, inboxRun.hydrated, aiBusy, qLoading]);
 
   // Kick off background triage for every unprocessed question. The runner chunks
   // the work (5/call), keeps going after you leave this page, and persists each
@@ -264,7 +295,12 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
   const removeQuestion = async (id) => {
     try {
       await window.ADMIN_STORE.Store.fsDeleteBotQuestion(id);
-      setQuestions((list) => (list || []).filter((x) => x.id !== id));
+      setQuestions((list) => {
+        const next = (list || []).filter((x) => x.id !== id);
+        inboxQuestionsCache.rows = next;
+        inboxQuestionsCache.at = Date.now();
+        return next;
+      });
       inboxRun.resolve(id);   // drop its background-run suggestion + processed mark
       setOpenInfo(null);
     } catch (e) { setActErr('could not remove question — try again'); }
@@ -506,12 +542,16 @@ function BotAdmin({ content, setAt, saveLLMConfig }) {
               <Btn sm kind="primary" icon="sparkle" onClick={aiProcess} disabled={aiBusy || !questions || !unprocessedCount()}>
                 {aiBusy ? `Processing… ${inboxRun.done}/${inboxRun.total}` : 'AI process'}
               </Btn>
-              <Btn sm icon="reset" onClick={loadQuestions} disabled={qLoading} title="Reload visitor questions"><span className="btn__label">{qLoading ? 'Loading…' : 'Refresh'}</span></Btn>
+              <Btn sm icon="reset" onClick={() => loadQuestions({ force: true })} disabled={qLoading} title="Reload visitor questions"><span className="btn__label">{qLoading ? 'Loading…' : 'Refresh'}</span></Btn>
             </>}>
             <p className="helptext" style={{ marginBottom: 12 }}>Every question visitors type to the bot is captured here. Junk is auto-removed on load — single-word noise, repeated words like &ldquo;hello hello&rdquo;, and exact duplicates never reach the AI. Hit <b>AI process</b> to triage the rest (5 at a time): merge into an existing Q&amp;A, create a new pair, or skip. Suggestions persist in Firestore, and a weekly background job classifies new questions automatically. Check <b>AmritBot logs</b> for purge and triage activity.</p>
             {(aiErr || actErr) && <div className="helptext" style={{ color: '#e0a341', marginBottom: 10 }}>⚠ {aiErr || actErr}</div>}
-            {questions === null ? <p className="helptext" style={{ margin: 0 }}>Loading…</p>
-              : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
+            {questions === null || (qLoading && !questions.length) ? (
+              <div className="inbox-skeleton" aria-busy="true">
+                {[0, 1, 2].map((i) => <div key={i} className="inbox-skeleton__row" />)}
+                <p className="helptext" style={{ margin: '8px 0 0' }}>Loading questions…</p>
+              </div>
+            ) : questions.length === 0 ? <p className="helptext" style={{ margin: 0 }}>No questions captured yet. Once visitors chat with the live bot, they show up here.</p>
                 : questions.map((q) => {
                   const s = suggestions[q.id] ? normSug(suggestions[q.id]) : null;
                   const noDetails = !s && inboxRun.processed[q.id];
