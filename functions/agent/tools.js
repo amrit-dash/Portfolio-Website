@@ -2,7 +2,14 @@
 
 const path = require('path');
 const schema = require(path.join(__dirname, '../shared-schema'));
-const { coerceImpactArray, normalizeImpactEntry, validateImpactWrite } = schema;
+const {
+  coerceImpactArray,
+  normalizeImpactEntry,
+  validateImpactWrite,
+  normalizeProjectItem,
+  applyProjectDefaults,
+  validateProjectItem,
+} = schema;
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
@@ -79,8 +86,19 @@ const GENERIC_TOOLS = [
 ];
 
 const STRUCTURED_TOOLS = [
-  { name: 'addItem', description: 'Append an item to a named collection (projects, expertise, experience, about.meta, about.impact, cards, contact.socials, bot.qa, bot.commands).',
-    parameters: { type: 'object', properties: { collection: { type: 'string' }, item: { type: 'string', description: 'JSON string of the object to append' } }, required: ['collection', 'item'] }, mutates: true },
+  { name: 'addItem', description: 'Append an item to a named collection (projects, expertise, experience, about.meta, about.impact, cards, contact.socials, bot.qa, bot.commands). For collection=projects, item MUST include desc (meaningful 2–4 sentence summary) and tags (non-empty string array of tech/skills, e.g. ["Next.js","Firebase"]). Use desc not description.',
+    parameters: {
+      type: 'object',
+      properties: {
+        collection: { type: 'string' },
+        item: {
+          type: 'string',
+          description: 'JSON string of the object to append. projects shape: {id?, title, cat?, type?, desc, tags[], skills?, links?, image?, gallery?} — desc and tags are required.',
+        },
+      },
+      required: ['collection', 'item'],
+    },
+    mutates: true },
   { name: 'removeItem', description: 'Remove an item from a collection by index or id.',
     parameters: { type: 'object', properties: { collection: { type: 'string' }, index: { type: 'number' }, id: { type: 'string' } }, required: ['collection'] }, mutates: true },
   { name: 'reorder', description: 'Reorder a collection to match the given order of ids or indices.',
@@ -332,6 +350,7 @@ function tryMergeIndexedObject(session, pathStr, val) {
 }
 
 function validateNewItem(collectionName, item) {
+  if (collectionName === 'projects') return validateProjectItem(item);
   if (collectionName === 'expertise' && item.icon && !schema.validateExpertiseIcon(item.icon)) {
     return { ok: false, error: 'invalid-expertise-icon', icon: item.icon };
   }
@@ -346,8 +365,18 @@ function execAddItem(a, session) {
   if (!col.ok) return col;
   let item = coerceValue(a.item);
   if (!item || typeof item !== 'object') return { ok: false, error: 'invalid-item' };
-  const check = validateNewItem(a.collection, item);
-  if (!check.ok) return check;
+  if (a.collection === 'projects') {
+    item = normalizeProjectItem(item);
+    let check = validateNewItem(a.collection, item);
+    if (!check.ok && (check.error === 'missing-project-desc' || check.error === 'missing-project-tags')) {
+      item = applyProjectDefaults(item);
+      check = validateNewItem(a.collection, item);
+    }
+    if (!check.ok) return check;
+  } else {
+    const check = validateNewItem(a.collection, item);
+    if (!check.ok) return check;
+  }
   if (a.collection === 'about.impact') item = normalizeImpactEntry(item, col.arr.length);
   let next = col.arr.concat([deepClone(item)]);
   next = applyRenumber(col.meta, next);

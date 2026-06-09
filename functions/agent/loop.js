@@ -36,6 +36,7 @@ const BASE_SYSTEM = [
   'You cannot change the bot LLM provider, API keys, or behavior toggles — those paths are blocked.',
   'Use publish() only when the owner explicitly asks to ship changes to the live site.',
   'Structured tools (addItem, removeItem, reorder, applyVibePreset, setProjectImage, setCv) handle arrays and presets safely.',
+  'When addItem collection=projects, always include desc (2–4 sentences: purpose, stack, outcome) and tags (non-empty array of relevant tech/skills, aligned with expertise modules when possible). Use field name desc, not description.',
   'generateImage creates raster art (Gemini or OpenAI DALL·E); setProjectImage places an existing URL or assets/ SVG — do not generate SVGs.',
   'For setContentPath/addItem, pass objects and arrays as compact JSON strings.',
   'Response format: Conversational replies use lightweight markdown only (**bold**, *italic*, `-` or `1.` lists) — never HTML.',

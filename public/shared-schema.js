@@ -333,6 +333,57 @@
     return heal(fallback);
   }
 
+  /* Normalize a projects row — map description→desc, coerce tags to a string[]. */
+  function normalizeProjectItem(item) {
+    const row = item && typeof item === 'object' && !Array.isArray(item) ? { ...item } : {};
+    if (!String(row.desc || '').trim() && typeof row.description === 'string' && row.description.trim()) {
+      row.desc = row.description.trim();
+    }
+    delete row.description;
+    if (!Array.isArray(row.tags)) {
+      row.tags = typeof row.tags === 'string'
+        ? row.tags.split(/[,·|]/).map((s) => s.trim()).filter(Boolean)
+        : [];
+    } else {
+      row.tags = row.tags.map((t) => String(t).trim()).filter(Boolean);
+    }
+    return row;
+  }
+
+  /* Last-resort fill when the agent omits desc/tags (prefer supplying both in addItem). */
+  function applyProjectDefaults(item) {
+    const row = normalizeProjectItem(item);
+    const title = String(row.title || 'New project').trim();
+    if (!String(row.desc || '').trim() && title) {
+      row.desc = `${title} — portfolio project showcasing relevant work, stack, and outcomes.`;
+    }
+    if (!row.tags.length) {
+      const fromCat = String(row.cat || '').split(/[·|,]/).map((s) => s.trim()).filter(Boolean);
+      row.tags = fromCat.length ? fromCat.slice(0, 6) : (title ? [title.split(/\s+/)[0]] : ['Portfolio']);
+    }
+    return row;
+  }
+
+  function validateProjectItem(item) {
+    const row = normalizeProjectItem(item);
+    const desc = String(row.desc || '').trim();
+    if (!desc) {
+      return {
+        ok: false,
+        error: 'missing-project-desc',
+        message: 'projects require desc (2–4 sentences: what it does, stack, outcome). Pass desc in the addItem JSON — not description.',
+      };
+    }
+    if (!row.tags.length) {
+      return {
+        ok: false,
+        error: 'missing-project-tags',
+        message: 'projects require a non-empty tags array (e.g. ["Next.js","Firebase","Automation"]). Match site expertise/skills when relevant.',
+      };
+    }
+    return { ok: true };
+  }
+
   function renumberExpertise(arr) {
     if (!Array.isArray(arr)) return arr;
     return arr.map((e, i) => ({ ...e, num: String(i + 1).padStart(2, '0') }));
@@ -416,6 +467,9 @@
     normalizeImpactEntry,
     validateImpactWrite,
     coerceImpactArray,
+    normalizeProjectItem,
+    applyProjectDefaults,
+    validateProjectItem,
     renumberExpertise,
     getVibe,
     validateExpertiseIcon,
