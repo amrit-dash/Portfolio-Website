@@ -408,6 +408,86 @@ function Swatches({ value, options, onChange, allowCustom = true }) {
   );
 }
 
+/* Hold ~300ms on a pill/tab, then drag to reorder (no visible grip). */
+function HoldReorderPills({ items, getKey, activeIndex, onSelect, onReorder, renderPill, addNode, className = 'subtabs' }) {
+  const HOLD_MS = 300;
+  const list = Array.isArray(items) ? items : [];
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+  const [armedIdx, setArmedIdx] = useState(null);
+  const holdTimer = useRef(null);
+  const suppressClick = useRef(false);
+
+  const clearHoldTimer = useCallback(() => {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+  }, []);
+
+  const handleDrop = (to) => {
+    if (dragIdx === null || dragIdx === to) { setDragIdx(null); setOverIdx(null); return; }
+    const next = list.slice();
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(to, 0, moved);
+    onReorder(next);
+    setDragIdx(null);
+    setOverIdx(null);
+    suppressClick.current = true;
+  };
+
+  const pillHandlers = (i) => ({
+    onMouseDown: (e) => {
+      if (e.button !== 0) return;
+      suppressClick.current = false;
+      clearHoldTimer();
+      holdTimer.current = setTimeout(() => setArmedIdx(i), HOLD_MS);
+    },
+    onMouseUp: () => {
+      clearHoldTimer();
+      if (armedIdx === i && dragIdx === null) suppressClick.current = true;
+      if (dragIdx === null) setArmedIdx(null);
+    },
+    onMouseLeave: () => {
+      clearHoldTimer();
+      if (dragIdx === null) setArmedIdx(null);
+    },
+    draggable: armedIdx === i,
+    onDragStart: (e) => {
+      if (armedIdx !== i) { e.preventDefault(); return; }
+      setDragIdx(i);
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', String(i)); } catch (err) {}
+    },
+    onDragEnd: () => {
+      setDragIdx(null);
+      setOverIdx(null);
+      setArmedIdx(null);
+      clearHoldTimer();
+      suppressClick.current = true;
+    },
+    onDragOver: (e) => { e.preventDefault(); if (dragIdx !== null) setOverIdx(i); },
+    onDrop: (e) => { e.preventDefault(); e.stopPropagation(); handleDrop(i); },
+    onClick: (e) => {
+      if (suppressClick.current) { suppressClick.current = false; e.preventDefault(); return; }
+      onSelect(i);
+    },
+  });
+
+  return (
+    <div className={className + (dragIdx !== null ? ' subtabs--drag' : '')}>
+      {list.map((it, i) => (
+        <span
+          key={getKey(it, i)}
+          className={'subtab' + (armedIdx === i ? ' subtab--armed' : '') + (dragIdx === i ? ' subtab--dragging' : '') + (overIdx === i && dragIdx !== null && dragIdx !== i ? ' subtab--over' : '')}
+          data-on={activeIndex === i}
+          {...pillHandlers(i)}
+        >
+          {renderPill(it, i)}
+        </span>
+      ))}
+      {addNode}
+    </div>
+  );
+}
+
 /* ---------- Reorderable list (HTML5 DnD) ---------- */
 function Reorderable({ items, getKey, onReorder, renderItem }) {
   const [dragIdx, setDragIdx] = useState(null);
@@ -542,6 +622,6 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 
 window.ADMIN_UI = {
   AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, GripHandle, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
-  Segmented, TagInput, Swatches, Reorderable, ReorderPanel, ListItem, BulletEditor, fileToDataURL, fmtBytes, inputStr,
+  Segmented, TagInput, Swatches, HoldReorderPills, Reorderable, ReorderPanel, ListItem, BulletEditor, fileToDataURL, fmtBytes, inputStr,
   storageReady, uploadToStorage, mdInline: renderMd,
 };

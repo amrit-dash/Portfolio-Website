@@ -9,14 +9,29 @@ function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '
 
 /* ============ WORK ============ */
 function WorkItemBody({ e, onChange }) {
-  const { Field, Input, TextArea, Btn, BulletEditor, TagInput, ToggleRow, AdminIcon } = window.ADMIN_UI;
+  const { Field, Input, TextArea, Btn, BulletEditor, TagInput, ToggleRow, AdminIcon, HoldReorderPills } = window.ADMIN_UI;
   const [roleTab, setRoleTab] = useStateWP(0);
   const hasRoles = Array.isArray(e.roles) && e.roles.length > 0;
   const set = (key, val) => onChange({ ...e, [key]: val });
 
   const setRole = (i, key, val) => onChange({ ...e, roles: e.roles.map((r, j) => j === i ? { ...r, [key]: val } : r) });
   const addRole = () => { const roles = [...(e.roles || []), { id: slug('role ' + ((e.roles || []).length + 1)), name: 'New role', date: '', bullets: [] }]; onChange({ ...e, roles }); setRoleTab(roles.length - 1); };
-  const delRole = (i) => { const roles = e.roles.filter((_, j) => j !== i); onChange({ ...e, roles }); setRoleTab(0); };
+  const delRole = (i) => {
+    const roles = e.roles.filter((_, j) => j !== i);
+    onChange({ ...e, roles });
+    setRoleTab((t) => {
+      if (!roles.length) return 0;
+      if (t === i) return Math.min(i, roles.length - 1);
+      if (t > i) return t - 1;
+      return t;
+    });
+  };
+  const reorderRoles = (next) => {
+    const activeId = e.roles[roleTab]?.id;
+    onChange({ ...e, roles: next });
+    const ni = activeId != null ? next.findIndex((r) => r.id === activeId) : roleTab;
+    setRoleTab(ni >= 0 ? ni : 0);
+  };
 
   return (
     <>
@@ -44,15 +59,20 @@ function WorkItemBody({ e, onChange }) {
 
       {hasRoles ? (
         <div style={{ marginTop: 12 }}>
-          <div className="subtabs">
-            {e.roles.map((r, i) => (
-              <span key={i} className="subtab" data-on={roleTab === i} onClick={() => setRoleTab(i)}>
+          <HoldReorderPills
+            items={e.roles}
+            getKey={(r, i) => r.id || i}
+            activeIndex={roleTab}
+            onSelect={setRoleTab}
+            onReorder={reorderRoles}
+            renderPill={(r, i) => (
+              <>
                 {r.name || 'role ' + (i + 1)}
-                <button onClick={(ev) => { ev.stopPropagation(); delRole(i); }} title="Delete sub-role">×</button>
-              </span>
-            ))}
-            <span className="subtab" onClick={addRole} style={{ borderStyle: 'dashed' }}><AdminIcon name="plus" size={12} />sub-role</span>
-          </div>
+                <button type="button" onMouseDown={(ev) => ev.stopPropagation()} onClick={(ev) => { ev.stopPropagation(); delRole(i); }} title="Delete sub-role">×</button>
+              </>
+            )}
+            addNode={<span className="subtab" onClick={addRole} style={{ borderStyle: 'dashed' }}><AdminIcon name="plus" size={12} />sub-role</span>}
+          />
           {e.roles && e.roles.at(roleTab) && (
             <div className="item" style={{ background: 'var(--bg-card)' }}>
               <div className="item__bd" style={{ borderTop: 0, paddingTop: 14 }}>
@@ -60,13 +80,13 @@ function WorkItemBody({ e, onChange }) {
                   <Field label="Sub-role name"><Input value={e.roles.at(roleTab).name} onChange={(v) => setRole(roleTab, 'name', v)} /></Field>
                   <Field label="Date"><Input value={e.roles.at(roleTab).date} onChange={(v) => setRole(roleTab, 'date', v)} /></Field>
                 </div>
-                <Field label="Bullets" hint="drag pills to reorder"><BulletEditor reorderable items={e.roles.at(roleTab).bullets || []} onChange={(v) => setRole(roleTab, 'bullets', v)} /></Field>
+                <Field label="Bullets" hint="drag to reorder"><BulletEditor reorderable items={e.roles.at(roleTab).bullets || []} onChange={(v) => setRole(roleTab, 'bullets', v)} /></Field>
               </div>
             </div>
           )}
         </div>
       ) : (
-        <Field label="Bullets" hint="drag pills to reorder"><BulletEditor reorderable items={e.bullets || []} onChange={(v) => set('bullets', v)} /></Field>
+        <Field label="Bullets" hint="drag to reorder"><BulletEditor reorderable items={e.bullets || []} onChange={(v) => set('bullets', v)} /></Field>
       )}
 
       <div className="divider" />

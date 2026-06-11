@@ -1614,7 +1614,34 @@ body::before {
    color: var(--danger);
 }
 
+.subtab--armed {
+   cursor: grab;
+   user-select: none;
+   border-color: color-mix(in oklab, var(--accent) 45%, var(--line-2));
+}
+
+.subtab--dragging {
+   opacity: .45;
+   border-color: var(--accent);
+}
+
+.subtabs--drag .subtab:not(.subtab--dragging) {
+   cursor: grab;
+}
+
+.subtabs--drag .subtab.subtab--over {
+   box-shadow: 0 2px 0 var(--accent);
+}
+
+/* Card list headers — trash/chev vertically centred with title block (all breakpoints) */
+.item__hd--card .iconbtn,
+.item__hd--card .chev {
+   align-self: center;
+   flex-shrink: 0;
+}
+
 /* bullets editor */
+
 .bullet {
    --bullet-inp-h: calc(13.5px * 1.5 + 18px + 2px);
    display: flex;
@@ -4327,16 +4354,16 @@ body::before {
 
    .item__hd--card .iconbtn {
       grid-column: 4;
-      grid-row: 1;
-      align-self: start;
+      grid-row: 1 / -1;
+      align-self: center;
       width: 28px;
       height: 28px;
    }
 
    .item__hd--card .chev {
       grid-column: 5;
-      grid-row: 1;
-      align-self: start;
+      grid-row: 1 / -1;
+      align-self: center;
    }
 
    /* Slash commands panel — icon-only header action + title wrap */
