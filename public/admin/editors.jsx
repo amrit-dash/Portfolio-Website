@@ -136,7 +136,7 @@ function newImpactId() {
 }
 
 function AboutEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon, Reorderable, ReorderPanel, inputStr } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, Btn, AdminIcon, Reorderable, ReorderPanel, inputStr } = window.ADMIN_UI;
   const { ImageSlot } = window.ADMIN_CROP;
   const a = content.about;
   const meta = Array.isArray(a.meta) ? a.meta : [];
@@ -166,7 +166,7 @@ function AboutEditor({ content, setAt }) {
         </Panel>
       </div>
       <Panel title="Bio copy">
-        <Field label="Heading" hint="<em> for italic accent"><TextArea rows={2} value={a.heading} onChange={(v) => setAt('about.heading', v)} /></Field>
+        <Field label="Heading" hint="<em> for italic accent · ✨ to refine"><window.ADMIN_REFINER.RefineField label="About bio heading" context="The About section heading shown above the bio intro paragraph." rows={2} value={a.heading} onChange={(v) => setAt('about.heading', v)} /></Field>
         <Field label="Intro paragraph" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="About intro paragraph" context="The intro paragraph under the About heading." rows={2} value={a.intro} onChange={(v) => setAt('about.intro', v)} /></Field>
       </Panel>
       <Panel title="Impact timeline" sub={`${impact.length} entries · drag to reorder`}>
@@ -406,15 +406,15 @@ function CardsEditor({ content, setAt }) {
 
 /* ============ CONTACT ============ */
 function ContactEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, Input, TextArea, AdminIcon, Reorderable, inputStr } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, Input, AdminIcon, Reorderable, inputStr } = window.ADMIN_UI;
   const c = content.contact;
   const setSocial = (i, key, val) => setAt('contact.socials', c.socials.map((s, j) => j === i ? { ...s, [key]: val } : s));
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/CONTACT.SH" title="Contact & socials">Reach-me details and the social links shown in the contact window and footer.</PageHead>
       <Panel title="Message">
-        <Field label="Heading" hint="<em> accent, <br/> line break"><TextArea rows={2} value={c.heading} onChange={(v) => setAt('contact.heading', v)} /></Field>
-        <Field label="Intro paragraph"><TextArea rows={2} value={c.intro} onChange={(v) => setAt('contact.intro', v)} /></Field>
+        <Field label="Heading" hint="<em> accent, <br/> line break · ✨ to refine"><window.ADMIN_REFINER.RefineField label="Contact message heading" context="The heading shown in the contact window above the intro paragraph." rows={2} value={c.heading} onChange={(v) => setAt('contact.heading', v)} /></Field>
+        <Field label="Intro paragraph" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="Contact intro paragraph" context="The intro paragraph in the contact window beneath the heading." rows={2} value={c.intro} onChange={(v) => setAt('contact.intro', v)} /></Field>
       </Panel>
       <Panel title="Reach me at">
         <div className="row">
