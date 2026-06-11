@@ -8,6 +8,7 @@
 
 const { ALL_TOOLS, executeTool } = require('./tools');
 const { DraftSession, buildOutline } = require('./content-ops');
+const { archiveDraftSnapshot } = require('./version-history');
 const { filterToolsForMode, INBOX_SYSTEM_GUARD, wrapVisitorText } = require('./guards');
 const { persistAudit } = require('./audit');
 const {
@@ -224,6 +225,9 @@ async function runAgentTurn({
   const commitResult = await session.commit();
   if (!commitResult.ok && commitResult.reason === 'stale-precondition') {
     return { status: 409, body: { error: 'stale-draft', message: 'Draft changed during the turn — retry.' } };
+  }
+  if (commitResult.ok && commitResult.changed) {
+    await archiveDraftSnapshot({ db, FieldValue, content: session.content, source: 'agent' });
   }
 
   // Persist only the user + final-state canonical messages for this turn.

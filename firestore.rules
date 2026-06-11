@@ -16,8 +16,13 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
-    // Draft + any other content docs — owner only.
+    // Draft, draft archive, and other content docs — owner only.
     match /content/{doc} {
+      allow read, write: if isOwner();
+    }
+
+    // Published version history (ring of 3) — owner only; live site reads content/published.
+    match /content/published_versions/{versionId} {
       allow read, write: if isOwner();
     }
 

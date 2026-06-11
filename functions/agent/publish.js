@@ -3,6 +3,7 @@
    part of content, so publish never sees or touches them. */
 
 const { deepClone, firestoreSafeValue } = require('./content-ops');
+const { archiveDraftSnapshot, archivePublishedVersion } = require('./version-history');
 
 function stripKeys(content) {
   const c = deepClone(content || {});
@@ -35,6 +36,8 @@ async function saveLLMConfig(db, FieldValue, content) {
 
 async function agentPublish({ db, FieldValue, content }) {
   if (!content || typeof content !== 'object') return { ok: false, error: 'no-content' };
+  await archiveDraftSnapshot({ db, FieldValue, content, source: 'publish' });
+  await archivePublishedVersion({ db, FieldValue, content, source: 'agent' });
   await saveLLMConfig(db, FieldValue, content);
   const safe = stripKeys(content);
   await db.doc('content/published').set({ content: safe, updatedAt: FieldValue.serverTimestamp() });
