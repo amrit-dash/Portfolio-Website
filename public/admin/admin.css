@@ -1422,8 +1422,8 @@ body::before {
    padding: 0;
    border: 0;
    border-radius: 0;
-   background: transparent;
-   color: var(--fg-mute);
+   background: color-mix(in srgb, var(--bg) 52%, var(--surface) 48%);
+   color: var(--fg-dim);
    cursor: grab;
    line-height: 0;
    transition: color .14s, background .14s;
@@ -1431,18 +1431,20 @@ body::before {
 
 .reorder-panel__grip:hover {
    color: var(--accent);
-   background: color-mix(in srgb, var(--accent) 12%, transparent);
+   background: color-mix(in srgb, var(--bg) 38%, var(--surface) 62%);
 }
 
 .reorder-panel__grip:active {
    cursor: grabbing;
+   background: color-mix(in srgb, var(--bg) 28%, var(--surface) 72%);
 }
 
 .reorder-panel__sep {
    flex: 0 0 0;
    width: 0;
    align-self: stretch;
-   border-right: 1px solid var(--line);
+   border-right: 1px solid color-mix(in oklab, var(--accent) 24%, var(--line-2));
+   box-shadow: 1px 0 0 color-mix(in oklab, var(--fg) 6%, transparent);
 }
 
 .reorder-panel__body {
