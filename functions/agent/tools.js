@@ -165,8 +165,20 @@ const STRUCTURED_TOOLS = [
     parameters: { type: 'object', properties: { limit: { type: 'number' } } }, mutates: false },
   { name: 'readSettings', description: 'Read config/settings (rate limits, retention, agentDailyTurnCap).',
     parameters: { type: 'object', properties: {} }, mutates: false },
-  { name: 'readBotConfig', description: 'Non-secret bot config: active provider, models, systemPrompt, qa count, behavior — NO api keys.',
+  { name: 'readBotConfig', description: 'Non-secret bot config: active provider, models, systemPrompt preview (first 500 chars), qa count, behavior — NO api keys. Use readBotContext for the full system prompt.',
     parameters: { type: 'object', properties: {} }, mutates: false },
+  { name: 'readBotContext', description: 'Read the full AmritBot context tab: bot.systemPrompt (complete text) and bot.intro lines. Draft only — live /chat uses config/llm after publish.',
+    parameters: { type: 'object', properties: {} }, mutates: false },
+  { name: 'setBotContext', description: 'Update bot.systemPrompt and/or bot.intro in content/draft. Does not auto-publish or touch config/llm — owner must publish (or activate providers) to go live.',
+    parameters: {
+      type: 'object',
+      properties: {
+        systemPrompt: { type: 'string', description: 'Full system instruction / context text' },
+        intro: { type: 'array', items: { type: 'string' }, description: 'Intro lines shown when chat opens' },
+      },
+    },
+    mutates: true,
+  },
   { name: 'setBotBehavior', description: 'Update safe bot.behavior fields only (temperature, maxTokens, matchThreshold, tone). API keys remain blocked.',
     parameters: {
       type: 'object',
@@ -653,6 +665,53 @@ function readBotConfigSafe(content) {
   };
 }
 
+const BOT_CONTEXT_MAX_PROMPT = 32000;
+const BOT_CONTEXT_MAX_INTRO_LINES = 20;
+const BOT_CONTEXT_MAX_INTRO_LINE = 500;
+
+function readBotContextSafe(content) {
+  const bot = (content && content.bot) || {};
+  const systemPrompt = typeof bot.systemPrompt === 'string' ? bot.systemPrompt : '';
+  const intro = Array.isArray(bot.intro)
+    ? bot.intro.filter((s) => typeof s === 'string')
+    : [];
+  return {
+    systemPrompt,
+    systemPromptLength: systemPrompt.length,
+    intro,
+    qaCount: Array.isArray(bot.qa) ? bot.qa.length : 0,
+    commandCount: Array.isArray(bot.commands) ? bot.commands.length : 0,
+  };
+}
+
+function execSetBotContext(a, session) {
+  let changed = false;
+  if (typeof a.systemPrompt === 'string') {
+    const sp = a.systemPrompt.slice(0, BOT_CONTEXT_MAX_PROMPT);
+    session.content = setAtPathDirect(session.content, 'bot.systemPrompt', sp);
+    if (!session.changedPaths.includes('bot.systemPrompt')) session.changedPaths.push('bot.systemPrompt');
+    changed = true;
+  }
+  if (Array.isArray(a.intro)) {
+    const intro = a.intro
+      .filter((s) => typeof s === 'string')
+      .map((s) => s.slice(0, BOT_CONTEXT_MAX_INTRO_LINE))
+      .slice(0, BOT_CONTEXT_MAX_INTRO_LINES);
+    session.content = setAtPathDirect(session.content, 'bot.intro', intro);
+    if (!session.changedPaths.includes('bot.intro')) session.changedPaths.push('bot.intro');
+    changed = true;
+  }
+  if (!changed) return { ok: false, error: 'no-fields' };
+  session.dirty = true;
+  const ctx = readBotContextSafe(session.content);
+  return {
+    ok: true,
+    systemPromptLength: ctx.systemPromptLength,
+    introCount: ctx.intro.length,
+    hint: 'Draft updated. Use publish when the owner wants this live (copies to config/llm + content/published).',
+  };
+}
+
 async function execListInbox(a, ctx) {
   const limit = Math.min(Number(a.limit) || 20, 50);
   const snap = await ctx.db.collection('bot_questions').orderBy('at', 'desc').limit(limit).get();
@@ -1055,6 +1114,8 @@ async function executeTool(name, args, ctx) {
     getRecentVisitorActivity: () => execRecentVisitorActivity(a, ctx),
     readSettings: () => execReadSettings(ctx),
     readBotConfig: () => attachLinks({ ok: true, config: readBotConfigSafe(session.content) }, ['bot']),
+    readBotContext: () => attachLinks({ ok: true, context: readBotContextSafe(session.content) }, ['bot']),
+    setBotContext: () => attachLinks(execSetBotContext(a, session), ['bot']),
     setBotBehavior: () => execSetBotBehavior(a, session),
     readAgentLogs: () => execReadAgentLogs(a),
     refineField: () => execRefineField(a, ctx),

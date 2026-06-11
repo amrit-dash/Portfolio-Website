@@ -1169,6 +1169,11 @@ function useContent() {
     return trackDraftSave((async () => {
       if (gen !== draftSaveGenRef.current) return;
       await Store.fsSaveDraft(canonical);
+      // Re-check after the network round-trip: publish bumps draftSaveGenRef while
+      // an older in-flight save was awaiting — without this, a stale whole-doc
+      // .set() can land after ship and revert bot.systemPrompt (and other fields)
+      // via the draft listener.
+      if (gen !== draftSaveGenRef.current) return;
     })());
   }, [trackDraftSave]);
   const cancelPendingDraftSync = React.useCallback(() => {
@@ -1395,6 +1400,7 @@ function useContent() {
       // Let in-flight autosaves finish, then cancel debounced work and bump gen.
       await awaitInFlightDraftSave();
       cancelPendingDraftSync();
+      pendingRemoteRef.current = null; // drop stale listener payloads queued while a field was focused
       const snap = mergeContentSnapshot(contentRef.current);
       const pubSnap = canonicalPublishedFromDraft(snap);
       if (!snap || !pubSnap) return false;
