@@ -62,7 +62,7 @@ const GENERIC_TOOLS = [
       'Set or merge a value at a dot-path in the portfolio draft. Blocked: bot.providers*, bot.behavior*, config.*.',
       'Scope: edit only what the user asked for. Prefer the narrowest leaf path; never replace a whole array when one entry changed.',
       'Leaf updates (safest): about.impact.1.html · about.impact.1.label · projects.3.title · projects.3.desc',
-      'experience.0.company · experience.1.roles.2.name · experience.1.roles.0.bullets (pass full bullets array)',
+      'experience.0.company · experience.0.startedOn · experience.0.endedOn · experience.1.roles.2.name · experience.1.roles.0.bullets (pass full bullets array)',
       'Partial object at an index merges into that row (preserves siblings): about.impact.1 with {"html":"<p>…</p>"}',
       'projects.2 with {"title":"New name"} · experience.0 with {"desc":"…"} · experience.1.roles.0 with {"name":"BeGig"}',
       'about.impact root merge-by-label: path about.impact, value {"label":"Then","html":"<p>…</p>"} (matches label/id).',

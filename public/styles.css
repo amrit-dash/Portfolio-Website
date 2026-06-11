@@ -1296,19 +1296,28 @@ ul { margin: 0; padding: 0; list-style: none; }
   color: var(--accent);
   border-left-color: var(--accent);
 }
+.exp-tab[data-current="true"]:not([data-active="true"]) {
+  background: rgba(40, 200, 64, 0.03);
+}
 .exp-tab__name { font-weight: 500; font-size: 13px; display: block; margin-bottom: 2px; color: var(--fg); }
 .exp-tab[data-active="true"] .exp-tab__name { color: var(--accent); }
+.exp-tab__date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--fg-mute);
+  letter-spacing: .1em;
+}
 .exp-tab__dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #28c840;
-  box-shadow: 0 0 6px #28c840;
-  margin-left: 8px;
-  vertical-align: 2px;
+  box-shadow: 0 0 4px rgba(40, 200, 64, 0.55);
+  flex-shrink: 0;
 }
-.exp-tab__date { font-size: 10px; color: var(--fg-mute); letter-spacing: .1em; }
 
 .exp-detail { padding: 32px; position: relative; }
 .exp-detail__path {

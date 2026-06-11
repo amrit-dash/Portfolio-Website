@@ -104,7 +104,7 @@ function buildOutline(content) {
   const outline = {};
   const ARRAY_HINTS = {
     projects: ['id', 'title', 'cat'],
-    experience: ['id', 'company', 'role', 'short'],
+    experience: ['id', 'company', 'role', 'short', 'startedOn', 'endedOn', 'current'],
     expertise: ['id', 'title', 'icon'],
     cards: ['id', 'title', 'eyebrow'],
   };

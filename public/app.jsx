@@ -1006,7 +1006,8 @@ function ExperienceFolder() {
     current.roles.find((r) => r.id === activeRole[current.id]) || current.roles[0] :
     null;
   const displayBullets = currentRole ? currentRole.bullets : current.bullets;
-  const displayDate = currentRole ? currentRole.date : current.date;
+  const formatExpDates = (entry) => (window.SHARED_SCHEMA && window.SHARED_SCHEMA.formatExperienceDateRange(entry)) || entry.date || '';
+  const displayDate = currentRole ? currentRole.date : formatExpDates(current);
   const displayPath = currentRole ? `~/work/${current.id}/${currentRole.id}/` : `~/work/${current.id}/`;
   return (
     <section id="work" className="section">
@@ -1033,10 +1034,14 @@ function ExperienceFolder() {
                 key={e.id}
                 className="exp-tab"
                 data-active={e.id === active}
+                data-current={!!e.current}
                 onClick={() => setActive(e.id)}>
 
-                <span className="exp-tab__name">{e.short}{e.current && <span className="exp-tab__dot" aria-hidden="true" />}</span>
-                <span className="exp-tab__date">{e.date}</span>
+                <span className="exp-tab__name">{e.short}</span>
+                <span className="exp-tab__date">
+                  {e.current && <span className="exp-tab__dot" aria-hidden="true" />}
+                  {formatExpDates(e)}
+                </span>
               </button>
             )}
           </div>
