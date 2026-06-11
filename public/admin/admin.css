@@ -17,6 +17,8 @@
    --accent-raw: #c8e856;
    --accent: var(--accent-raw);
    --accent-fg: #0c0d0a;
+   --selection-bg: color-mix(in oklab, var(--accent) 35%, transparent);
+   --selection-fg: var(--fg);
    --accent-2: #ffd25a;
    --danger: #ff6b5b;
    --ok: #28c840;
@@ -106,7 +108,25 @@ ul {
 }
 
 ::selection {
-   background: color-mix(in oklab, var(--accent) 35%, transparent);
+   background: var(--selection-bg);
+   color: var(--selection-fg);
+}
+
+/* Inverted selection on filled-accent surfaces — swap fg/bg like cursor difference */
+.login__btn,
+.seg button[data-on="true"],
+.btn--primary,
+.devicebar button[data-on="true"],
+.msg.usr,
+.provrow__nm .tag,
+.tag--accent,
+.tag--vision,
+.default-seg__btn--active,
+.composer__send,
+.agentmsg--user .agentmsg__body,
+.agentchat__quickreply:hover:not(:disabled) {
+   --selection-bg: var(--accent-fg);
+   --selection-fg: var(--accent);
 }
 
 .mono {

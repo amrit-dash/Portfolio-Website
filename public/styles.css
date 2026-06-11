@@ -17,6 +17,8 @@
   --accent-raw: #c8e856;
   --accent:    var(--accent-raw);
   --accent-fg: #0c0d0a; /* text color over filled-accent surfaces */
+  --selection-bg: var(--accent);
+  --selection-fg: var(--accent-fg);
   --accent-2:  #ffd25a;
   --danger:    #ff6b5b;
   --shadow:    0 24px 60px -20px rgba(0,0,0,.7), 0 2px 0 0 rgba(255,255,255,.04) inset;
@@ -1969,7 +1971,17 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 
 /* ---------- Selection ---------- */
-::selection { background: var(--accent); color: var(--accent-fg); }
+::selection { background: var(--selection-bg); color: var(--selection-fg); }
+
+/* Inverted selection on filled-accent surfaces — swap fg/bg like cursor difference */
+.btn--primary,
+.user-msg__bubble,
+.filter-pill__close:hover,
+.folder-icon:hover .folder-icon__label,
+.folder-icon:focus-visible .folder-icon__label {
+  --selection-bg: var(--accent-fg);
+  --selection-fg: var(--accent);
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
