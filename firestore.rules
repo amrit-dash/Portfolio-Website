@@ -11,18 +11,18 @@ service cloud.firestore {
     }
 
     // Published content — the live site reads it (public); only the owner writes.
+    // Version history subcollection (ring of 3) — owner only.
     match /content/published {
       allow read: if true;
       allow write: if isOwner();
+
+      match /versions/{versionId} {
+        allow read, write: if isOwner();
+      }
     }
 
     // Draft, draft archive, and other content docs — owner only.
     match /content/{doc} {
-      allow read, write: if isOwner();
-    }
-
-    // Published version history (ring of 3) — owner only; live site reads content/published.
-    match /content/published_versions/{versionId} {
       allow read, write: if isOwner();
     }
 

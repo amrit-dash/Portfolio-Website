@@ -32,6 +32,17 @@ const LS_MODEL_CATALOG = 'amritos.modelCatalog';
 const LS_VISION_SUPPORT = 'amritos.visionSupport';
 const LS_CAPABILITIES_SUPPORT = 'amritos.capabilitiesSupport';
 const CAPABILITY_KEYS = ['vision', 'url', 'search'];
+const MAX_PUBLISHED_VERSIONS = 3;
+
+function fsTsToIso(ts) {
+  if (!ts) return null;
+  if (typeof ts.toDate === 'function') return ts.toDate().toISOString();
+  if (typeof ts.toMillis === 'function') return new Date(ts.toMillis()).toISOString();
+  if (typeof ts.seconds === 'number') return new Date(ts.seconds * 1000).toISOString();
+  if (typeof ts === 'string') return ts;
+  if (typeof ts === 'number') return new Date(ts).toISOString();
+  return null;
+}
 
 /* ---------- Default content (seed) ----------
    Data-driven sections (expertise / experience / projects / socials) are
@@ -182,8 +193,8 @@ function normalizeContent(content) {
 /* ---------- Store ---------- */
 const Store = {
   _draftAdopter: null,
-  async adoptRemoteDraft(remote) {
-    if (remote && this._draftAdopter) this._draftAdopter(remote);
+  async adoptRemoteDraft(remote, opts) {
+    if (remote && this._draftAdopter) this._draftAdopter(remote, opts);
   },
   read(key) {
     try { return JSON.parse(localStorage.getItem(key) || 'null'); }
@@ -429,19 +440,65 @@ const Store = {
     try { await window.fb.db.doc('config/console').set({ theme, accent, updatedAt: window.fb.serverTimestamp() }, { merge: true }); return true; }
     catch (e) { console.warn('[store] fsSaveConsole failed', e && e.message); return false; }
   },
-  async fsLoadDraft() {
+  _draftUpdatedAtMs(ts) {
+    if (!ts) return 0;
+    if (typeof ts.toMillis === 'function') return ts.toMillis();
+    if (typeof ts.seconds === 'number') return ts.seconds * 1000;
+    return 0;
+  },
+  async fsLoadDraftDoc() {
     if (!this.fsReady()) return null;
     try {
       const snap = await window.fb.db.doc('content/draft').get();
-      return snap.exists ? (snap.data().content || null) : null;
-    } catch (e) { console.warn('[store] fsLoadDraft failed', e && e.message); return null; }
+      if (!snap.exists) return null;
+      const d = snap.data() || {};
+      return { content: d.content || null, updatedAtMs: this._draftUpdatedAtMs(d.updatedAt) };
+    } catch (e) { console.warn('[store] fsLoadDraftDoc failed', e && e.message); return null; }
   },
-  async fsSaveDraft(content) {
+  async fsLoadDraft() {
+    const doc = await this.fsLoadDraftDoc();
+    return doc ? doc.content : null;
+  },
+  /* Autosave with updatedAt precondition — stale whole-doc writes cannot clobber
+     a newer remote draft (same pattern as agent DraftSession.commit). */
+  async fsSaveDraft(content, priorUpdatedAtMs) {
+    if (!this.fsReady()) return { ok: false, reason: 'not-ready' };
+    const canonical = mergeContentSnapshot(content);
+    if (!canonical) return { ok: false, reason: 'empty' };
+    const draftRef = window.fb.db.doc('content/draft');
+    const next = { content: clone(canonical), updatedAt: window.fb.serverTimestamp() };
+    try {
+      const prior = typeof priorUpdatedAtMs === 'number' ? priorUpdatedAtMs : 0;
+      if (prior > 0) {
+        const result = await window.fb.db.runTransaction(async (tx) => {
+          const snap = await tx.get(draftRef);
+          const curMs = snap.exists ? this._draftUpdatedAtMs((snap.data() || {}).updatedAt) : 0;
+          if (curMs && curMs !== prior) return { ok: false, reason: 'stale-precondition' };
+          tx.set(draftRef, next);
+          return { ok: true };
+        });
+        if (result.ok) await this.fsArchiveDraft(canonical, 'autosave');
+        return result;
+      }
+      await draftRef.set(next);
+      await this.fsArchiveDraft(canonical, 'autosave');
+      return { ok: true };
+    } catch (e) {
+      console.warn('[store] fsSaveDraft failed', e && e.message);
+      return { ok: false, reason: 'error', message: e && e.message };
+    }
+  },
+  async fsArchiveDraft(content, source = 'autosave') {
     if (!this.fsReady()) return;
     const canonical = mergeContentSnapshot(content);
     if (!canonical) return;
-    try { await window.fb.db.doc('content/draft').set({ content: clone(canonical), updatedAt: window.fb.serverTimestamp() }); }
-    catch (e) { console.warn('[store] fsSaveDraft failed', e && e.message); }
+    try {
+      await window.fb.db.doc('content/draft_archive').set({
+        content: clone(canonical),
+        updatedAt: window.fb.serverTimestamp(),
+        source,
+      });
+    } catch (e) { console.warn('[store] fsArchiveDraft failed', e && e.message); }
   },
   // Deep-clone content with every LLM apiKey blanked — for the PUBLIC published
   // doc, which must never carry a secret.
@@ -476,6 +533,95 @@ const Store = {
       return true;
     } catch (e) { console.warn('[store] fsSaveLLMConfig failed', e && e.message); return false; }
   },
+  async fsMergeLLMConfigPreserveKeys(strippedContent) {
+    if (!this.fsReady()) return false;
+    try {
+      const llmSnap = await window.fb.db.doc('config/llm').get();
+      const cur = llmSnap.exists ? (llmSnap.data() || {}) : {};
+      const bot = (strippedContent && strippedContent.bot) || {};
+      const prov = bot.providers || {};
+      const beh = bot.behavior || {};
+      const curBy = (cur.byProvider && typeof cur.byProvider === 'object') ? cur.byProvider : {};
+      const pubBy = (prov.byProvider && typeof prov.byProvider === 'object') ? prov.byProvider : {};
+      const mergedBy = { ...pubBy };
+      for (const id of Object.keys(curBy)) {
+        if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+        const curP = Reflect.get(curBy, id) || {};
+        const pubP = Reflect.get(mergedBy, id) || {};
+        Reflect.set(mergedBy, id, {
+          ...pubP,
+          apiKey: (typeof curP.apiKey === 'string') ? curP.apiKey : '',
+        });
+      }
+      await window.fb.db.doc('config/llm').set({
+        active: prov.active || cur.active || 'gemini',
+        byProvider: mergedBy,
+        systemPrompt: bot.systemPrompt != null ? bot.systemPrompt : (cur.systemPrompt || ''),
+        temperature: typeof beh.temperature === 'number' ? beh.temperature : (typeof cur.temperature === 'number' ? cur.temperature : 0.7),
+        maxTokens: typeof beh.maxTokens === 'number' ? beh.maxTokens : (typeof cur.maxTokens === 'number' ? cur.maxTokens : 300),
+        updatedAt: window.fb.serverTimestamp(),
+      });
+      return true;
+    } catch (e) { console.warn('[store] fsMergeLLMConfigPreserveKeys failed', e && e.message); return false; }
+  },
+  async fsArchivePublishedVersion(content, source = 'admin') {
+    if (!this.fsReady()) return null;
+    const safe = this.stripKeys(content);
+    try {
+      const col = window.fb.db.collection('content/published/versions');
+      const existing = await col.get();
+      const batch = window.fb.db.batch();
+      existing.forEach((doc) => {
+        if (doc.data().isCurrent) batch.update(doc.ref, { isCurrent: false });
+      });
+      const newRef = col.doc();
+      batch.set(newRef, {
+        content: clone(safe),
+        publishedAt: window.fb.serverTimestamp(),
+        isCurrent: true,
+        source,
+      });
+      await batch.commit();
+      const all = await col.orderBy('publishedAt', 'desc').get();
+      if (all.size > MAX_PUBLISHED_VERSIONS) {
+        const delBatch = window.fb.db.batch();
+        all.docs.slice(MAX_PUBLISHED_VERSIONS).forEach((d) => delBatch.delete(d.ref));
+        await delBatch.commit();
+      }
+      return newRef.id;
+    } catch (e) { console.warn('[store] fsArchivePublishedVersion failed', e && e.message); return null; }
+  },
+  async fsRevertToPublishedVersion(versionId) {
+    if (!this.fsReady() || !versionId) return { ok: false, error: 'no-version-id' };
+    try {
+      const versionRef = window.fb.db.doc(`content/published/versions/${versionId}`);
+      const snap = await versionRef.get();
+      if (!snap.exists) return { ok: false, error: 'version-not-found' };
+      const data = snap.data() || {};
+      const content = clone(data.content || null);
+      if (!content) return { ok: false, error: 'empty-version' };
+      const batch = window.fb.db.batch();
+      const all = await window.fb.db.collection('content/published/versions').get();
+      all.forEach((doc) => {
+        batch.update(doc.ref, { isCurrent: doc.id === versionId });
+      });
+      batch.set(window.fb.db.doc('content/published'), {
+        content,
+        updatedAt: window.fb.serverTimestamp(),
+      });
+      await batch.commit();
+      await this.fsMergeLLMConfigPreserveKeys(content);
+      return {
+        ok: true,
+        versionId,
+        content,
+        publishedAt: fsTsToIso(data.publishedAt),
+      };
+    } catch (e) {
+      console.warn('[store] fsRevertToPublishedVersion failed', e && e.message);
+      return { ok: false, error: e && e.message };
+    }
+  },
   async fsLoadPublished() {
     if (!this.fsReady()) return null;
     try { const s = await window.fb.db.doc('content/published').get(); return s.exists ? (s.data().content || s.data()) : null; }
@@ -484,10 +630,11 @@ const Store = {
   async fsPublish(content) {
     if (!this.fsReady()) return;
     try {
-      await this.fsSaveLLMConfig(content);                       // keys → private config/llm
-      const safe = this.stripKeys(content);                      // public copy carries NO keys
+      await this.fsArchiveDraft(content, 'publish');
+      await this.fsArchivePublishedVersion(content, 'admin');
+      await this.fsSaveLLMConfig(content);
+      const safe = this.stripKeys(content);
       await window.fb.db.doc('content/published').set({ content: safe, updatedAt: window.fb.serverTimestamp() });
-      // Draft is owner-only readable, so it keeps the keys for continued editing.
       await window.fb.db.doc('content/draft').set({ content: clone(content), updatedAt: window.fb.serverTimestamp() });
     } catch (e) { console.warn('[store] fsPublish failed', e && e.message); }
   },
@@ -1117,6 +1264,7 @@ function useContent() {
   }, []);
   const [publishedSnapshot, setPublishedSnapshot] = React.useState(() => mergeContentSnapshot(Store.loadPublished()));
   const [synced, setSynced] = React.useState(false); // true once Firestore draft adopted/seeded
+  const [remoteDraftNotice, setRemoteDraftNotice] = React.useState(0);
   const [agentBusy, setAgentBusyState] = React.useState(false);
   const draftTimer = React.useRef(null);
   // U14 concurrency state:
@@ -1126,9 +1274,12 @@ function useContent() {
   //    can tell our own echo from a genuine remote (agent) change.
   //  pendingRemoteRef — a remote change that arrived while a field was focused; it
   //    is adopted once focus leaves (so we never stomp the value under the cursor).
+  //  serverDraftUpdatedAtMsRef — last known Firestore content/draft updatedAt (precondition).
   const agentBusyRef = React.useRef(false);
+  const syncedRef = React.useRef(false);
   const lastJsonRef = React.useRef('');
   const pendingRemoteRef = React.useRef(null);
+  const serverDraftUpdatedAtMsRef = React.useRef(0);
   /* Debounced fsSaveDraft can still be in flight when Publish runs; bumping
      draftSaveGenRef invalidates scheduled + completing saves so a stale write
      cannot land on Firestore after ship and revert the draft via the listener. */
@@ -1138,7 +1289,11 @@ function useContent() {
   const publishCooldownUntilRef = React.useRef(0);
   const PUBLISH_LISTENER_GUARD_MS = 5000;
   const [publishing, setPublishing] = React.useState(false);
-  const [draftSaving, setDraftSaving] = React.useState(false);
+  const [draftSyncStatus, setDraftSyncStatus] = React.useState('idle'); // idle | pending | saving | saved | error
+  const draftSyncStatusRef = React.useRef('idle');
+  const savedClearTimer = React.useRef(null);
+  const queuedSyncRef = React.useRef(null);
+  const scheduleDraftSyncRef = React.useRef(null);
   const contentRef = React.useRef(content);
   const publishedSnapshotRef = React.useRef(publishedSnapshot);
   const publishedAtRef = React.useRef(publishedAt);
@@ -1147,31 +1302,93 @@ function useContent() {
   React.useEffect(() => { publishedSnapshotRef.current = publishedSnapshot; }, [publishedSnapshot]);
   React.useEffect(() => { publishedAtRef.current = publishedAt; }, [publishedAt]);
   React.useEffect(() => { draftUpdatedAtRef.current = draftUpdatedAt; }, [draftUpdatedAt]);
-  const setAgentBusy = React.useCallback((b) => { agentBusyRef.current = !!b; setAgentBusyState(!!b); }, []);
-  const syncDraftSavingFlag = React.useCallback(() => {
-    setDraftSaving(!!draftTimer.current || !!draftSaveInFlightRef.current);
+  const bumpDraftSyncStatus = React.useCallback((next) => {
+    if (savedClearTimer.current) {
+      clearTimeout(savedClearTimer.current);
+      savedClearTimer.current = null;
+    }
+    draftSyncStatusRef.current = next;
+    setDraftSyncStatus(next);
+    if (next === 'saved') {
+      savedClearTimer.current = setTimeout(() => {
+        draftSyncStatusRef.current = 'idle';
+        setDraftSyncStatus('idle');
+      }, 2500);
+    } else if (next === 'error') {
+      savedClearTimer.current = setTimeout(() => {
+        draftSyncStatusRef.current = 'idle';
+        setDraftSyncStatus('idle');
+      }, 4000);
+    }
   }, []);
+  const syncDraftSavingFlag = React.useCallback(() => {
+    const busy = !!draftTimer.current || !!draftSaveInFlightRef.current;
+    if (busy) bumpDraftSyncStatus('saving');
+    else if (draftSyncStatusRef.current === 'saving') bumpDraftSyncStatus('idle');
+  }, [bumpDraftSyncStatus]);
+  const tryFlushQueuedSync = React.useCallback(() => {
+    const next = queuedSyncRef.current;
+    if (!next) return;
+    if (!Store.fsReady() || !syncedRef.current || agentBusyRef.current || pendingRemoteRef.current) return;
+    queuedSyncRef.current = null;
+    if (scheduleDraftSyncRef.current) scheduleDraftSyncRef.current(next);
+  }, []);
+  const setAgentBusy = React.useCallback((b) => {
+    const was = agentBusyRef.current;
+    agentBusyRef.current = !!b;
+    setAgentBusyState(!!b);
+    if (was && !b) tryFlushQueuedSync();
+  }, [tryFlushQueuedSync]);
   const trackDraftSave = React.useCallback((promise) => {
     draftSaveInFlightRef.current = promise;
-    setDraftSaving(true);
+    bumpDraftSyncStatus('saving');
     promise.finally(() => {
       if (draftSaveInFlightRef.current === promise) draftSaveInFlightRef.current = null;
       syncDraftSavingFlag();
     });
     return promise;
-  }, [syncDraftSavingFlag]);
+  }, [bumpDraftSyncStatus, syncDraftSavingFlag]);
+  const handleSaveConflict = React.useCallback(async () => {
+    const remoteDoc = await Store.fsLoadDraftDoc();
+    if (!remoteDoc || !remoteDoc.content) return;
+    const merged = mergeContentSnapshot(remoteDoc.content);
+    const json = contentStateJson(merged);
+    lastJsonRef.current = json;
+    if (typeof remoteDoc.updatedAtMs === 'number' && remoteDoc.updatedAtMs > 0) {
+      serverDraftUpdatedAtMsRef.current = remoteDoc.updatedAtMs;
+    }
+    Store.saveDraft(merged);
+    setContent(merged);
+    setRemoteDraftNotice((n) => n + 1);
+  }, []);
   const runDraftSave = React.useCallback((canonical, saveGen) => {
     const gen = typeof saveGen === 'number' ? saveGen : draftSaveGenRef.current;
     return trackDraftSave((async () => {
       if (gen !== draftSaveGenRef.current) return;
-      await Store.fsSaveDraft(canonical);
-      // Re-check after the network round-trip: publish bumps draftSaveGenRef while
-      // an older in-flight save was awaiting — without this, a stale whole-doc
-      // .set() can land after ship and revert bot.systemPrompt (and other fields)
-      // via the draft listener.
+      if (!syncedRef.current || pendingRemoteRef.current) {
+        queuedSyncRef.current = canonical;
+        bumpDraftSyncStatus('pending');
+        return;
+      }
+      const prior = serverDraftUpdatedAtMsRef.current || 0;
+      const result = await Store.fsSaveDraft(canonical, prior);
       if (gen !== draftSaveGenRef.current) return;
+      if (!result || !result.ok) {
+        if (result && result.reason === 'stale-precondition') {
+          await handleSaveConflict();
+          bumpDraftSyncStatus('error');
+        } else {
+          bumpDraftSyncStatus('error');
+        }
+        return;
+      }
+      const fresh = await Store.fsLoadDraftDoc();
+      if (gen !== draftSaveGenRef.current) return;
+      if (fresh && fresh.updatedAtMs) serverDraftUpdatedAtMsRef.current = fresh.updatedAtMs;
+      bumpDraftSyncStatus('saved');
+      tryFlushQueuedSync();
     })());
-  }, [trackDraftSave]);
+  }, [trackDraftSave, handleSaveConflict, bumpDraftSyncStatus, tryFlushQueuedSync]);
   const cancelPendingDraftSync = React.useCallback(() => {
     if (draftTimer.current) {
       clearTimeout(draftTimer.current);
@@ -1200,15 +1417,16 @@ function useContent() {
   React.useEffect(() => {
     if (!window.fb || !window.fb.auth) return;
     const unsub = window.fb.auth.onAuthStateChanged(async (u) => {
-      if (!u) { setSynced(false); return; }
+      if (!u) { syncedRef.current = false; setSynced(false); return; }
       const pub = await Store.loadPublishedSnapshot();
       if (pub) setPublishedSnapshot(pub);
-      const remote = await Store.fsLoadDraft();
-      if (remote) {
-        const merged = mergeContentSnapshot(remote);
+      const remoteDoc = await Store.fsLoadDraftDoc();
+      if (remoteDoc && remoteDoc.content) {
+        const merged = mergeContentSnapshot(remoteDoc.content);
         Store.saveDraft(merged);
         setContent(merged);
         lastJsonRef.current = contentStateJson(merged);
+        if (remoteDoc.updatedAtMs) serverDraftUpdatedAtMsRef.current = remoteDoc.updatedAtMs;
         if (pub && draftMatchesPublished(merged, pub)) {
           setPublishedSnapshot(pub);
           setDirty(false);
@@ -1217,17 +1435,23 @@ function useContent() {
         }
       } else {
         // No remote draft yet — seed it from whatever we have locally.
+        serverDraftUpdatedAtMsRef.current = 0;
         setContent((cur) => {
           const canonical = mergeContentSnapshot(cur);
-          runDraftSave(canonical, draftSaveGenRef.current);
           lastJsonRef.current = contentStateJson(canonical);
           return canonical;
         });
       }
+      syncedRef.current = true;
       setSynced(true);
+      if (!remoteDoc || !remoteDoc.content) {
+        const canonical = mergeContentSnapshot(contentRef.current);
+        if (canonical) runDraftSave(canonical, draftSaveGenRef.current);
+      }
+      tryFlushQueuedSync();
     });
     return () => unsub();
-  }, []);
+  }, [runDraftSave, touchDraftUpdatedAt, tryFlushQueuedSync]);
 
   const draftDiffersFromPublished = React.useMemo(() => {
     if (!publishedSnapshot) return false;
@@ -1263,29 +1487,36 @@ function useContent() {
   // Debounced Firestore draft write (1s after the last edit) to avoid a write
   // per keystroke while still keeping the cross-device draft current.
   const scheduleDraftSync = React.useCallback((next) => {
-    if (!Store.fsReady()) return;
-    // Pause autosave while an agent turn is in flight: a debounced stale whole-doc
-    // .set() here would clobber the agent's server write (U14 / KD2).
-    if (agentBusyRef.current) return;
-    if (draftTimer.current) clearTimeout(draftTimer.current);
     const canonical = mergeContentSnapshot(next);
     if (!canonical) return;
+    bumpDraftSyncStatus('pending');
+    // Queue when cloud sync is not yet possible; flush once hydration/concurrency allows.
+    if (!Store.fsReady() || !syncedRef.current || agentBusyRef.current || pendingRemoteRef.current) {
+      queuedSyncRef.current = canonical;
+      return;
+    }
+    if (draftTimer.current) clearTimeout(draftTimer.current);
     // Record our own latest content so the live listener treats the resulting
     // snapshot as an echo, not a remote change (must match listener normalization).
     lastJsonRef.current = contentStateJson(canonical);
     const saveGen = draftSaveGenRef.current;
-    setDraftSaving(true);
     draftTimer.current = setTimeout(() => {
       draftTimer.current = null;
       if (saveGen !== draftSaveGenRef.current) { syncDraftSavingFlag(); return; }
+      if (!syncedRef.current || pendingRemoteRef.current || agentBusyRef.current) {
+        queuedSyncRef.current = canonical;
+        bumpDraftSyncStatus('pending');
+        return;
+      }
       runDraftSave(canonical, saveGen);
     }, 1000);
-  }, [runDraftSave, syncDraftSavingFlag]);
+  }, [runDraftSave, syncDraftSavingFlag, bumpDraftSyncStatus]);
+  scheduleDraftSyncRef.current = scheduleDraftSync;
 
   // U14 — adopt the agent's server-side draft writes into the open editor, and
   // keep the dedicated Agent page + floating dock in sync, WITHOUT stomping the
   // field the owner is actively editing.
-  const adoptRemoteDraft = React.useCallback((remote) => {
+  const adoptRemoteDraft = React.useCallback((remote, opts = {}) => {
     if (!remote) return;
     const merged = mergeContentSnapshot(remote);
     const json = contentStateJson(merged);
@@ -1295,11 +1526,21 @@ function useContent() {
     const pub = publishedSnapshotRef.current;
     if (pub && draftMatchesPublished(merged, pub)) {
       lastJsonRef.current = json;
+      if (typeof opts.updatedAtMs === 'number' && opts.updatedAtMs > 0) {
+        serverDraftUpdatedAtMsRef.current = opts.updatedAtMs;
+      }
       return;
     }
     lastJsonRef.current = json;
+    if (typeof opts.updatedAtMs === 'number' && opts.updatedAtMs > 0) {
+      serverDraftUpdatedAtMsRef.current = opts.updatedAtMs;
+      const iso = new Date(opts.updatedAtMs).toISOString();
+      Store.write(LS.draftUpdatedAt, iso);
+      setDraftUpdatedAt(iso);
+    }
     Store.saveDraft(merged);
     setContent(merged);
+    if (opts.notify) setRemoteDraftNotice((n) => n + 1);
   }, []);
 
   React.useEffect(() => {
@@ -1331,30 +1572,33 @@ function useContent() {
         if (json === lastJsonRef.current) {
           const pub = publishedSnapshotRef.current;
           const pubAt = publishedAtRef.current;
+          if (updatedAtMs) serverDraftUpdatedAtMsRef.current = updatedAtMs;
           if (pub && pubAt && draftMatchesPublished(remote, pub) && draftUpdatedAtRef.current !== pubAt) {
             touchDraftUpdatedAt(pubAt);
           }
           return;
         }
-        if (updatedAtMs) {
-          const iso = new Date(updatedAtMs).toISOString();
-          Store.write(LS.draftUpdatedAt, iso);
-          setDraftUpdatedAt(iso);
-        }
         // Defer adoption while a field is focused so we never replace the value
         // under the cursor; the flush interval below picks it up on blur/idle.
-        if (isEditingField()) { pendingRemoteRef.current = remote; return; }
-        adoptRemoteDraft(remote);
+        if (isEditingField()) {
+          pendingRemoteRef.current = { content: remote, updatedAtMs };
+          if (draftTimer.current) { clearTimeout(draftTimer.current); draftTimer.current = null; syncDraftSavingFlag(); }
+          if (queuedSyncRef.current) bumpDraftSyncStatus('pending');
+          return;
+        }
+        adoptRemoteDraft(remote, { updatedAtMs, notify: true });
       });
     });
     // Flush a deferred remote change once the owner stops editing.
     const flush = setInterval(() => {
       if (pendingRemoteRef.current && !isEditingField()) {
-        const r = pendingRemoteRef.current; pendingRemoteRef.current = null; adoptRemoteDraft(r);
+        const r = pendingRemoteRef.current; pendingRemoteRef.current = null;
+        adoptRemoteDraft(r.content, { updatedAtMs: r.updatedAtMs, notify: true });
+        tryFlushQueuedSync();
       }
     }, 1200);
     return () => { if (unsub) unsub(); unsubAuth(); clearInterval(flush); };
-  }, [adoptRemoteDraft]);
+  }, [adoptRemoteDraft, bumpDraftSyncStatus, syncDraftSavingFlag, tryFlushQueuedSync]);
 
   const setAt = React.useCallback((path, value) => {
     let computed;
@@ -1400,6 +1644,25 @@ function useContent() {
       const snap = mergeContentSnapshot(contentRef.current);
       const pubSnap = canonicalPublishedFromDraft(snap);
       if (!snap || !pubSnap) return false;
+      if (Store.fsReady()) {
+        const remoteDoc = await Store.fsLoadDraftDoc();
+        if (remoteDoc && remoteDoc.content) {
+          const prior = serverDraftUpdatedAtMsRef.current || 0;
+          if (remoteDoc.updatedAtMs && prior && remoteDoc.updatedAtMs > prior) {
+            const remoteJson = contentStateJson(remoteDoc.content);
+            const localJson = contentStateJson(snap);
+            if (remoteJson !== localJson) {
+              const reload = typeof confirm === 'function' && confirm(
+                'Draft was updated on another device. Load the remote draft before publishing?'
+              );
+              if (reload) {
+                adoptRemoteDraft(remoteDoc.content, { updatedAtMs: remoteDoc.updatedAtMs, notify: true });
+                return false;
+              }
+            }
+          }
+        }
+      }
       lastJsonRef.current = contentStateJson(snap);
       Store.saveDraft(snap);
       contentRef.current = snap;
@@ -1416,6 +1679,8 @@ function useContent() {
       touchDraftUpdatedAt(ts);
       setDirty(false);
       await Store.fsPublish(snap);
+      const fresh = await Store.fsLoadDraftDoc();
+      if (fresh && fresh.updatedAtMs) serverDraftUpdatedAtMsRef.current = fresh.updatedAtMs;
       return true;
     } catch (e) {
       console.warn('[admin] publish failed', e && e.message);
@@ -1424,7 +1689,7 @@ function useContent() {
       publishInFlightRef.current = false;
       setPublishing(false);
     }
-  }, [cancelPendingDraftSync, awaitInFlightDraftSave, touchDraftUpdatedAt]);
+  }, [cancelPendingDraftSync, awaitInFlightDraftSave, touchDraftUpdatedAt, adoptRemoteDraft]);
 
   const reset = React.useCallback(() => {
     const def = Store.resetDraft();
@@ -1472,12 +1737,17 @@ function useContent() {
     return true;
   }, [cancelPendingDraftSync, publishedAt, touchDraftUpdatedAt, runDraftSave]);
 
-  /* Revert draft to the in-memory published snapshot (discard unpublished edits). */
-  const discardDraft = React.useCallback(() => {
-    if (!publishedSnapshot) return false;
+  /* Revert draft to the live published snapshot (discard unpublished edits). */
+  const discardDraft = React.useCallback(async () => {
     cancelPendingDraftSync();
+    pendingRemoteRef.current = null;
+    const base = await Store.loadPublishedSnapshot();
+    if (!base) return false;
+    const pubSnap = canonicalPublishedFromDraft(base) || base;
+    setPublishedSnapshot(pubSnap);
+    publishedSnapshotRef.current = pubSnap;
     setContent((cur) => {
-      const next = clone(publishedSnapshot);
+      const next = clone(base);
       try {
         const curBy = cur && cur.bot && cur.bot.providers && cur.bot.providers.byProvider;
         const nextProv = next.bot && next.bot.providers;
@@ -1505,7 +1775,7 @@ function useContent() {
     setDirty(false);
     if (publishedAt) touchDraftUpdatedAt(publishedAt);
     return true;
-  }, [publishedSnapshot, publishedAt, touchDraftUpdatedAt, cancelPendingDraftSync, runDraftSave]);
+  }, [publishedAt, touchDraftUpdatedAt, cancelPendingDraftSync, runDraftSave]);
 
   const previewDraft = React.useCallback(() => {
     setContent((cur) => { Store.setPreview(cur); return cur; });
@@ -1521,16 +1791,58 @@ function useContent() {
     });
   }, []);
 
-  /* publish() cancels/awaits draft autosave internally — don't block the button on draftSaving. */
+  /* publish() cancels/awaits draft autosave internally — don't block the button on draft sync UI. */
   const canPublish = hasUnpublishedEdits && !publishing;
+  const draftSaving = draftSyncStatus === 'pending' || draftSyncStatus === 'saving';
+
+  const revertToPublishedVersion = React.useCallback(async (versionId) => {
+    const result = await Store.fsRevertToPublishedVersion(versionId);
+    if (!result || !result.ok) return false;
+    const pubSnap = canonicalPublishedFromDraft(result.content) || result.content;
+    const ts = result.publishedAt || new Date().toISOString();
+    publishedSnapshotRef.current = pubSnap;
+    publishedAtRef.current = ts;
+    setPublishedSnapshot(pubSnap);
+    setPublishedAt(ts);
+    Store.publish(pubSnap);
+    Store.write('amritos.publishedAt', ts);
+    return true;
+  }, []);
 
   return {
     content, setAt, replace, publish, reset, discardDraft, syncDraftFromPublished, previewDraft,
     dirty, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, draftUpdatedAt,
-    publishedSnapshot, publishedAt, setDirty, synced,
+    publishedSnapshot, publishedAt, setDirty, synced, remoteDraftNotice,
     saveLLMConfig, agentBusy, setAgentBusy, adoptRemoteDraft,
-    publishing, draftSaving, canPublish,
+    publishing, draftSaving, draftSyncStatus, canPublish, revertToPublishedVersion,
   };
+}
+
+function useVersionHistory(synced) {
+  const [draftArchive, setDraftArchive] = React.useState(null);
+  const [publishedVersions, setPublishedVersions] = React.useState([]);
+
+  React.useEffect(() => {
+    if (!synced || !Store.fsReady()) {
+      setDraftArchive(null);
+      setPublishedVersions([]);
+      return undefined;
+    }
+    const unsubs = [
+      window.fb.db.doc('content/draft_archive').onSnapshot(
+        (snap) => setDraftArchive(snap.exists ? { id: snap.id, ...snap.data() } : null),
+        () => setDraftArchive(null),
+      ),
+      window.fb.db.collection('content/published/versions').orderBy('publishedAt', 'desc').limit(MAX_PUBLISHED_VERSIONS)
+        .onSnapshot(
+          (snap) => setPublishedVersions(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+          () => setPublishedVersions([]),
+        ),
+    ];
+    return () => unsubs.forEach((u) => { try { u(); } catch (e) { /* noop */ } });
+  }, [synced]);
+
+  return { draftArchive, publishedVersions };
 }
 
 /* ---------- Analytics hook (real-time, Firestore-backed) ----------
@@ -1662,6 +1974,6 @@ function useAnalytics() {
 }
 
 window.ADMIN_STORE = {
-  Store, buildDefaultContent, useContent, useAnalytics, LLM_PROVIDERS, LS,
-  contentFingerprint, draftMatchesPublished, canonicalPublishedFromDraft,
+  Store, buildDefaultContent, useContent, useAnalytics, useVersionHistory, LLM_PROVIDERS, LS,
+  contentFingerprint, draftMatchesPublished, canonicalPublishedFromDraft, fsTsToIso, MAX_PUBLISHED_VERSIONS,
 };

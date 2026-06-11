@@ -66,14 +66,14 @@ async function archiveDraftSnapshot({ db, FieldValue, content, source = 'autosav
 }
 
 async function clearCurrentPublishedVersions(db, batch) {
-  const existing = await db.collection('content/published_versions').get();
+  const existing = await db.collection('content/published/versions').get();
   existing.forEach((doc) => {
     if (doc.data().isCurrent) batch.update(doc.ref, { isCurrent: false });
   });
 }
 
 async function trimPublishedVersions(db, max = MAX_PUBLISHED_VERSIONS) {
-  const all = await db.collection('content/published_versions').orderBy('publishedAt', 'desc').get();
+  const all = await db.collection('content/published/versions').orderBy('publishedAt', 'desc').get();
   if (all.size <= max) return;
   const batch = db.batch();
   all.docs.slice(max).forEach((d) => batch.delete(d.ref));
@@ -85,7 +85,7 @@ async function archivePublishedVersion({ db, FieldValue, content, source = 'admi
   const safe = stripKeys(content);
   const batch = db.batch();
   await clearCurrentPublishedVersions(db, batch);
-  const newRef = db.collection('content/published_versions').doc();
+  const newRef = db.collection('content/published/versions').doc();
   batch.set(newRef, {
     content: firestoreSafeValue(safe),
     publishedAt: FieldValue.serverTimestamp(),
@@ -99,7 +99,7 @@ async function archivePublishedVersion({ db, FieldValue, content, source = 'admi
 
 async function revertToPublishedVersion({ db, FieldValue, versionId }) {
   if (!versionId) return { ok: false, error: 'no-version-id' };
-  const versionRef = db.doc(`content/published_versions/${versionId}`);
+  const versionRef = db.doc(`content/published/versions/${versionId}`);
   const snap = await versionRef.get();
   if (!snap.exists) return { ok: false, error: 'version-not-found' };
   const data = snap.data() || {};
@@ -107,7 +107,7 @@ async function revertToPublishedVersion({ db, FieldValue, versionId }) {
   if (!content) return { ok: false, error: 'empty-version' };
 
   const batch = db.batch();
-  const all = await db.collection('content/published_versions').get();
+  const all = await db.collection('content/published/versions').get();
   all.forEach((doc) => {
     batch.update(doc.ref, { isCurrent: doc.id === versionId });
   });

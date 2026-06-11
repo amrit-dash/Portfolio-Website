@@ -326,10 +326,22 @@ function AnalyticsPage({ analytics, onReset }) {
 }
 
 /* ---------- Sync & deploy ---------- */
-function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, onPublish, onSyncFromPublished, onDiscard, onPreview, canPublish, publishing }) {
+function formatHistoryTime(ts) {
+  const iso = window.ADMIN_STORE.fsTsToIso(ts);
+  return iso ? new Date(iso).toLocaleString() : '—';
+}
+
+function SyncPage({
+  publishedAt, draftUpdatedAt, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished,
+  publishedSnapshot, draftArchive, publishedVersions, onPublish, onSyncFromPublished, onDiscard,
+  onPreview, onRevertVersion, canPublish, publishing, revertingVersionId,
+}) {
   const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
   const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) || 'amrit-dash-portfolio';
   const consoleHref = (path) => `https://console.firebase.google.com/project/${projectId}/${path}`;
+  const draftSavedAt = draftArchive && draftArchive.updatedAt
+    ? formatHistoryTime(draftArchive.updatedAt)
+    : (draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString() : 'not saved yet');
   const draftStatus = !publishedSnapshot
     ? 'no published snapshot yet'
     : draftDiffersFromPublished
@@ -337,16 +349,70 @@ function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDif
       : 'matches live site';
   const canSync = showSyncFromLive;
   const canDiscard = hasUnpublishedEdits && !!publishedSnapshot;
+
+  const handleRevert = (version) => {
+    if (!version || version.isCurrent || !onRevertVersion) return;
+    const when = formatHistoryTime(version.publishedAt);
+    if (!confirm(`Deploy the published snapshot from ${when}? The live site will switch to this version. No new history entry is created.`)) return;
+    onRevertVersion(version.id);
+  };
+
   return (
     <div className="canvas--narrow">
       <PageHead eyebrow="/SYSTEM.SYNC" title="Sync & deploy">How the dashboard talks to the live site — you edit a private draft, then Publish promotes it to the snapshot the live site reads in real time. Content, media, keys and analytics all live in Firebase.</PageHead>
 
-      <Panel title="Publish state">
+      <Panel title="Draft snapshot" sub="latest archived autosave">
         <div className="bars">
-          <div className="barrow" style={{ gridTemplateColumns: '160px 1fr auto' }}><span className="mono" style={{ color: 'var(--fg-mute)' }}>DRAFT</span><span>{draftStatus}</span><span className={'dirty' + (draftDiffersFromPublished ? '' : ' saved')}><span className="dot" />{draftDiffersFromPublished ? (hasUnpublishedEdits ? 'dirty' : 'out of sync') : 'clean'}</span></div>
-          <div className="barrow" style={{ gridTemplateColumns: '160px 1fr auto' }}><span className="mono" style={{ color: 'var(--fg-mute)' }}>PUBLISHED</span><span>{publishedAt ? new Date(publishedAt).toLocaleString() : 'never published'}</span></div>
+          <div className="barrow" style={{ gridTemplateColumns: '1fr auto auto' }}>
+            <span>Last saved draft</span>
+            <span className="mono" style={{ fontSize: 12, color: 'var(--fg-mute)' }}>{draftSavedAt}</span>
+            <span className={'dirty' + (draftDiffersFromPublished ? '' : ' saved')}><span className="dot" />{draftDiffersFromPublished ? (hasUnpublishedEdits ? 'dirty' : 'out of sync') : 'clean'}</span>
+          </div>
         </div>
-        <div className="divider" />
+        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>{draftStatus}</p>
+      </Panel>
+
+      <Panel title="Published versions" sub="last 3 retained · newest first">
+        {publishedVersions.length === 0 ? (
+          <p className="helptext" style={{ margin: 0 }}>No version history yet — publish to create the first archived snapshot.</p>
+        ) : (
+          <div className="bars">
+            {publishedVersions.map((version) => (
+              <div className="barrow" key={version.id} style={{ gridTemplateColumns: '1fr auto auto' }}>
+                <span>
+                  {version.isCurrent ? (
+                    <span style={{ color: 'var(--accent)' }}><b>Currently deployed</b></span>
+                  ) : (
+                    <span className="helptext">Historical snapshot</span>
+                  )}
+                  {version.source && (
+                    <span className="mono helptext" style={{ marginLeft: 8, fontSize: 10 }}>{version.source}</span>
+                  )}
+                </span>
+                <span className="mono" style={{ fontSize: 12, color: 'var(--fg-mute)' }}>{formatHistoryTime(version.publishedAt)}</span>
+                {version.isCurrent ? (
+                  <span className="helptext" style={{ fontSize: 11 }}>live</span>
+                ) : (
+                  <Btn
+                    sm
+                    kind="ghost"
+                    icon="reset"
+                    disabled={!!revertingVersionId}
+                    onClick={() => handleRevert(version)}
+                  >
+                    {revertingVersionId === version.id ? 'Reverting…' : 'Revert'}
+                  </Btn>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
+          Revert switches the live site to a previous snapshot and marks it as currently deployed. It does not add a new history entry — publish again when you want a fresh snapshot at the top.
+        </p>
+      </Panel>
+
+      <Panel title="Deploy actions">
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
           <Btn kind="primary" icon="publish" onClick={onPublish} disabled={!canPublish}>{publishing ? 'Publishing…' : 'Publish to site'}</Btn>
@@ -359,15 +425,16 @@ function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDif
           )}
         </div>
         <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
+          Live site last updated: {publishedAt ? new Date(publishedAt).toLocaleString() : 'never published'}.
           {!publishedSnapshot
-            ? 'Publish at least once to create a live snapshot you can sync from.'
+            ? ' Publish at least once to create a live snapshot you can sync from.'
             : canDiscard && canSync
-              ? 'Discard drops unpublished edits and restores the last published snapshot. Sync reloads from the live site when the draft diverged from what visitors see.'
+              ? ' Discard drops unpublished edits and restores the last published snapshot. Sync reloads from the live site when the draft diverged from what visitors see.'
               : canSync
-                ? 'Sync replaces your entire draft with the live published snapshot — unpublished edits are lost. Use this when the draft diverged or is missing content visitors already see.'
+                ? ' Sync replaces your entire draft with the live published snapshot — unpublished edits are lost.'
                 : canDiscard
-                  ? 'Discard drops unpublished edits and restores the last published snapshot.'
-                  : 'Draft matches the live published snapshot — nothing to sync.'}
+                  ? ' Discard drops unpublished edits and restores the last published snapshot.'
+                  : ' Draft matches the live published snapshot — nothing to sync.'}
         </p>
       </Panel>
 
@@ -392,7 +459,9 @@ function SyncPage({ publishedAt, hasUnpublishedEdits, showSyncFromLive, draftDif
         <div className="bars">
           {[
             ['content/draft', 'Firestore', 'in-progress edits, autosaved on every change', 'firestore/data/content/draft'],
+            ['content/draft_archive', 'Firestore', 'single latest draft archive (overwritten on save/publish)', 'firestore/data/content/draft_archive'],
             ['content/published', 'Firestore', 'the snapshot the live site reads in real time', 'firestore/data/content/published'],
+            ['content/published/versions', 'Firestore', 'ring of 3 published snapshots for revert', 'firestore/data/content/published/versions'],
             ['config/llm · config/agent', 'Firestore', 'bot + agent provider keys — owner-locked rules, server-read only', 'firestore/data/config'],
             ['events · stats/global · stats_daily', 'Firestore', 'visitor analytics — counters, daily buckets, recent feed', 'firestore/data/stats'],
             ['media (images, CV PDFs)', 'Storage', 'uploaded assets; the field stores the download URL', 'storage'],
@@ -540,18 +609,22 @@ const NAV = [
 
 const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', sync: 'Sync & deploy' };
 
-// Shown while debounced / in-flight draft writes sync to Firestore — same slot as inbox triage.
-function DraftSavingIndicator({ saving, placement = 'sidebar' }) {
-  if (!saving) return null;
+// Draft sync status in the sidebar/topbar — same slot as inbox triage (pending → saving → saved/error).
+function DraftSavingIndicator({ status, placement = 'sidebar' }) {
+  if (!status || status === 'idle') return null;
+  const spinning = status === 'pending' || status === 'saving';
+  const label = spinning ? 'Saving…' : status === 'saved' ? 'Saved' : status === 'error' ? 'Save conflict — refreshed' : '';
   return (
-    <div className={'inboxrun inboxrun--status inboxrun--' + placement} role="status" aria-live="polite">
-      <span className="inboxrun__spin" />
-      <span className="inboxrun__t">Saving…</span>
+    <div className={'inboxrun inboxrun--status inboxrun--' + placement + (status === 'saved' ? ' inboxrun--ok' : '') + (status === 'error' ? ' inboxrun--err' : '')} role="status" aria-live="polite">
+      {spinning && <span className="inboxrun__spin" />}
+      {status === 'saved' && <span className="inboxrun__ico" aria-hidden="true">✓</span>}
+      {status === 'error' && <span className="inboxrun__ico inboxrun__ico--err" aria-hidden="true">!</span>}
+      <span className="inboxrun__t">{label}</span>
     </div>
   );
 }
 
-function Sidebar({ route, go, content, draftSaving, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
+function Sidebar({ route, go, content, draftSyncStatus, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
   return (
     <aside className={'side' + (open ? ' side--open' : '')}>
@@ -583,7 +656,7 @@ function Sidebar({ route, go, content, draftSaving, onLogout, open, onClose, adm
         ))}
       </nav>
       {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} placement="sidebar" />}
-      <DraftSavingIndicator saving={draftSaving} placement="sidebar" />
+      <DraftSavingIndicator status={draftSyncStatus} placement="sidebar" />
       <div className="side__foot">
         <div className="side__user">
           <span className="side__avatar">AD</span>
@@ -701,7 +774,20 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, publishedAt, saveLLMConfig, setAgentBusy, publishing, draftSaving, canPublish } = window.ADMIN_STORE.useContent();
+  const [revertingVersionId, setRevertingVersionId] = useAState(null);
+  const {
+    content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft,
+    hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot,
+    publishedAt, draftUpdatedAt, saveLLMConfig, setAgentBusy, publishing, draftSyncStatus,
+    canPublish, remoteDraftNotice, synced, revertToPublishedVersion,
+  } = window.ADMIN_STORE.useContent();
+  const { draftArchive, publishedVersions } = window.ADMIN_STORE.useVersionHistory(synced);
+  useAEffect(() => {
+    if (!remoteDraftNotice) return;
+    setFlash('Draft updated on another device');
+    const t = setTimeout(() => setFlash(null), 2800);
+    return () => clearTimeout(t);
+  }, [remoteDraftNotice]);
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
@@ -740,14 +826,31 @@ function AdminApp() {
     window.ADMIN_STORE.Store.clearPreview();
     setFlash('Draft synced from live site ✓'); setTimeout(() => setFlash(null), 2800);
   };
-  const doDiscard = () => {
+  const doDiscard = async () => {
     if (!hasUnpublishedEdits || !publishedSnapshot) return;
     if (!confirm('Discard all unpublished changes and revert the draft to the last published snapshot?')) return;
-    if (discardDraft()) {
+    const ok = await discardDraft();
+    if (ok) {
       window.ADMIN_STORE.Store.clearPreview();
       if (preview) setPreviewMode('published');
       setFlash('Draft changes discarded ✓');
       setTimeout(() => setFlash(null), 2600);
+    }
+  };
+  const doRevertVersion = async (versionId) => {
+    if (!versionId || revertingVersionId) return;
+    setRevertingVersionId(versionId);
+    try {
+      const ok = await revertToPublishedVersion(versionId);
+      if (!ok) {
+        setFlash('Revert failed — try again');
+        setTimeout(() => setFlash(null), 2800);
+        return;
+      }
+      setFlash('Live site reverted ✓');
+      setTimeout(() => setFlash(null), 2600);
+    } finally {
+      setRevertingVersionId(null);
     }
   };
 
@@ -770,7 +873,26 @@ function AdminApp() {
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
       case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} publish={publish} canPublish={canPublish} publishing={publishing} />;
-      case 'sync': return <SyncPage publishedAt={publishedAt} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} draftDiffersFromPublished={draftDiffersFromPublished} publishedSnapshot={publishedSnapshot} onPublish={doPublish} onSyncFromPublished={doSyncFromPublished} onDiscard={doDiscard} onPreview={() => openPreview('draft')} canPublish={canPublish} publishing={publishing} />;
+      case 'sync': return (
+        <SyncPage
+          publishedAt={publishedAt}
+          draftUpdatedAt={draftUpdatedAt}
+          hasUnpublishedEdits={hasUnpublishedEdits}
+          showSyncFromLive={showSyncFromLive}
+          draftDiffersFromPublished={draftDiffersFromPublished}
+          publishedSnapshot={publishedSnapshot}
+          draftArchive={draftArchive}
+          publishedVersions={publishedVersions}
+          onPublish={doPublish}
+          onSyncFromPublished={doSyncFromPublished}
+          onDiscard={doDiscard}
+          onPreview={() => openPreview('draft')}
+          onRevertVersion={doRevertVersion}
+          canPublish={canPublish}
+          publishing={publishing}
+          revertingVersionId={revertingVersionId}
+        />
+      );
       default: return <Overview content={content} analytics={analytics} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} canPublish={canPublish} publishing={publishing} />;
     }
   };
@@ -778,7 +900,7 @@ function AdminApp() {
   return (
     <div className="shell">
       <div className="nav-scrim" data-open={navOpen} onClick={() => setNavOpen(false)} />
-      <Sidebar route={route} go={go} content={content} draftSaving={draftSaving} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
+      <Sidebar route={route} go={go} content={content} draftSyncStatus={draftSyncStatus} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
         adminTheme={adminTheme} setAdminTheme={setAdminTheme} adminAccent={adminAccent} setAdminAccent={setAdminAccent} />
       <div className="main">
         <div className="topbar">
@@ -786,7 +908,7 @@ function AdminApp() {
           <span className="topbar__crumb">amrit.os / <b>{Reflect.get(TITLES, route) || route}</b></span>
           <span className="topbar__spacer" />
           {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} placement="topbar" />}
-          <DraftSavingIndicator saving={draftSaving} placement="topbar" />
+          <DraftSavingIndicator status={draftSyncStatus} placement="topbar" />
           {flash
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + ((hasUnpublishedEdits || draftDiffersFromPublished) ? '' : ' saved')}><span className="dot" />{hasUnpublishedEdits ? 'Draft · unpublished changes' : (draftDiffersFromPublished ? 'Draft · out of sync with live' : 'All changes published')}</span>}

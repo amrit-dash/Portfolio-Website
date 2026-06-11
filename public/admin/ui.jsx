@@ -305,17 +305,44 @@ function Segmented({ value, options, onChange }) {
 }
 
 /* Tag / multi-value input */
-function TagInput({ value = [], onChange, placeholder = 'Add tag + Enter' }) {
+function TagInput({ value = [], onChange, placeholder = 'Add tag + Enter', reorderable = false }) {
   const [draft, setDraft] = useState('');
-  const add = () => { const t = draft.trim(); if (t && !value.includes(t)) onChange([...value, t]); setDraft(''); };
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+  const list = Array.isArray(value) ? value : [];
+  const add = () => { const t = draft.trim(); if (t && !list.includes(t)) onChange([...list, t]); setDraft(''); };
+
+  const clearDrag = () => { setDragIdx(null); setOverIdx(null); };
+
+  const handleDrop = (to) => {
+    if (!reorderable || dragIdx === null || dragIdx === to) { clearDrag(); return; }
+    const next = list.slice();
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+    clearDrag();
+  };
+
   return (
     <div className="tags" onClick={(e) => { if (e.target.classList.contains('tags')) e.currentTarget.querySelector('input').focus(); }}>
-      {value.map((t, i) => (
-        <span key={i} className="tag">{t}<button type="button" onClick={() => onChange(value.filter((_, j) => j !== i))}>×</button></span>
+      {list.map((t, i) => (
+        <span key={t + ':' + i}
+          className={'tag' + (reorderable && dragIdx === i ? ' dragging' : '') + (reorderable && overIdx === i && dragIdx !== null && dragIdx !== i ? ' dragover' : '')}
+          onDragOver={reorderable ? (e) => { e.preventDefault(); setOverIdx(i); } : undefined}
+          onDrop={reorderable ? (e) => { e.preventDefault(); handleDrop(i); } : undefined}>
+          {reorderable && (
+            <span className="tag__grip" draggable
+              onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(i)); } catch (err) {} }}
+              onDragEnd={clearDrag}
+              title="Drag to reorder"><AdminIcon name="gripH" size={10} /></span>
+          )}
+          {t}
+          <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))}>×</button>
+        </span>
       ))}
       <input value={draft} placeholder={placeholder}
         onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } else if (e.key === 'Backspace' && !draft && value.length) onChange(value.slice(0, -1)); }}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } else if (e.key === 'Backspace' && !draft && list.length) onChange(list.slice(0, -1)); }}
         onBlur={add} />
     </div>
   );
@@ -405,16 +432,32 @@ function ListItem({ gripProps, num, thumb, icon, title, sub, open, onToggle, onD
 }
 
 /* Bullet list editor */
-function BulletEditor({ items = [], onChange, placeholder = 'Bullet point' }) {
+function BulletEditor({ items = [], onChange, placeholder = 'Bullet point', reorderable = false }) {
+  const list = Array.isArray(items) ? items : [];
+  const setItem = (i, val) => { const n = list.slice(); n[i] = val; onChange(n); };
+  const removeItem = (i) => onChange(list.filter((_, j) => j !== i));
+
+  const renderBullet = (b, i, gripProps) => (
+    <div className="bullet">
+      {reorderable && gripProps && (
+        <span className="item__grip grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder">
+          <AdminIcon name="grip" size={16} />
+        </span>
+      )}
+      <input className="inp" value={b} placeholder={placeholder} onChange={(e) => setItem(i, e.target.value)} />
+      <span className="iconbtn iconbtn--danger" onClick={() => removeItem(i)} title="Remove"><AdminIcon name="x" size={13} /></span>
+    </div>
+  );
+
   return (
     <div>
-      {items.map((b, i) => (
-        <div key={i} className="bullet">
-          <input className="inp" value={b} placeholder={placeholder} onChange={(e) => { const n = items.slice(); n[i] = e.target.value; onChange(n); }} />
-          <span className="iconbtn iconbtn--danger" onClick={() => onChange(items.filter((_, j) => j !== i))} title="Remove"><AdminIcon name="x" size={13} /></span>
-        </div>
-      ))}
-      <Btn sm icon="plus" kind="ghost" onClick={() => onChange([...items, ''])}>Add point</Btn>
+      {reorderable ? (
+        <Reorderable items={list} getKey={(_, i) => i} onReorder={onChange}
+          renderItem={(b, i, { gripProps }) => renderBullet(b, i, gripProps)} />
+      ) : (
+        list.map((b, i) => <React.Fragment key={i}>{renderBullet(b, i)}</React.Fragment>)
+      )}
+      <Btn sm icon="plus" kind="ghost" onClick={() => onChange([...list, ''])}>Add point</Btn>
     </div>
   );
 }
