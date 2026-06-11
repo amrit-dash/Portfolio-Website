@@ -902,13 +902,14 @@ function AboutWindow({ cvUrl, cvVariant, cvFileName, onCvDownloaded }) {
           <div className="about-grid">
             <div>
               <div className="about-photo-stack" data-reveal data-reveal-type="scale">
-                {photoStamp ? (
-                  <div className="about-stamp-header">
-                    <span className="about-stamp-label">{photoStamp}</span>
-                    <span className="about-stamp-rule" aria-hidden="true" />
-                  </div>
-                ) : null}
                 <div className="about-photo">
+                  {photoStamp ? (
+                    <div className="about-photo-stamp">
+                      <span className="about-photo-stamp__bracket" aria-hidden="true">[</span>
+                      <span className="about-photo-stamp__label">{photoStamp}</span>
+                      <span className="about-photo-stamp__bracket" aria-hidden="true">]</span>
+                    </div>
+                  ) : null}
                   <img src={a.photo || 'assets/about-photo.jpg'} alt="Amrit Dash" />
                 </div>
               </div>
@@ -1051,8 +1052,8 @@ function ExperienceFolder() {
 
                 <span className="exp-tab__name">{e.short}</span>
                 <span className="exp-tab__date">
-                  {e.current && <span className="exp-tab__dot" aria-hidden="true" />}
                   {formatExpDates(e)}
+                  {e.current && <span className="exp-tab__dot" aria-hidden="true" />}
                 </span>
               </button>
             )}
