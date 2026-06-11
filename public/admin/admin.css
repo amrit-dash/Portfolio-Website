@@ -955,36 +955,26 @@ body::before {
    border-radius: 6px;
    background: var(--bg-card);
    color: var(--fg-dim);
-   transition: border-color .15s, opacity .15s, box-shadow .15s;
+   transition: border-color .15s, opacity .15s, box-shadow .15s, background .15s;
 }
 
-.tag:has(.tag__grip) {
-   gap: 4px;
-   padding: 3px 6px 3px 4px;
+.tag--reorder {
+   cursor: grab;
+   background: color-mix(in srgb, var(--accent) 10%, transparent);
+   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
-.tag.dragging {
+.tag--reorder:active {
+   cursor: grabbing;
+}
+
+.tag--reorder.dragging {
    opacity: .55;
    border-color: var(--accent);
 }
 
-.tag.dragover {
+.tag--reorder.dragover {
    box-shadow: -2px 0 0 var(--accent);
-}
-
-.tag__grip {
-   color: var(--fg-mute);
-   cursor: grab;
-   display: grid;
-   place-items: center;
-   padding: 2px 1px;
-   margin: -1px 0;
-   line-height: 0;
-   flex-shrink: 0;
-}
-
-.tag__grip:active {
-   cursor: grabbing;
 }
 
 .tag b {

@@ -364,20 +364,21 @@ function TagInput({ value = [], onChange, placeholder = 'Add tag + Enter', reord
   };
 
   return (
-    <div className="tags" onClick={(e) => { if (e.target.classList.contains('tags')) e.currentTarget.querySelector('input').focus(); }}>
+    <div className={'tags' + (reorderable ? ' tags--reorder' : '')} onClick={(e) => { if (e.target.classList.contains('tags')) e.currentTarget.querySelector('input').focus(); }}>
       {list.map((t, i) => (
         <span key={t + ':' + i}
-          className={'tag' + (reorderable && dragIdx === i ? ' dragging' : '') + (reorderable && overIdx === i && dragIdx !== null && dragIdx !== i ? ' dragover' : '')}
+          className={'tag' + (reorderable ? ' tag--reorder' : '') + (reorderable && dragIdx === i ? ' dragging' : '') + (reorderable && overIdx === i && dragIdx !== null && dragIdx !== i ? ' dragover' : '')}
+          draggable={reorderable || undefined}
+          title={reorderable ? 'Drag to reorder' : undefined}
+          onDragStart={reorderable ? (e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(i)); } catch (err) {} } : undefined}
+          onDragEnd={reorderable ? clearDrag : undefined}
           onDragOver={reorderable ? (e) => { e.preventDefault(); setOverIdx(i); } : undefined}
           onDrop={reorderable ? (e) => { e.preventDefault(); handleDrop(i); } : undefined}>
-          {reorderable && (
-            <span className="tag__grip" draggable
-              onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(i)); } catch (err) {} }}
-              onDragEnd={clearDrag}
-              title="Drag to reorder"><AdminIcon name="gripH" size={10} /></span>
-          )}
           {t}
-          <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))}>×</button>
+          <button type="button" draggable={false}
+            onMouseDown={(e) => e.stopPropagation()}
+            onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onClick={() => onChange(list.filter((_, j) => j !== i))}>×</button>
         </span>
       ))}
       <input value={draft} placeholder={placeholder}
