@@ -1055,8 +1055,8 @@ function ExperienceFolder() {
 
                 <span className="exp-tab__name">{e.short}</span>
                 <span className="exp-tab__date">
-                  {formatExpDates(e)}
                   {e.current && <span className="exp-tab__dot" aria-hidden="true" />}
+                  {formatExpDates(e)}
                 </span>
               </button>
             )}
