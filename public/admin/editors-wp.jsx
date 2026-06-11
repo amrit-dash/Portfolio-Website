@@ -6,6 +6,9 @@
 const { useState: useStateWP } = React;
 
 function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || ('id-' + Math.random().toString(36).slice(2, 6)); }
+function formatExpDates(e) {
+  return (window.SHARED_SCHEMA && window.SHARED_SCHEMA.formatExperienceDateRange(e)) || e.date || '';
+}
 
 /* ============ WORK ============ */
 function WorkItemBody({ e, onChange }) {
@@ -43,15 +46,28 @@ function WorkItemBody({ e, onChange }) {
         <Field label="Role / title"><Input value={e.role} onChange={(v) => set('role', v)} /></Field>
         <Field label="Subtitle"><Input value={e.sub} onChange={(v) => set('sub', v)} /></Field>
       </div>
-      <Field label="Date range"><Input value={e.date} onChange={(v) => set('date', v)} /></Field>
-      <ToggleRow title="Currently working in this role" value={!!e.current} onChange={(v) => set('current', v)} />
+      <div className="row">
+        <Field label="Started on" hint="Month and year"><Input value={e.startedOn || ''} onChange={(v) => set('startedOn', v)} placeholder="Month and year" /></Field>
+        <Field label="Ended on" hint="Month and year">
+          {e.current
+            ? <Input value="Present" disabled readOnly />
+            : <Input value={e.endedOn || ''} onChange={(v) => set('endedOn', v)} placeholder="Month and year" />}
+        </Field>
+      </div>
+      <div className="togrow-wrap--current-role">
+        <ToggleRow title="Currently working in this role" value={!!e.current} onChange={(v) => {
+          const next = { ...e, current: v };
+          if (v) next.endedOn = '';
+          onChange(next);
+        }} />
+      </div>
       <Field label="Description" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="Work experience description" context="The role description paragraph shown when a work history entry is selected — scope, impact, and what was built at this company." rows={2} value={e.desc} onChange={(v) => set('desc', v)} /></Field>
 
       <div className="divider" />
       <ToggleRow title="Split into sub-roles" sub="for a progression of titles within one company (e.g. Intern → Consultant → Lead)"
         value={hasRoles}
         onChange={(on) => {
-          if (on) onChange({ ...e, roles: [{ id: slug('role 1'), name: 'Role 1', date: e.date || '', bullets: e.bullets || [] }] });
+          if (on) onChange({ ...e, roles: [{ id: slug('role 1'), name: 'Role 1', date: formatExpDates(e), bullets: e.bullets || [] }] });
           else { const { roles, ...rest } = e; onChange({ ...rest, bullets: (e.roles && e.roles[0] && e.roles[0].bullets) || e.bullets || [] }); }
         }} />
 
@@ -101,7 +117,7 @@ function WorkEditor({ content, setAt }) {
     const mapped = list.map((e, j) => j === i ? next : e);
     setAt('experience', next.current ? mapped.map((e, j) => j === i ? e : { ...e, current: false }) : mapped);
   };
-  const add = () => { const next = [...list, { id: slug('role ' + (list.length + 1)), company: 'New company', role: 'Role', sub: '', date: '', short: 'New', current: false, desc: '', bullets: [], stack: [] }]; setAt('experience', next); setOpen(next.length - 1); };
+  const add = () => { const next = [...list, { id: slug('role ' + (list.length + 1)), company: 'New company', role: 'Role', sub: '', startedOn: '', endedOn: '', short: 'New', current: false, desc: '', bullets: [], stack: [] }]; setAt('experience', next); setOpen(next.length - 1); };
 
   return (
     <div className="canvas--narrow">
@@ -113,7 +129,7 @@ function WorkEditor({ content, setAt }) {
           renderItem={(e, i, { gripProps }) => (
             <ListItem layout="card" gripProps={gripProps} icon={<AdminIcon name="work" size={15} />}
               title={<span className="item__title-inline">{e.company}{e.current && <span className="item__current-role"><span className="current-dot" aria-hidden="true" /><span className="current-role-label">Current role</span></span>}</span>}
-              sub={`${e.role} · ${e.date}${e.roles ? ' · ' + e.roles.length + ' sub-roles' : ''}`}
+              sub={`${e.role} · ${formatExpDates(e)}${e.roles ? ' · ' + e.roles.length + ' sub-roles' : ''}`}
               open={open === i} onToggle={() => setOpen(open === i ? null : i)}
               onDelete={() => { setAt('experience', list.filter((_, j) => j !== i)); setOpen(null); }}>
               <WorkItemBody e={e} onChange={(next) => update(i, next)} />

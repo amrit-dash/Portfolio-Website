@@ -1093,6 +1093,15 @@ body::before {
    color: var(--fg-mute);
 }
 
+.togrow-wrap--current-role {
+   margin-bottom: 14px;
+}
+
+.togrow-wrap--current-role .togrow {
+   padding-top: 6px;
+   padding-bottom: 12px;
+}
+
 /* segmented */
 .seg {
    display: flex;
