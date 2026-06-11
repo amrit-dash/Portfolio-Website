@@ -1385,7 +1385,47 @@ body::before {
    cursor: grabbing;
 }
 
-/* Unified reorder row panel — bullets, score chips, meta strip, impact timeline */
+/* Left reorder strip — vertical grip alongside card content (Impact timeline). */
+.item__reorder {
+   display: flex;
+   align-items: stretch;
+}
+
+.item__reorder-grip {
+   flex: 0 0 20px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   align-self: stretch;
+   margin: 0;
+   padding: 0;
+   border: 0;
+   border-right: 1px solid var(--line);
+   border-radius: 0;
+   background: transparent;
+   color: var(--fg-mute);
+   cursor: grab;
+   line-height: 0;
+   transition: color .14s, background .14s, box-shadow .14s;
+}
+
+.item__reorder-grip:hover {
+   color: var(--accent);
+   background: color-mix(in srgb, var(--accent) 10%, transparent);
+   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.item__reorder-grip:active {
+   cursor: grabbing;
+}
+
+.item__reorder-body {
+   flex: 1 1 auto;
+   min-width: 0;
+   padding: 10px 14px 16px;
+}
+
+/* Unified reorder row panel — bullets, score chips, meta strip */
 .reorder-panel {
    display: flex;
    align-items: stretch;
@@ -1515,12 +1555,6 @@ body::before {
 .reorder-panel--meta .reorder-panel__body > .field--value {
    flex: 1.5;
    min-width: 120px;
-}
-
-/* Impact timeline — multi-line refine entry */
-.reorder-panel--timeline .reorder-panel__body {
-   align-items: stretch;
-   padding: 10px 12px 14px;
 }
 
 /* Single-line bullet rows */

@@ -173,17 +173,20 @@ function AboutEditor({ content, setAt }) {
         <Reorderable items={impact} getKey={(m) => m.id || m.label}
           onReorder={(next) => setAt('about.impact', next)}
           renderItem={(m, i, { gripProps }) => (
-            <ReorderPanel gripProps={gripProps} className="reorder-panel--timeline">
-              <window.ADMIN_REFINER.RefineImpactEntry
-                label={m.label}
-                html={m.html}
-                onLabelChange={(v) => setImpact(i, 'label', v)}
-                onHtmlChange={(v) => setImpact(i, 'html', v)}
-                onAccept={(p) => setImpactEntry(i, p)}
-                onDelete={() => setAt('about.impact', impact.filter((_, j) => j !== i))}
-                context="A short label and description pair in the About impact timeline (Now / Then / Before)."
-              />
-            </ReorderPanel>
+            <div className="item__reorder">
+              <span className="item__reorder-grip" {...gripProps} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
+              <div className="item__reorder-body">
+                <window.ADMIN_REFINER.RefineImpactEntry
+                  label={m.label}
+                  html={m.html}
+                  onLabelChange={(v) => setImpact(i, 'label', v)}
+                  onHtmlChange={(v) => setImpact(i, 'html', v)}
+                  onAccept={(p) => setImpactEntry(i, p)}
+                  onDelete={() => setAt('about.impact', impact.filter((_, j) => j !== i))}
+                  context="A short label and description pair in the About impact timeline (Now / Then / Before)."
+                />
+              </div>
+            </div>
           )} />
         <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.impact', [...impact, { id: newImpactId(), label: '', html: '' }])}>Add timeline entry</Btn>
       </Panel>
