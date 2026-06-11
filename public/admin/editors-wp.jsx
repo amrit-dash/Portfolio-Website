@@ -60,17 +60,17 @@ function WorkItemBody({ e, onChange }) {
                   <Field label="Sub-role name"><Input value={e.roles.at(roleTab).name} onChange={(v) => setRole(roleTab, 'name', v)} /></Field>
                   <Field label="Date"><Input value={e.roles.at(roleTab).date} onChange={(v) => setRole(roleTab, 'date', v)} /></Field>
                 </div>
-                <Field label="Bullets"><BulletEditor items={e.roles.at(roleTab).bullets || []} onChange={(v) => setRole(roleTab, 'bullets', v)} /></Field>
+                <Field label="Bullets" hint="drag to reorder"><BulletEditor reorderable items={e.roles.at(roleTab).bullets || []} onChange={(v) => setRole(roleTab, 'bullets', v)} /></Field>
               </div>
             </div>
           )}
         </div>
       ) : (
-        <Field label="Bullets" hint=""><BulletEditor items={e.bullets || []} onChange={(v) => set('bullets', v)} /></Field>
+        <Field label="Bullets" hint="drag to reorder"><BulletEditor reorderable items={e.bullets || []} onChange={(v) => set('bullets', v)} /></Field>
       )}
 
       <div className="divider" />
-      <Field label="Tech stack" hint="multiple tags"><TagInput value={e.stack || []} onChange={(v) => set('stack', v)} placeholder="Add tech + Enter" /></Field>
+      <Field label="Tech stack" hint="drag to reorder · multiple tags"><TagInput reorderable value={e.stack || []} onChange={(v) => set('stack', v)} placeholder="Add tech + Enter" /></Field>
     </>
   );
 }

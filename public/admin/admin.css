@@ -1501,6 +1501,7 @@ body::before {
 
 .bullet .inp {
    flex: 1;
+   min-width: 0;
 }
 
 .bullet .iconbtn {
