@@ -11,7 +11,8 @@ const EXPERIENCE = [
     company: 'Contour Education',
     role: 'Automation Engineer',
     sub: 'CRM ops on Monday.com',
-    date: 'Aug 2025 — Present',
+    startedOn: 'Aug 2025',
+    endedOn: '',
     short: 'Contour Education',
     current: true,
     desc: 'Automating the full operational backbone at Contour Education — 100+ workflows live across Make.com, Zapier, n8n and Apps Script, wired around a Monday.com CRM.',
@@ -28,7 +29,8 @@ const EXPERIENCE = [
     company: 'Various Project-Based Roles',
     role: 'Freelance Software Engineer',
     sub: 'AI · Flutter · Shopify · Bots',
-    date: 'Sep 2024 — Jul 2025',
+    startedOn: 'Sep 2024',
+    endedOn: 'Jul 2025',
     short: 'Freelance',
     desc: 'Five clients, five very different problems — spanning LLM/RAG, Flutter, Shopify and WhatsApp automation.',
     roles: [
@@ -94,7 +96,8 @@ const EXPERIENCE = [
     company: 'Axelerant Technologies',
     role: 'Business Automation Engineer',
     sub: 'Internal process automation',
-    date: 'Jul 2023 — Aug 2024',
+    startedOn: 'Jul 2023',
+    endedOn: 'Aug 2024',
     short: 'Axelerant',
     desc: 'Built and maintained internal automation infrastructure across Make, Zapier, Apps Script and Zoho CRM.',
     bullets: [
@@ -110,7 +113,8 @@ const EXPERIENCE = [
     company: 'Highradius Corporation',
     role: 'Co-op Intern → Consultant → Script Automation Lead',
     sub: 'Cash App Automation · ASAP tooling',
-    date: 'Apr 2020 — Jun 2023',
+    startedOn: 'Apr 2020',
+    endedOn: 'Jun 2023',
     short: 'Highradius',
     desc: 'Three years at Highradius — progressed from a college co-op intern, to a Cash Application Automation consultant, to Script Automation Team Lead on the technical dev team.',
     roles: [
@@ -597,6 +601,15 @@ function _deepMerge(base, over) {
   return out;
 }
 
+function _coerceExperience(arr) {
+  const fn = window.SHARED_SCHEMA && window.SHARED_SCHEMA.coerceExperienceArray;
+  return fn ? fn(arr) : arr;
+}
+function _withExperienceNorm(content) {
+  if (content && Array.isArray(content.experience)) content.experience = _coerceExperience(content.experience);
+  return content;
+}
+
 /* Synchronous first paint: defaults merged with the last cached published
    snapshot (localStorage). Firestore then hydrates/streams the live copy via
    subscribeContent() below — so the page renders instantly, then updates live. */
@@ -610,7 +623,7 @@ try {
     'null'
   );
 } catch (e) { /* keep defaults */ }
-const PORTFOLIO_CONTENT = _override ? _deepMerge(PORTFOLIO_DEFAULTS, _override) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS));
+const PORTFOLIO_CONTENT = _withExperienceNorm(_override ? _deepMerge(PORTFOLIO_DEFAULTS, _override) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS)));
 
 window.PORTFOLIO_DEFAULTS = PORTFOLIO_DEFAULTS;
 window.PORTFOLIO_CONTENT  = PORTFOLIO_CONTENT;
@@ -724,7 +737,7 @@ try {
   }
   window.applyFavicon(_toned, null, _root.dataset.theme === 'light' ? 'light' : 'dark');
 } catch (e) { /* non-fatal */ }
-window.mergeContent = (over) => over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS));
+window.mergeContent = (over) => _withExperienceNorm(over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS)));
 
 /* Live content subscription. If Firebase is present (and we're not inside the
    admin's preview iframe, which is driven by localStorage), stream

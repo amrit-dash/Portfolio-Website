@@ -187,6 +187,10 @@ function normalizeContent(content) {
     const fallback = (PORTFOLIO_DEFAULTS.about && PORTFOLIO_DEFAULTS.about.impact) || [];
     about.impact = coerce(about.impact, fallback);
   }
+  if (Array.isArray(content.experience)) {
+    const coerceExp = window.SHARED_SCHEMA && window.SHARED_SCHEMA.coerceExperienceArray;
+    if (coerceExp) content.experience = coerceExp(content.experience);
+  }
   return content;
 }
 

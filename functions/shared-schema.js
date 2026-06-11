@@ -333,6 +333,48 @@
     return heal(fallback);
   }
 
+  /* Experience date range — legacy `date` string migrates to startedOn + endedOn. */
+  function parseExperienceDateRange(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return { startedOn: '', endedOn: '' };
+    const parts = s.split(/\s*[–—-]\s+/);
+    if (parts.length < 2) return { startedOn: s, endedOn: '' };
+    const startedOn = parts[0].trim();
+    let endedOn = parts.slice(1).join(' – ').trim();
+    if (/present/i.test(endedOn)) endedOn = '';
+    return { startedOn, endedOn };
+  }
+
+  function formatExperienceDateRange(entry) {
+    if (!entry || typeof entry !== 'object') return '';
+    const started = String(entry.startedOn || '').trim();
+    const ended = entry.current ? '' : String(entry.endedOn || '').trim();
+    if (started) return `${started} – ${ended || (entry.current ? 'Present' : '')}`.replace(/ – $/, '');
+    return String(entry.date || '').trim();
+  }
+
+  function normalizeExperienceEntry(entry) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+    const row = { ...entry };
+    const hasNew = String(row.startedOn || '').trim() || String(row.endedOn || '').trim();
+    if (!hasNew && String(row.date || '').trim()) {
+      const parsed = parseExperienceDateRange(row.date);
+      row.startedOn = parsed.startedOn;
+      row.endedOn = parsed.endedOn;
+      if (!row.current && parsed.endedOn === '' && /present/i.test(String(row.date))) row.current = true;
+    }
+    if (!String(row.startedOn || '').trim()) row.startedOn = '';
+    if (row.current) row.endedOn = '';
+    else if (!String(row.endedOn || '').trim()) row.endedOn = '';
+    if (hasNew || String(row.date || '').trim()) delete row.date;
+    return row;
+  }
+
+  function coerceExperienceArray(arr) {
+    if (!Array.isArray(arr)) return arr;
+    return arr.map(normalizeExperienceEntry);
+  }
+
   /* Normalize a projects row — map description→desc, coerce tags to a string[]. */
   function normalizeProjectItem(item) {
     const row = item && typeof item === 'object' && !Array.isArray(item) ? { ...item } : {};
@@ -452,6 +494,10 @@
     normalizeImpactEntry,
     validateImpactWrite,
     coerceImpactArray,
+    parseExperienceDateRange,
+    formatExperienceDateRange,
+    normalizeExperienceEntry,
+    coerceExperienceArray,
     normalizeProjectItem,
     applyProjectDefaults,
     validateProjectItem,

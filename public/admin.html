@@ -32,11 +32,11 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
+  <!-- Shared enums + agent config schema (plain JS global; before data.jsx for experience date migration) -->
+  <script src="shared-schema.js"></script>
+
   <!-- Site data (seeds the dashboard with current content) -->
   <script type="text/babel" data-presets="env,react" src="data.jsx"></script>
-
-  <!-- Shared enums + agent config schema (plain JS global; loaded by agent UI) -->
-  <script src="shared-schema.js"></script>
 
   <!-- Admin app (order matters: store → md → ui → crop → editors → bot → agent → app) -->
   <script type="text/babel" data-presets="env,react" src="admin/store.jsx"></script>
