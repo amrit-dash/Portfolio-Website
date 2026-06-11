@@ -363,7 +363,7 @@ function ExpertiseEditor({ content, setAt }) {
 
 /* ============ ACHIEVEMENTS / EDUCATION / CERTS (cards) ============ */
 function CardsEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, BulletEditor, AdminIcon, Reorderable } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, BulletEditor, AdminIcon, Reorderable, GripHandle } = window.ADMIN_UI;
   const cards = content.cards;
   const update = (i, key, val) => setAt('cards', cards.map((c, j) => j === i ? { ...c, [key]: val } : c));
   return (
@@ -394,7 +394,7 @@ function CardsEditor({ content, setAt }) {
               <Reorderable items={c.scores} getKey={(_, k) => k} onReorder={(next) => update(i, 'scores', next)}
                 renderItem={(s, k, { gripProps }) => (
                   <div className="row scorerow">
-                    <span className="item__grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
+                    <GripHandle gripProps={gripProps} />
                     <Field label="Label"><Input value={s.label} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, label: v } : x))} /></Field>
                     <Field label="Value"><Input value={s.value} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, value: v } : x))} /></Field>
                     <DelBtn onClick={() => update(i, 'scores', c.scores.filter((_, m) => m !== k))} />

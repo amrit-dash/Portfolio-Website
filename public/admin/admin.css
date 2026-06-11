@@ -800,6 +800,25 @@ body::before {
    height: 38px;
 }
 
+/* Grip column in labeled rows — invisible label spacer lines grip up with inputs */
+.field--grip {
+   flex: 0 0 auto;
+}
+
+.field--grip>label {
+   visibility: hidden;
+}
+
+.field--grip .item__grip {
+   padding: 0;
+   margin: 0;
+   width: 28px;
+   height: 38px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+}
+
 .field>label {
    font-family: var(--font-mono);
    font-size: 10.5px;
@@ -864,6 +883,7 @@ body::before {
 
 .row {
    display: flex;
+   align-items: center;
    gap: 12px;
 }
 
@@ -976,9 +996,14 @@ body::before {
    border: 0;
    color: var(--fg-mute);
    cursor: pointer;
+   display: grid;
+   place-items: center;
    font-size: 13px;
    line-height: 1;
-   padding: 0 2px;
+   width: 18px;
+   height: 18px;
+   padding: 0;
+   flex-shrink: 0;
 }
 
 .tag button:hover {
@@ -1495,8 +1520,16 @@ body::before {
    margin-bottom: 8px;
 }
 
-.bullet .grip {
+.bullet .grip,
+.bullet .item__grip {
    flex: 0 0 auto;
+   padding: 0;
+   margin: 0;
+   width: 28px;
+   height: 38px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
 }
 
 .bullet .inp {
@@ -1506,16 +1539,23 @@ body::before {
 
 .bullet .iconbtn {
    flex: 0 0 auto;
+   width: 38px;
+   height: 38px;
+}
+
+.bullet .refine__spark {
+   position: static;
+   flex: 0 0 auto;
+   width: 38px;
+   height: 38px;
 }
 
 .scorerow {
-   align-items: flex-end;
    padding: 11px 13px;
 }
 
-.scorerow > .item__grip {
-   flex: 0 0 auto;
-   margin-bottom: 2px;
+.scorerow .field {
+   margin-bottom: 0;
 }
 
 /* =====================================================
@@ -4478,7 +4518,7 @@ body::before {
    .socirow > .iconbtn {
       grid-column: 4;
       grid-row: 1;
-      align-self: start;
+      align-self: center;
    }
 
    .socirow__href {
@@ -4927,6 +4967,21 @@ body::before {
 .socirow>.miniico,
 .socirow>.iconbtn {
    flex: 0 0 auto;
+}
+
+.socirow>.item__grip {
+   padding: 0;
+   margin: 0;
+   width: 28px;
+   height: 38px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+}
+
+.socirow>.iconbtn {
+   width: 38px;
+   height: 38px;
 }
 
 .socirow__label {

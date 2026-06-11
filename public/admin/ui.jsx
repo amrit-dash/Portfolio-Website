@@ -196,6 +196,23 @@ function Input({ value, onChange, placeholder, ...rest }) {
   );
 }
 
+/* Grip handle for labeled rows — invisible label spacer matches DelBtn / Field height */
+function GripHandle({ gripProps, className = '', stopPropagation = true }) {
+  const props = { ...gripProps, title: gripProps?.title || 'Drag to reorder' };
+  if (stopPropagation) {
+    const prevClick = props.onClick;
+    props.onClick = (e) => { e.stopPropagation(); prevClick?.(e); };
+  }
+  return (
+    <div className="field field--grip">
+      <label aria-hidden="true">&nbsp;</label>
+      <span className={'item__grip' + (className ? ' ' + className : '')} {...props}>
+        <AdminIcon name="grip" size={16} />
+      </span>
+    </div>
+  );
+}
+
 /* Delete button that sits inside a `.row` and lines up with sibling input
    fields (invisible label spacer + button matched to input height). Replaces
    ad-hoc flex-end delete divs that drifted below the input. */
@@ -488,7 +505,7 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 }
 
 window.ADMIN_UI = {
-  AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
+  AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, GripHandle, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
   Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes, inputStr,
   storageReady, uploadToStorage, mdInline: renderMd,
 };
