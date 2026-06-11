@@ -112,7 +112,7 @@ function WorkItemBody({ e, onChange }) {
 function WorkEditor({ content, setAt }) {
   const { PageHead, Panel, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
   const list = content.experience;
-  const [open, setOpen] = useStateWP(0);
+  const [open, setOpen] = useStateWP(null);
   const update = (i, next) => {
     const mapped = list.map((e, j) => j === i ? next : e);
     setAt('experience', next.current ? mapped.map((e, j) => j === i ? e : { ...e, current: false }) : mapped);
