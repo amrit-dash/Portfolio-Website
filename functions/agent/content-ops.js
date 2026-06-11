@@ -23,6 +23,20 @@ function deepClone(v) {
   return JSON.parse(JSON.stringify(v));
 }
 
+/* Firestore rejects undefined anywhere in a document; use null for absent values. */
+function firestoreSafeValue(val) {
+  if (val === undefined) return null;
+  if (val == null || typeof val !== 'object') return val;
+  if (Array.isArray(val)) return val.map(firestoreSafeValue);
+  const out = {};
+  for (const k of Object.keys(val)) {
+    if (UNSAFE_KEY(k)) continue;
+    const v = firestoreSafeValue(Reflect.get(val, k));
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 function getAtPath(obj, path) {
   const keys = normalizePath(path);
   let node = obj;
@@ -162,6 +176,15 @@ class DraftSession {
     return getAtPath(this.content, path);
   }
 
+  /* Capture pre-mutation value for per-path undo (used when setPath blocklist is bypassed). */
+  trackPathChange(path) {
+    const p = pathString(path);
+    if (!(p in this.pathBefore)) {
+      this.pathBefore[p] = deepClone(getAtPath(this.content, path));
+    }
+    if (!this.changedPaths.includes(p)) this.changedPaths.push(p);
+  }
+
   setPath(path, value) {
     const p = pathString(path);
     if (isBlocklisted(path)) {
@@ -217,7 +240,7 @@ class DraftSession {
 
   async commit() {
     if (!this.dirty) return { ok: true, changed: false };
-    const next = { content: this.content, updatedAt: this.FieldValue.serverTimestamp() };
+    const next = { content: firestoreSafeValue(this.content), updatedAt: this.FieldValue.serverTimestamp() };
     if (this.priorUpdateTime) {
       const result = await this.db.runTransaction(async (tx) => {
         const snap = await tx.get(this.draftRef);
@@ -235,11 +258,13 @@ class DraftSession {
   }
 
   perPathRevertData() {
-    return this.changedPaths.map((p) => ({
-      path: p,
-      before: this.pathBefore[p],
-      after: deepClone(getAtPath(this.content, p)),
-    }));
+    return this.changedPaths
+      .filter((p) => p && !String(p).startsWith('('))
+      .map((p) => ({
+        path: p,
+        before: firestoreSafeValue(this.pathBefore[p]),
+        after: firestoreSafeValue(deepClone(getAtPath(this.content, p))),
+      }));
   }
 }
 
@@ -268,13 +293,14 @@ async function revertPath({ db, FieldValue, path, beforeValue }) {
   const data = snap.exists ? snap.data() : {};
   let content = deepClone(data.content || {});
   content = setAtPath(content, path, beforeValue);
-  await draftRef.set({ content, updatedAt: FieldValue.serverTimestamp() });
+  await draftRef.set({ content: firestoreSafeValue(content), updatedAt: FieldValue.serverTimestamp() });
   return { ok: true, path: pathString(path) };
 }
 
 module.exports = {
   SNAPSHOT_RING,
   deepClone,
+  firestoreSafeValue,
   getAtPath,
   setAtPath,
   outlineEntry,

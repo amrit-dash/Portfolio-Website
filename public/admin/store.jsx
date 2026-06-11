@@ -380,7 +380,7 @@ const Store = {
       const patch = { updatedAt: window.fb.serverTimestamp() };
       const fv = window.fb && window.fb.FieldValue;
       if (data && data.suggestions) {
-        Object.entries(data.suggestions).forEach(([id, s]) => { patch['suggestions.' + id] = s; });
+        Object.entries(data.suggestions).forEach(([id, s]) => { patch['suggestions.' + id] = clone(s); });
       }
       if (data && data.processed) {
         Object.entries(data.processed).forEach(([id, v]) => { patch['processed.' + id] = v; });
@@ -444,7 +444,7 @@ const Store = {
     if (!this.fsReady()) return;
     const canonical = mergeContentSnapshot(content);
     if (!canonical) return;
-    try { await window.fb.db.doc('content/draft').set({ content: canonical, updatedAt: window.fb.serverTimestamp() }); }
+    try { await window.fb.db.doc('content/draft').set({ content: clone(canonical), updatedAt: window.fb.serverTimestamp() }); }
     catch (e) { console.warn('[store] fsSaveDraft failed', e && e.message); }
   },
   // Deep-clone content with every LLM apiKey blanked — for the PUBLIC published
@@ -492,7 +492,7 @@ const Store = {
       const safe = this.stripKeys(content);                      // public copy carries NO keys
       await window.fb.db.doc('content/published').set({ content: safe, updatedAt: window.fb.serverTimestamp() });
       // Draft is owner-only readable, so it keeps the keys for continued editing.
-      await window.fb.db.doc('content/draft').set({ content, updatedAt: window.fb.serverTimestamp() });
+      await window.fb.db.doc('content/draft').set({ content: clone(content), updatedAt: window.fb.serverTimestamp() });
     } catch (e) { console.warn('[store] fsPublish failed', e && e.message); }
   },
 
@@ -625,7 +625,7 @@ const Store = {
     if (!this.fsReady()) return false;
     try {
       await window.fb.db.doc('config/agentMeta').set(
-        { ...patch, updatedAt: window.fb.serverTimestamp() },
+        { ...clone(patch), updatedAt: window.fb.serverTimestamp() },
         { merge: true }
       );
       return true;

@@ -5,6 +5,7 @@
    result so a thread survives a provider switch (see providers/*). */
 
 const crypto = require('crypto');
+const { firestoreSafeValue } = require('./content-ops');
 
 function newId(prefix) {
   return prefix + '_' + crypto.randomBytes(8).toString('hex');
@@ -71,19 +72,16 @@ function attachmentsMeta(attachments) {
 
 function sanitizeTurnMeta(turnMeta) {
   if (!turnMeta || typeof turnMeta !== 'object') return null;
-  const out = {};
-  for (const [key, value] of Object.entries(turnMeta)) {
-    if (value !== undefined) out[key] = value;
-  }
-  return Object.keys(out).length ? out : null;
+  const safe = firestoreSafeValue(turnMeta);
+  return safe && typeof safe === 'object' && Object.keys(safe).length ? safe : null;
 }
 
 function toFirestore(msg) {
   const out = {
     role: msg.role,
     text: msg.text || '',
-    toolCalls: msg.toolCalls || [],
-    toolResults: msg.toolResults || [],
+    toolCalls: firestoreSafeValue(msg.toolCalls || []),
+    toolResults: firestoreSafeValue(msg.toolResults || []),
     attachments: attachmentsMeta(msg.attachments),
     ts: msg.ts || Date.now(),
   };

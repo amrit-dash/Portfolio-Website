@@ -5,12 +5,13 @@
    replaced with a hash stub to stay well under the 1 MB Firestore doc limit. */
 
 const crypto = require('crypto');
-const { deepClone } = require('./content-ops');
+const { deepClone, firestoreSafeValue } = require('./content-ops');
 
 const MAX_VALUE_BYTES = 8000;
 const KEY_PATTERN = /apiKey|api_key|secret|token/i;
 
 function stripKeyFields(obj, depth) {
+  if (obj === undefined) return null;
   if (depth > 12 || obj == null) return obj;
   if (Array.isArray(obj)) return obj.map((v) => stripKeyFields(v, depth + 1));
   if (typeof obj !== 'object') return obj;
@@ -27,11 +28,12 @@ function stripKeyFields(obj, depth) {
 }
 
 function capAuditValue(val) {
+  if (val === undefined) return null;
   const cleaned = stripKeyFields(val, 0);
   let json;
   try { json = JSON.stringify(cleaned); } catch (e) { return { _error: 'non-serializable' }; }
   if (json == null) return cleaned;
-  if (json.length <= MAX_VALUE_BYTES) return cleaned;
+  if (json.length <= MAX_VALUE_BYTES) return firestoreSafeValue(cleaned);
   const hash = crypto.createHash('sha256').update(json).digest('hex').slice(0, 16);
   return { _truncated: true, _bytes: json.length, _hash: hash };
 }

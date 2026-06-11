@@ -2,7 +2,7 @@
    keys → config/llm). The agent's OWN keys live in config/agent and are never
    part of content, so publish never sees or touches them. */
 
-const { deepClone } = require('./content-ops');
+const { deepClone, firestoreSafeValue } = require('./content-ops');
 
 function stripKeys(content) {
   const c = deepClone(content || {});
@@ -38,7 +38,7 @@ async function agentPublish({ db, FieldValue, content }) {
   await saveLLMConfig(db, FieldValue, content);
   const safe = stripKeys(content);
   await db.doc('content/published').set({ content: safe, updatedAt: FieldValue.serverTimestamp() });
-  await db.doc('content/draft').set({ content: deepClone(content), updatedAt: FieldValue.serverTimestamp() });
+  await db.doc('content/draft').set({ content: firestoreSafeValue(deepClone(content)), updatedAt: FieldValue.serverTimestamp() });
   return { ok: true, published: true };
 }
 

@@ -1,6 +1,7 @@
 /* Inbox triage helpers — junk classification, purge, LLM batch classify, Firestore sync. */
 
 const { wrapVisitorText } = require('./guards');
+const { firestoreSafeValue } = require('./content-ops');
 
 const INBOX_BATCH = 5;
 const INBOX_MAX_PER_RUN = 25;
@@ -389,14 +390,18 @@ async function mergeInboxRun(db, FieldValue, patch) {
   const processed = { ...(cur.processed || {}) };
   (patch.processedIds || []).forEach((id) => { if (id) processed[id] = true; });
   (patch.purgedIds || []).forEach((id) => { if (id) { processed[id] = true; delete suggestions[id]; } });
+  const safeSuggestions = {};
+  for (const [id, s] of Object.entries(suggestions)) {
+    safeSuggestions[id] = firestoreSafeValue(s);
+  }
   await db.doc('config/inboxRun').set({
-    suggestions,
+    suggestions: safeSuggestions,
     processed,
     updatedAt: FieldValue.serverTimestamp(),
     ...(patch.lastAutoRun ? { lastAutoRun: FieldValue.serverTimestamp() } : {}),
     ...(patch.lastWeeklyRun ? { lastWeeklyRun: FieldValue.serverTimestamp() } : {}),
   }, { merge: true });
-  return { suggestions, processed };
+  return { suggestions: safeSuggestions, processed };
 }
 
 async function fetchQuestionDocs(db, ids) {

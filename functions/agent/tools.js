@@ -625,9 +625,9 @@ function execSetBotBehavior(a, session) {
   }
   if (typeof a.tone === 'string' && tones.has(a.tone)) { beh.tone = a.tone; changed = true; }
   if (!changed) return { ok: false, error: 'no-fields' };
+  session.trackPathChange('bot.behavior');
   session.content = setAtPathDirect(session.content, 'bot.behavior', beh);
   session.dirty = true;
-  if (!session.changedPaths.includes('bot.behavior')) session.changedPaths.push('bot.behavior');
   return { ok: true, behavior: beh };
 }
 
@@ -688,8 +688,8 @@ function execSetBotContext(a, session) {
   let changed = false;
   if (typeof a.systemPrompt === 'string') {
     const sp = a.systemPrompt.slice(0, BOT_CONTEXT_MAX_PROMPT);
-    session.content = setAtPathDirect(session.content, 'bot.systemPrompt', sp);
-    if (!session.changedPaths.includes('bot.systemPrompt')) session.changedPaths.push('bot.systemPrompt');
+    const r = session.setPath('bot.systemPrompt', sp);
+    if (!r.ok) return r;
     changed = true;
   }
   if (Array.isArray(a.intro)) {
@@ -697,12 +697,11 @@ function execSetBotContext(a, session) {
       .filter((s) => typeof s === 'string')
       .map((s) => s.slice(0, BOT_CONTEXT_MAX_INTRO_LINE))
       .slice(0, BOT_CONTEXT_MAX_INTRO_LINES);
-    session.content = setAtPathDirect(session.content, 'bot.intro', intro);
-    if (!session.changedPaths.includes('bot.intro')) session.changedPaths.push('bot.intro');
+    const r = session.setPath('bot.intro', intro);
+    if (!r.ok) return r;
     changed = true;
   }
   if (!changed) return { ok: false, error: 'no-fields' };
-  session.dirty = true;
   const ctx = readBotContextSafe(session.content);
   return {
     ok: true,
