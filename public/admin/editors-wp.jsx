@@ -30,7 +30,7 @@ function WorkItemBody({ e, onChange }) {
       </div>
       <div className="row">
         <Field label="Date range"><Input value={e.date} onChange={(v) => set('date', v)} /></Field>
-        <Field label="" hint=""><div style={{ paddingTop: 22 }}><ToggleRow title="Current role" sub="green dot on tab" value={!!e.current} onChange={(v) => set('current', v)} /></div></Field>
+        <Field label={'\u00A0'} hint=""><ToggleRow title="Current role" sub="green dot on tab" value={!!e.current} onChange={(v) => set('current', v)} /></Field>
       </div>
       <Field label="Description" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="Work experience description" context="The role description paragraph shown when a work history entry is selected — scope, impact, and what was built at this company." rows={2} value={e.desc} onChange={(v) => set('desc', v)} /></Field>
 

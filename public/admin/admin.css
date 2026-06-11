@@ -191,7 +191,7 @@ body::before {
 
 .login__bar {
    display: flex;
-   align-items: center;
+   align-items: flex-end;
    gap: 10px;
    padding: 9px 13px;
    background: linear-gradient(180deg, #2a2d22, #1c1f15);
