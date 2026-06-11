@@ -1028,6 +1028,42 @@ ul { margin: 0; padding: 0; list-style: none; }
   gap: 36px;
   align-items: start;
 }
+.about-photo-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.about-stamp-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.about-stamp-label {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 4px 10px 4px 0;
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+.about-stamp-label::before {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 2px;
+  margin-right: 10px;
+  vertical-align: middle;
+  background: var(--accent);
+}
+.about-stamp-rule {
+  flex: 1;
+  min-width: 0;
+  border-top: 1px dashed var(--line-2);
+}
 .about-photo {
   position: relative;
   border: 1px solid var(--line);
@@ -1046,18 +1082,6 @@ ul { margin: 0; padding: 0; list-style: none; }
   background: repeating-linear-gradient(0deg, rgba(0,0,0,.15) 0 1px, transparent 1px 3px);
   mix-blend-mode: multiply;
   pointer-events: none;
-}
-.about-stamp {
-  position: absolute;
-  top: 10px; left: 10px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  background: rgba(12,13,10,.85);
-  color: var(--accent);
-  padding: 4px 8px;
-  border: 1px solid var(--accent);
-  letter-spacing: .15em;
-  border-radius: 3px;
 }
 .about-text h2 {
   font-family: var(--font-display);

@@ -868,6 +868,11 @@ function AboutWindow({ cvUrl, cvVariant, cvFileName, onCvDownloaded }) {
   const a = useSiteContent().about || {};
   const meta = Array.isArray(a.meta) ? a.meta : [];
   const impact = Array.isArray(a.impact) ? a.impact : [];
+  const photoStamp = String(
+    a.photoStamp
+    || (window.PORTFOLIO_DEFAULTS && window.PORTFOLIO_DEFAULTS.about && window.PORTFOLIO_DEFAULTS.about.photoStamp)
+    || ''
+  ).trim();
   const [cvBusy, setCvBusy] = useState(false);
   const [cvErr, setCvErr] = useState(false);
   const onCvClick = async (e) => {
@@ -896,9 +901,16 @@ function AboutWindow({ cvUrl, cvVariant, cvFileName, onCvDownloaded }) {
         <div className="window__body">
           <div className="about-grid">
             <div>
-              <div className="about-photo" data-reveal data-reveal-type="scale">
-                <span className="about-stamp">{a.photoStamp}</span>
-                <img src={a.photo || 'assets/about-photo.jpg'} alt="Amrit Dash" />
+              <div className="about-photo-stack" data-reveal data-reveal-type="scale">
+                {photoStamp ? (
+                  <div className="about-stamp-header">
+                    <span className="about-stamp-label">{photoStamp}</span>
+                    <span className="about-stamp-rule" aria-hidden="true" />
+                  </div>
+                ) : null}
+                <div className="about-photo">
+                  <img src={a.photo || 'assets/about-photo.jpg'} alt="Amrit Dash" />
+                </div>
               </div>
               <div className="about-meta" data-reveal data-reveal-delay="1">
                 {meta.map((m, i) => <span key={i}><b>{m.label}</b> {m.value}</span>)}
