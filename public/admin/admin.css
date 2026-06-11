@@ -1386,9 +1386,29 @@ body::before {
 }
 
 /* Left reorder strip — vertical grip alongside card content (Impact timeline). */
+.item:has(> .item__reorder) {
+   border: none;
+   background: transparent;
+   box-shadow: none;
+   overflow: visible;
+   margin-bottom: 6px;
+}
+
+.item:has(> .item__reorder).dragging .item__reorder {
+   opacity: .5;
+   border-color: var(--accent);
+}
+
+.item:has(> .item__reorder).dragover .item__reorder {
+   box-shadow: 0 -2px 0 var(--accent);
+}
+
 .item__reorder {
    display: flex;
    align-items: stretch;
+   border: 1px solid var(--line);
+   border-radius: 8px;
+   overflow: hidden;
 }
 
 .item__reorder-grip {
@@ -1423,7 +1443,13 @@ body::before {
 .item__reorder-body {
    flex: 1 1 auto;
    min-width: 0;
-   padding: 10px 14px 16px;
+   padding: 10px 14px 16px 16px;
+   background: color-mix(in srgb, var(--accent) 10%, var(--bg-elev));
+}
+
+.item__reorder-body .inp,
+.item__reorder-body .ta {
+   background: var(--bg-elev);
 }
 
 /* Unified reorder row panel — bullets, score chips, meta strip */
@@ -1494,7 +1520,7 @@ body::before {
    display: flex;
    align-items: flex-start;
    gap: 8px;
-   padding: 6px 8px;
+   padding: 6px 10px 6px 14px;
 }
 
 .reorder-panel__actions {
@@ -1535,7 +1561,7 @@ body::before {
 .reorder-panel--fields .reorder-panel__body {
    align-items: flex-start;
    gap: 10px;
-   padding: 8px 8px 8px 6px;
+   padding: 8px 10px 8px 14px;
 }
 
 .reorder-panel--fields .reorder-panel__body .field {
@@ -1560,12 +1586,18 @@ body::before {
 
 /* Single-line bullet rows */
 .reorder-panel--bullet .reorder-panel__body {
-   padding: 5px 6px 5px 4px;
+   padding: 5px 8px 5px 14px;
 }
 
 .reorder-panel--bullet .reorder-panel__body .inp {
    flex: 1;
    min-width: 0;
+}
+
+/* Tighter inputs in reorder rows — modest left inset, normal bg on accent tint */
+.reorder-panel .inp {
+   padding: 8px 12px;
+   background: var(--bg-elev);
 }
 
 .reorder-panel--refine .reorder-panel__body .refine__spark {
