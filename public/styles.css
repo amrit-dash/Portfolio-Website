@@ -1934,6 +1934,12 @@ ul { margin: 0; padding: 0; list-style: none; }
      widths — pin them left so both stay fully visible and wrap if needed */
   .about-text .hero__cta-row { justify-content: flex-start !important; }
   .expertise-grid { grid-template-columns: repeat(2, 1fr); }
+  /* lone last item in 2-col grid — span row, keep card width, center */
+  .expertise-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    max-width: calc((100% - 14px) / 2);
+    justify-self: center;
+  }
   .exp-folder__body { grid-template-columns: 1fr; }
   .exp-sidebar {
     border-right: none; border-bottom: 1px solid var(--line);
@@ -1965,6 +1971,11 @@ ul { margin: 0; padding: 0; list-style: none; }
   .section { padding: 80px 16px 40px; }
   .hero { padding-left: 16px; padding-right: 16px; }
   .expertise-grid { grid-template-columns: 1fr; }
+  .expertise-card:last-child:nth-child(odd) {
+    grid-column: auto;
+    max-width: none;
+    justify-self: stretch;
+  }
   .window__body { padding: 18px; }
   .menubar__right .pill { display: none; }
   .console { height: 420px; }

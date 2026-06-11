@@ -1641,7 +1641,6 @@ body::before {
 }
 
 /* bullets editor */
-
 .bullet {
    --bullet-inp-h: calc(13.5px * 1.5 + 18px + 2px);
    display: flex;
@@ -4310,8 +4309,8 @@ body::before {
 
    .item__hd--card .item__grip {
       grid-column: 1;
-      grid-row: 1;
-      align-self: start;
+      grid-row: 1 / -1;
+      align-self: center;
       padding: 2px;
       margin: 0;
    }
@@ -4338,14 +4337,14 @@ body::before {
    /* Work / Projects entries have no MOD badge — centre icon in the left stack */
    .item__hd--card:not(:has(.item__num)) .miniico,
    .item__hd--card:not(:has(.item__num)) .minithumb {
-      grid-row: 1;
-      align-self: start;
+      grid-row: 1 / -1;
+      align-self: center;
    }
 
    .item__hd--card .item__text {
       grid-column: 3;
-      grid-row: 1;
-      align-self: start;
+      grid-row: 1 / -1;
+      align-self: center;
    }
 
    .item__hd--card .spacer {
@@ -4625,8 +4624,8 @@ body::before {
 
    .socirow > .item__grip {
       grid-column: 1;
-      grid-row: 1;
-      align-self: start;
+      grid-row: 1 / -1;
+      align-self: center;
    }
 
    .socirow > .miniico {
