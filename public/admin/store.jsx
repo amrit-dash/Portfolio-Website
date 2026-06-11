@@ -110,15 +110,11 @@ function stableStringify(value) {
     return v;
   });
 }
-/* Sort id-keyed arrays so reordering the same rows does not look like drift. */
+/* Recursively normalize nested objects for fingerprinting. Array order is preserved —
+   projects, experience, expertise, and similar lists are visitor-visible by index. */
 function stabilizeArrays(node) {
   if (!node || typeof node !== 'object') return node;
   if (Array.isArray(node)) {
-    if (node.length && node.every((item) => item && typeof item.id === 'string')) {
-      return [...node]
-        .sort((a, b) => a.id.localeCompare(b.id))
-        .map((item) => stabilizeArrays(item));
-    }
     return node.map((item) => stabilizeArrays(item));
   }
   const out = {};

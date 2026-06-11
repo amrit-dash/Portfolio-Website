@@ -14,12 +14,10 @@ function stableStringify(value) {
   });
 }
 
+/* Preserve array order — list position is visitor-visible (projects, experience, etc.). */
 function stabilizeArrays(node) {
   if (!node || typeof node !== 'object') return node;
   if (Array.isArray(node)) {
-    if (node.length && node.every((item) => item && typeof item.id === 'string')) {
-      return [...node].sort((a, b) => a.id.localeCompare(b.id)).map((item) => stabilizeArrays(item));
-    }
     return node.map((item) => stabilizeArrays(item));
   }
   const out = {};
