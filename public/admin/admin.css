@@ -819,6 +819,15 @@ body::before {
    justify-content: center;
 }
 
+/* Toggle in a labeled row column — lines up with sibling inputs (Date range, etc.) */
+.field--toggle {
+   flex: 1;
+}
+
+.field--toggle .tog {
+   margin-top: 8px;
+}
+
 .field>label {
    font-family: var(--font-mono);
    font-size: 10.5px;
@@ -899,6 +908,10 @@ body::before {
 .row > .field--del,
 .row > .field--grip {
    flex: 0 0 auto;
+}
+
+.row > .field--toggle {
+   flex: 1;
 }
 
 .row>* {
@@ -1522,6 +1535,22 @@ body::before {
 
 .item__text {
    min-width: 0;
+}
+
+.item__title-inline {
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+}
+
+.current-dot {
+   display: inline-block;
+   width: 7px;
+   height: 7px;
+   border-radius: 50%;
+   background: var(--ok);
+   box-shadow: 0 0 6px var(--ok);
+   flex-shrink: 0;
 }
 
 .item__sub {

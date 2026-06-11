@@ -1298,6 +1298,16 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .exp-tab__name { font-weight: 500; font-size: 13px; display: block; margin-bottom: 2px; color: var(--fg); }
 .exp-tab[data-active="true"] .exp-tab__name { color: var(--accent); }
+.exp-tab__dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #28c840;
+  box-shadow: 0 0 6px #28c840;
+  margin-right: 6px;
+  vertical-align: 2px;
+}
 .exp-tab__date { font-size: 10px; color: var(--fg-mute); letter-spacing: .1em; }
 
 .exp-detail { padding: 32px; position: relative; }

@@ -9,7 +9,7 @@ function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '
 
 /* ============ WORK ============ */
 function WorkItemBody({ e, onChange }) {
-  const { Field, Input, TextArea, Btn, BulletEditor, TagInput, ToggleRow, AdminIcon, HoldReorderPills } = window.ADMIN_UI;
+  const { Field, Input, TextArea, Btn, BulletEditor, TagInput, Toggle, ToggleRow, AdminIcon, HoldReorderPills } = window.ADMIN_UI;
   const [roleTab, setRoleTab] = useStateWP(0);
   const hasRoles = Array.isArray(e.roles) && e.roles.length > 0;
   const set = (key, val) => onChange({ ...e, [key]: val });
@@ -45,7 +45,9 @@ function WorkItemBody({ e, onChange }) {
       </div>
       <div className="row">
         <Field label="Date range"><Input value={e.date} onChange={(v) => set('date', v)} /></Field>
-        <Field label={'\u00A0'} hint=""><ToggleRow title="Current role" sub="green dot on tab" value={!!e.current} onChange={(v) => set('current', v)} /></Field>
+        <Field label="Current role" hint="green dot on tab" className="field--toggle">
+          <Toggle value={!!e.current} onChange={(v) => set('current', v)} />
+        </Field>
       </div>
       <Field label="Description" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="Work experience description" context="The role description paragraph shown when a work history entry is selected — scope, impact, and what was built at this company." rows={2} value={e.desc} onChange={(v) => set('desc', v)} /></Field>
 
@@ -99,8 +101,11 @@ function WorkEditor({ content, setAt }) {
   const { PageHead, Panel, AdminIcon, Reorderable, ListItem } = window.ADMIN_UI;
   const list = content.experience;
   const [open, setOpen] = useStateWP(0);
-  const update = (i, next) => setAt('experience', list.map((e, j) => j === i ? next : e));
-  const add = () => { const next = [...list, { id: slug('role ' + (list.length + 1)), company: 'New company', role: 'Role', sub: '', date: '', short: 'New', desc: '', bullets: [], stack: [] }]; setAt('experience', next); setOpen(next.length - 1); };
+  const update = (i, next) => {
+    const mapped = list.map((e, j) => j === i ? next : e);
+    setAt('experience', next.current ? mapped.map((e, j) => j === i ? e : { ...e, current: false }) : mapped);
+  };
+  const add = () => { const next = [...list, { id: slug('role ' + (list.length + 1)), company: 'New company', role: 'Role', sub: '', date: '', short: 'New', current: false, desc: '', bullets: [], stack: [] }]; setAt('experience', next); setOpen(next.length - 1); };
 
   return (
     <div className="canvas--narrow">
@@ -111,7 +116,7 @@ function WorkEditor({ content, setAt }) {
         <Reorderable items={list} getKey={(e, i) => e.id || i} onReorder={(next) => setAt('experience', next)}
           renderItem={(e, i, { gripProps }) => (
             <ListItem layout="card" gripProps={gripProps} icon={<AdminIcon name="work" size={15} />}
-              title={<span>{e.company}{e.current && <span style={{ color: 'var(--ok)', fontFamily: 'var(--font-mono)', fontSize: 10, marginLeft: 8 }}>● current</span>}</span>}
+              title={<span className="item__title-inline">{e.current && <span className="current-dot" title="Current role" />}{e.company}</span>}
               sub={`${e.role} · ${e.date}${e.roles ? ' · ' + e.roles.length + ' sub-roles' : ''}`}
               open={open === i} onToggle={() => setOpen(open === i ? null : i)}
               onDelete={() => { setAt('experience', list.filter((_, j) => j !== i)); setOpen(null); }}>
