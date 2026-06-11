@@ -332,73 +332,74 @@ function formatHistoryTime(ts) {
 }
 
 function SyncPage({
-  publishedAt, draftUpdatedAt, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished,
-  publishedSnapshot, draftArchive, publishedVersions, onPublish, onSyncFromPublished, onDiscard,
-  onPreview, onRevertVersion, canPublish, publishing, revertingVersionId,
+  publishedAt, draftArchive, publishedVersions, onPublish, onSyncFromPublished,
+  onPreview, onRevertVersion, onRevertDraft, canPublish, publishing, revertingVersionId,
+  revertingDraft, showSyncFromLive,
 }) {
-  const { PageHead, Panel, Btn, AdminIcon } = window.ADMIN_UI;
+  const { PageHead, Panel, Btn } = window.ADMIN_UI;
   const projectId = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) || 'amrit-dash-portfolio';
   const consoleHref = (path) => `https://console.firebase.google.com/project/${projectId}/${path}`;
   const draftSavedAt = draftArchive && draftArchive.updatedAt
     ? formatHistoryTime(draftArchive.updatedAt)
-    : (draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString() : 'not saved yet');
-  const draftStatus = !publishedSnapshot
-    ? 'no published snapshot yet'
-    : draftDiffersFromPublished
-      ? (hasUnpublishedEdits ? 'has unpublished edits' : 'differs from live site')
-      : 'matches live site';
+    : '—';
+  const canRevertDraft = !!(draftArchive && draftArchive.content);
   const canSync = showSyncFromLive;
-  const canDiscard = hasUnpublishedEdits && !!publishedSnapshot;
 
-  const handleRevert = (version) => {
+  const handleRevertVersion = (version) => {
     if (!version || version.isCurrent || !onRevertVersion) return;
     const when = formatHistoryTime(version.publishedAt);
-    if (!confirm(`Deploy the published snapshot from ${when}? The live site will switch to this version. No new history entry is created.`)) return;
+    if (!confirm(`Deploy the snapshot from ${when}? The live site will switch to this version.`)) return;
     onRevertVersion(version.id);
   };
 
-  return (
-    <div className="canvas--narrow">
-      <PageHead eyebrow="/SYSTEM.SYNC" title="Sync & deploy">How the dashboard talks to the live site — you edit a private draft, then Publish promotes it to the snapshot the live site reads in real time. Content, media, keys and analytics all live in Firebase.</PageHead>
+  const handleRevertDraft = () => {
+    if (!canRevertDraft || !onRevertDraft) return;
+    if (!confirm('Restore your draft from the snapshot saved before the last publish or deploy revert? Current draft edits will be replaced.')) return;
+    onRevertDraft();
+  };
 
-      <Panel title="Draft snapshot" sub="latest archived autosave">
-        <div className="bars">
-          <div className="barrow" style={{ gridTemplateColumns: '1fr auto auto' }}>
-            <span>Last saved draft</span>
-            <span className="mono" style={{ fontSize: 12, color: 'var(--fg-mute)' }}>{draftSavedAt}</span>
-            <span className={'dirty' + (draftDiffersFromPublished ? '' : ' saved')}><span className="dot" />{draftDiffersFromPublished ? (hasUnpublishedEdits ? 'dirty' : 'out of sync') : 'clean'}</span>
-          </div>
+  return (
+    <div className="canvas--narrow sync-page">
+      <PageHead eyebrow="/SYSTEM.SYNC" title="Sync & deploy" />
+
+      <Panel title="Deploy actions">
+        <div className="sync-deploy__actions">
+          <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
+          <Btn kind="primary" icon="publish" onClick={onPublish} disabled={!canPublish}>{publishing ? 'Publishing…' : 'Publish to site'}</Btn>
+          {canSync && (
+            <Btn kind="ghost" icon="sync" onClick={onSyncFromPublished}>Sync from live</Btn>
+          )}
         </div>
-        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>{draftStatus}</p>
+        {publishedAt && (
+          <p className="helptext sync-deploy__meta">Live site updated {new Date(publishedAt).toLocaleString()}</p>
+        )}
       </Panel>
 
-      <Panel title="Published versions" sub="last 3 retained · newest first">
+      <Panel title="Version history" sub="last 3 retained">
         {publishedVersions.length === 0 ? (
-          <p className="helptext" style={{ margin: 0 }}>No version history yet — publish to create the first archived snapshot.</p>
+          <p className="helptext" style={{ margin: 0 }}>No version history yet — publish to create the first snapshot.</p>
         ) : (
-          <div className="bars">
+          <div className="bars sync-version-list">
             {publishedVersions.map((version) => (
-              <div className="barrow" key={version.id} style={{ gridTemplateColumns: '1fr auto auto' }}>
-                <span>
+              <div className="barrow sync-version-row" key={version.id}>
+                <span className="sync-version-row__label">
                   {version.isCurrent ? (
-                    <span style={{ color: 'var(--accent)' }}><b>Currently deployed</b></span>
+                    <strong className="sync-version-row__title">Currently deployed</strong>
                   ) : (
-                    <span className="helptext">Historical snapshot</span>
-                  )}
-                  {version.source && (
-                    <span className="mono helptext" style={{ marginLeft: 8, fontSize: 10 }}>{version.source}</span>
+                    <span className="sync-version-row__title sync-version-row__title--muted">Historical snapshot</span>
                   )}
                 </span>
-                <span className="mono" style={{ fontSize: 12, color: 'var(--fg-mute)' }}>{formatHistoryTime(version.publishedAt)}</span>
+                <span className="mono sync-version-row__time">{formatHistoryTime(version.publishedAt)}</span>
                 {version.isCurrent ? (
-                  <span className="helptext" style={{ fontSize: 11 }}>live</span>
+                  <span className="sync-live"><span className="dot" />Live</span>
                 ) : (
                   <Btn
                     sm
                     kind="ghost"
+                    className="sync-revert-btn"
                     icon="reset"
                     disabled={!!revertingVersionId}
-                    onClick={() => handleRevert(version)}
+                    onClick={() => handleRevertVersion(version)}
                   >
                     {revertingVersionId === version.id ? 'Reverting…' : 'Revert'}
                   </Btn>
@@ -407,78 +408,31 @@ function SyncPage({
             ))}
           </div>
         )}
-        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
-          Revert switches the live site to a previous snapshot and marks it as currently deployed. It does not add a new history entry — publish again when you want a fresh snapshot at the top.
-        </p>
       </Panel>
 
-      <Panel title="Deploy actions">
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Btn icon="eye" onClick={onPreview}>Preview draft</Btn>
-          <Btn kind="primary" icon="publish" onClick={onPublish} disabled={!canPublish}>{publishing ? 'Publishing…' : 'Publish to site'}</Btn>
-          <span className="spacer" style={{ flex: 1 }} />
-          {canDiscard && (
-            <Btn kind="ghost" icon="reset" onClick={onDiscard}>Discard draft changes</Btn>
-          )}
-          {canSync && (
-            <Btn kind="danger" icon="sync" onClick={onSyncFromPublished}>Sync draft from live site</Btn>
-          )}
-        </div>
-        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
-          Live site last updated: {publishedAt ? new Date(publishedAt).toLocaleString() : 'never published'}.
-          {!publishedSnapshot
-            ? ' Publish at least once to create a live snapshot you can sync from.'
-            : canDiscard && canSync
-              ? ' Discard drops unpublished edits and restores the last published snapshot. Sync reloads from the live site when the draft diverged from what visitors see.'
-              : canSync
-                ? ' Sync replaces your entire draft with the live published snapshot — unpublished edits are lost.'
-                : canDiscard
-                  ? ' Discard drops unpublished edits and restores the last published snapshot.'
-                  : ' Draft matches the live published snapshot — nothing to sync.'}
-        </p>
-      </Panel>
-
-      <Panel title="How sync works" sub="live on Firebase">
-        <p className="helptext" style={{ marginBottom: 14 }}>
-          The dashboard edits a <b style={{ color: 'var(--fg)' }}>draft</b>; <b style={{ color: 'var(--fg)' }}>Publish</b> promotes it to a <b style={{ color: 'var(--fg)' }}>published snapshot</b> the live site reads. Work-in-progress stays off the site until you ship it. Each concern is backed by a Firebase service:
-        </p>
+      <Panel title="Draft" sub="saved before publish or revert">
         <div className="bars">
-          {[['Admin login', 'Firebase Auth', 'Google sign-in, restricted to the owner account'], ['Draft + published content', 'Cloud Firestore', 'content/draft + content/published docs'], ['Images & CV PDFs', 'Firebase Storage', 'download URL stored on the field'], ['Live site read', 'Firestore listener', 'real-time — no rebuild/redeploy needed'], ['LLM keys + agent', 'Cloud Functions', 'keys read server-side, never reach the browser']].map(([a, b, c]) => (
-            <div className="barrow" key={a} style={{ gridTemplateColumns: '180px 170px 1fr' }}>
-              <span>{a}</span><span className="mono" style={{ color: 'var(--accent)', fontSize: 11 }}>{b}</span><span className="helptext">{c}</span>
-            </div>
-          ))}
-        </div>
-        <div className="callout" style={{ marginTop: 16, marginBottom: 0 }}>
-          <AdminIcon name="info" size={16} />
-          <div>Firestore beats a re-deployed static JSON: edits go live the instant you publish (a snapshot listener), with no hosting rebuild. Storage serves the cropped images, and Cloud Functions proxy every LLM call so keys stay server-side.</div>
+          <div className="barrow sync-draft-row">
+            <span className="sync-version-row__title">Last saved draft</span>
+            <span className="mono sync-version-row__time">{draftSavedAt}</span>
+            <Btn
+              sm
+              kind="ghost"
+              className="sync-revert-btn"
+              icon="reset"
+              disabled={!canRevertDraft || revertingDraft}
+              onClick={handleRevertDraft}
+            >
+              {revertingDraft ? 'Restoring…' : 'Revert draft'}
+            </Btn>
+          </div>
         </div>
       </Panel>
 
-      <Panel title="Where content lives" sub="Firestore + Storage are the source of truth">
-        <div className="bars">
-          {[
-            ['content/draft', 'Firestore', 'in-progress edits, autosaved on every change', 'firestore/data/content/draft'],
-            ['content/draft_archive', 'Firestore', 'single latest draft archive (overwritten on save/publish)', 'firestore/data/content/draft_archive'],
-            ['content/published', 'Firestore', 'the snapshot the live site reads in real time', 'firestore/data/content/published'],
-            ['content/published/versions', 'Firestore', 'ring of 3 published snapshots for revert', 'firestore/data/content/published/versions'],
-            ['config/llm · config/agent', 'Firestore', 'bot + agent provider keys — owner-locked rules, server-read only', 'firestore/data/config'],
-            ['events · stats/global · stats_daily', 'Firestore', 'visitor analytics — counters, daily buckets, recent feed', 'firestore/data/stats'],
-            ['media (images, CV PDFs)', 'Storage', 'uploaded assets; the field stores the download URL', 'storage'],
-            ['admin session', 'Firebase Auth', 'Google sign-in, restricted to the owner account', 'authentication/users'],
-          ].map(([k, store, note, path]) => (
-            <div className="barrow" key={k} style={{ gridTemplateColumns: '230px 110px 1fr auto' }}>
-              <span className="mono" style={{ fontSize: 11 }}>{k}</span>
-              <span className="mono" style={{ color: 'var(--accent)', fontSize: 11 }}>{store}</span>
-              <span className="helptext">{note}</span>
-              <a className="helptext" href={consoleHref(path)} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>open ↗</a>
-            </div>
-          ))}
-        </div>
-        <p className="helptext" style={{ marginTop: 12, marginBottom: 0 }}>
-          <code>localStorage.amritos.*</code> still exists, but only as an offline cache + instant first paint — Firestore and Storage are the durable, cross-device source of truth. Owner-only Firestore rules deny client access to the key docs; see <code>firestore.rules</code>.
-        </p>
-      </Panel>
+      <div className="sync-firestore-links">
+        <span className="helptext">Firestore · Storage · Auth</span>
+        <a className="sync-firestore-links__open" href={consoleHref('firestore/data')} target="_blank" rel="noreferrer">Open console ↗</a>
+      </div>
     </div>
   );
 }
@@ -775,11 +729,12 @@ function AdminApp() {
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
   const [revertingVersionId, setRevertingVersionId] = useAState(null);
+  const [revertingDraft, setRevertingDraft] = useAState(false);
   const {
     content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft,
     hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot,
     publishedAt, draftUpdatedAt, saveLLMConfig, setAgentBusy, publishing, draftSyncStatus,
-    canPublish, remoteDraftNotice, synced, revertToPublishedVersion,
+    canPublish, remoteDraftNotice, synced, revertToPublishedVersion, revertDraftFromArchive,
   } = window.ADMIN_STORE.useContent();
   const { draftArchive, publishedVersions } = window.ADMIN_STORE.useVersionHistory(synced);
   useAEffect(() => {
@@ -853,6 +808,23 @@ function AdminApp() {
       setRevertingVersionId(null);
     }
   };
+  const doRevertDraft = async () => {
+    if (revertingDraft) return;
+    setRevertingDraft(true);
+    try {
+      const ok = await revertDraftFromArchive();
+      if (!ok) {
+        setFlash('No draft archive to restore');
+        setTimeout(() => setFlash(null), 2800);
+        return;
+      }
+      window.ADMIN_STORE.Store.clearPreview();
+      setFlash('Draft restored from archive ✓');
+      setTimeout(() => setFlash(null), 2600);
+    } finally {
+      setRevertingDraft(false);
+    }
+  };
 
   if (!authReady) return <div className="login"><div className="login__crt"><div className="login__body" style={{ textAlign: 'center', color: 'var(--fg-mute)' }}>Checking session…</div></div></div>;
   if (!user) return <Login onGoogle={signInGoogle} error={authError} busy={authBusy} />;
@@ -876,21 +848,18 @@ function AdminApp() {
       case 'sync': return (
         <SyncPage
           publishedAt={publishedAt}
-          draftUpdatedAt={draftUpdatedAt}
-          hasUnpublishedEdits={hasUnpublishedEdits}
           showSyncFromLive={showSyncFromLive}
-          draftDiffersFromPublished={draftDiffersFromPublished}
-          publishedSnapshot={publishedSnapshot}
           draftArchive={draftArchive}
           publishedVersions={publishedVersions}
           onPublish={doPublish}
           onSyncFromPublished={doSyncFromPublished}
-          onDiscard={doDiscard}
           onPreview={() => openPreview('draft')}
           onRevertVersion={doRevertVersion}
+          onRevertDraft={doRevertDraft}
           canPublish={canPublish}
           publishing={publishing}
           revertingVersionId={revertingVersionId}
+          revertingDraft={revertingDraft}
         />
       );
       default: return <Overview content={content} analytics={analytics} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} canPublish={canPublish} publishing={publishing} />;

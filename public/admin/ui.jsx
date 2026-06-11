@@ -150,12 +150,13 @@ function Panel({ title, sub, actions, children, tight, className }) {
   );
 }
 
-function Btn({ kind, sm, icon, children, onClick, type, disabled, title }) {
+function Btn({ kind, sm, icon, children, onClick, type, disabled, title, className }) {
   const cls = ['btn'];
   if (kind === 'primary') cls.push('btn--primary');
   if (kind === 'ghost') cls.push('btn--ghost');
   if (kind === 'danger') cls.push('btn--danger');
   if (sm) cls.push('btn--sm');
+  if (className) cls.push(className);
   return (
     <button className={cls.join(' ')} onClick={onClick} type={type || 'button'} disabled={disabled} title={title}>
       {icon && <AdminIcon name={icon} size={sm ? 13 : 15} />}
