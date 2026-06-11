@@ -619,7 +619,7 @@ function StatsCard() {
 function LinksCard() {
   const links = [
     { name: 'linkedin', href: 'https://linkedin.com/in/amritdash60', label: 'LinkedIn' },
-    { name: 'github', href: 'https://github.com/the-AoG-guy', label: 'GitHub' },
+    { name: 'github', href: 'https://github.com/amrit-dash', label: 'GitHub' },
     { name: 'instagram', href: 'https://www.instagram.com/_amrit_dash_', label: 'Instagram' },
     { name: 'whatsapp', href: 'https://wa.me/917978416962', label: 'WhatsApp' },
     { name: 'email', href: 'mailto:amrit.dash60@gmail.com', label: 'Email' },

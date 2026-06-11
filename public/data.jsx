@@ -347,7 +347,7 @@ const PROJECTS = [
 const SOCIALS = [
   { label: 'WhatsApp',  icon: 'whatsapp',  href: 'https://wa.me/917978416962?text=Hey!' },
   { label: 'LinkedIn',  icon: 'linkedin',  href: 'https://linkedin.com/in/amritdash60' },
-  { label: 'GitHub',    icon: 'github',    href: 'https://github.com/the-AoG-guy' },
+  { label: 'GitHub',    icon: 'github',    href: 'https://github.com/amrit-dash' },
   { label: 'Instagram', icon: 'instagram', href: 'https://www.instagram.com/_amrit_dash_' },
 ];
 
