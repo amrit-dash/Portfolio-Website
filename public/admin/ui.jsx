@@ -535,7 +535,6 @@ function ListItem({ gripProps, num, thumb, icon, title, sub, open, onToggle, onD
     <>
       <div className={hdClass} onClick={onToggle}>
         <span className="item__grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
-        {num != null && <span className="item__num">{num}</span>}
         {thumb && <img className="minithumb" src={window.assetUrl(thumb)} alt="" />}
         {icon && <span className="miniico">{icon}</span>}
         <div className="item__text">
@@ -544,6 +543,7 @@ function ListItem({ gripProps, num, thumb, icon, title, sub, open, onToggle, onD
         </div>
         <span className="spacer" />
         {headRight}
+        {num != null && <span className="item__num">{num}</span>}
         {onDelete && <span className="iconbtn iconbtn--danger" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete"><AdminIcon name="trash" size={14} /></span>}
         {onToggle && <span className="chev" data-open={!!open}><AdminIcon name="chev" size={16} /></span>}
       </div>
