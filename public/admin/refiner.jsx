@@ -236,7 +236,7 @@ function RefineBulletEditor({ items = [], onChange, placeholder = 'List item', r
     const showVal = frozen ? snapRef.current : b;
     return (
       <div>
-        <div className="bullet">
+        <div className={'bullet' + (reorderable ? ' bullet--reorder' : '')}>
           {reorderable && gripProps && (
             <span className="item__grip grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder">
               <AdminIcon name="grip" size={16} />
@@ -249,7 +249,7 @@ function RefineBulletEditor({ items = [], onChange, placeholder = 'List item', r
             onClick={() => refine(i)}
             disabled={(activeIdx !== null && activeIdx !== i) || (activeIdx === i && state === 'working') || !String(b || '').trim()}
           />
-          <span className="iconbtn iconbtn--danger" onClick={() => onChange(list.filter((_, j) => j !== i))} title="Remove"><AdminIcon name="x" size={13} /></span>
+          <button type="button" className="iconbtn iconbtn--danger" onClick={() => onChange(list.filter((_, j) => j !== i))} title="Remove" aria-label="Remove"><AdminIcon name="x" size={13} /></button>
         </div>
         {activeIdx === i && state === 'working' && <div className="refine__status"><span className="refine__spin" aria-hidden="true" /> Refining…</div>}
         {activeIdx === i && state === 'error' && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {err}</div>}

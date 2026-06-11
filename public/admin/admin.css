@@ -1514,10 +1514,19 @@ body::before {
 
 /* bullets editor */
 .bullet {
+   --bullet-inp-h: calc(13.5px * 1.5 + 18px + 2px);
    display: flex;
    align-items: center;
    gap: 8px;
    margin-bottom: 8px;
+   min-height: var(--bullet-inp-h);
+}
+
+/* draggable rows sit inside .item cards — pad row, drop trailing margin */
+.bullet--reorder {
+   padding: 11px 13px;
+   margin-bottom: 0;
+   box-sizing: border-box;
 }
 
 .bullet .grip,
@@ -1526,7 +1535,7 @@ body::before {
    padding: 0;
    margin: 0;
    width: 28px;
-   height: 38px;
+   height: var(--bullet-inp-h);
    display: flex;
    align-items: center;
    justify-content: center;
@@ -1535,19 +1544,40 @@ body::before {
 .bullet .inp {
    flex: 1;
    min-width: 0;
+   align-self: center;
 }
 
 .bullet .iconbtn {
    flex: 0 0 auto;
-   width: 38px;
-   height: 38px;
+   width: var(--bullet-inp-h);
+   height: var(--bullet-inp-h);
+   padding: 0;
+   font: inherit;
+   appearance: none;
+   border: none;
+   background: transparent;
+   box-shadow: none;
+   color: var(--fg-dim);
+   border-radius: 8px;
+   cursor: pointer;
+}
+
+.bullet .iconbtn:hover {
+   color: var(--danger);
+   border: none;
+   background: color-mix(in oklab, var(--danger) 12%, transparent);
+}
+
+.bullet .iconbtn:focus-visible {
+   outline: 2px solid color-mix(in oklab, var(--danger) 55%, transparent);
+   outline-offset: 1px;
 }
 
 .bullet .refine__spark {
    position: static;
    flex: 0 0 auto;
-   width: 38px;
-   height: 38px;
+   width: var(--bullet-inp-h);
+   height: var(--bullet-inp-h);
 }
 
 /* Score chips + About meta strip — compact inline row inside Reorderable `.item`.

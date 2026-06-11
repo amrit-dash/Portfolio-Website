@@ -455,14 +455,14 @@ function BulletEditor({ items = [], onChange, placeholder = 'Bullet point', reor
   const removeItem = (i) => onChange(list.filter((_, j) => j !== i));
 
   const renderBullet = (b, i, gripProps) => (
-    <div className="bullet">
+    <div className={'bullet' + (reorderable ? ' bullet--reorder' : '')}>
       {reorderable && gripProps && (
         <span className="item__grip grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder">
           <AdminIcon name="grip" size={16} />
         </span>
       )}
       <input className="inp" value={b} placeholder={placeholder} onChange={(e) => setItem(i, e.target.value)} />
-      <span className="iconbtn iconbtn--danger" onClick={() => removeItem(i)} title="Remove"><AdminIcon name="x" size={13} /></span>
+      <button type="button" className="iconbtn iconbtn--danger" onClick={() => removeItem(i)} title="Remove" aria-label="Remove"><AdminIcon name="x" size={13} /></button>
     </div>
   );
 
