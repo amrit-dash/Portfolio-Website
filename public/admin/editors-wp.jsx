@@ -127,7 +127,7 @@ function ProjectBody({ p, expertise, onChange }) {
         <ImageSlot label="Gallery image (modal)" value={p.gallery} target={TARGETS.projGallery} outputType="image/jpeg" storageKey={'projects/' + (p.id || 'p') + '-gallery'}
           hint="Large image inside the open modal" onChange={(url) => set('gallery', url)} />
       </div>
-      <Field label="Tags" hint="multiple"><TagInput value={p.tags || []} onChange={(v) => set('tags', v)} placeholder="Add tag + Enter" /></Field>
+      <Field label="Tags" hint="drag to reorder"><TagInput reorderable value={p.tags || []} onChange={(v) => set('tags', v)} placeholder="Add tag + Enter" /></Field>
       <Field label="Filter skills" hint="which expertise modules surface this project">
         <div className="tags" style={{ minHeight: 0, gap: 6 }}>
           {expertise.map((e) => (

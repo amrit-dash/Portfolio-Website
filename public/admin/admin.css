@@ -935,6 +935,36 @@ body::before {
    border-radius: 6px;
    background: var(--bg-card);
    color: var(--fg-dim);
+   transition: border-color .15s, opacity .15s, box-shadow .15s;
+}
+
+.tag:has(.tag__grip) {
+   gap: 4px;
+   padding: 3px 6px 3px 4px;
+}
+
+.tag.dragging {
+   opacity: .55;
+   border-color: var(--accent);
+}
+
+.tag.dragover {
+   box-shadow: -2px 0 0 var(--accent);
+}
+
+.tag__grip {
+   color: var(--fg-mute);
+   cursor: grab;
+   display: grid;
+   place-items: center;
+   padding: 2px 1px;
+   margin: -1px 0;
+   line-height: 0;
+   flex-shrink: 0;
+}
+
+.tag__grip:active {
+   cursor: grabbing;
 }
 
 .tag b {
@@ -1466,13 +1496,22 @@ body::before {
 }
 
 .bullet .grip {
-   color: var(--fg-mute);
-   cursor: grab;
+   flex: 0 0 auto;
    padding-top: 9px;
 }
 
 .bullet .inp {
    flex: 1;
+}
+
+.scorerow {
+   align-items: flex-end;
+   padding: 11px 13px;
+}
+
+.scorerow > .item__grip {
+   flex: 0 0 auto;
+   margin-bottom: 2px;
 }
 
 /* =====================================================
@@ -3940,6 +3979,26 @@ body::before {
 
 .inboxrun__t {
    white-space: nowrap;
+}
+
+.inboxrun__ico {
+   font-size: 12px;
+   font-weight: 700;
+   line-height: 1;
+   flex-shrink: 0;
+   color: var(--ok, #6fcf97);
+}
+
+.inboxrun__ico--err {
+   color: var(--danger, #e07070);
+}
+
+.inboxrun--ok.inboxrun--sidebar {
+   background: color-mix(in oklab, var(--ok, #6fcf97) 10%, var(--bg-elev));
+}
+
+.inboxrun--err.inboxrun--sidebar {
+   background: color-mix(in oklab, var(--danger, #e07070) 10%, var(--bg-elev));
 }
 
 @keyframes inboxspin { to { transform: rotate(360deg); } }
