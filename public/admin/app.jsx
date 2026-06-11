@@ -540,7 +540,18 @@ const NAV = [
 
 const TITLES = { overview: 'Overview', analytics: 'Analytics', hero: 'Hero & intro', about: 'About', expertise: 'Expertise', work: 'Work history', projects: 'Projects', cards: 'Education & awards', contact: 'Contact', media: 'CV & media', appearance: 'Appearance', agent: 'Agent', bot: 'AmritBot', sync: 'Sync & deploy' };
 
-function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
+// Shown while debounced / in-flight draft writes sync to Firestore — same slot as inbox triage.
+function DraftSavingIndicator({ saving, placement = 'sidebar' }) {
+  if (!saving) return null;
+  return (
+    <div className={'inboxrun inboxrun--status inboxrun--' + placement} role="status" aria-live="polite">
+      <span className="inboxrun__spin" />
+      <span className="inboxrun__t">Saving…</span>
+    </div>
+  );
+}
+
+function Sidebar({ route, go, content, draftSaving, onLogout, open, onClose, adminTheme, setAdminTheme, adminAccent, setAdminAccent }) {
   const { AdminIcon } = window.ADMIN_UI;
   return (
     <aside className={'side' + (open ? ' side--open' : '')}>
@@ -572,6 +583,7 @@ function Sidebar({ route, go, content, onLogout, open, onClose, adminTheme, setA
         ))}
       </nav>
       {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} placement="sidebar" />}
+      <DraftSavingIndicator saving={draftSaving} placement="sidebar" />
       <div className="side__foot">
         <div className="side__user">
           <span className="side__avatar">AD</span>
@@ -689,7 +701,7 @@ function AdminApp() {
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
   const [flash, setFlash] = useAState(null);
-  const { content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, publishedAt, saveLLMConfig, setAgentBusy, publishing, canPublish } = window.ADMIN_STORE.useContent();
+  const { content, setAt, replace, publish, discardDraft, syncDraftFromPublished, previewDraft, hasUnpublishedEdits, showSyncFromLive, draftDiffersFromPublished, publishedSnapshot, publishedAt, saveLLMConfig, setAgentBusy, publishing, draftSaving, canPublish } = window.ADMIN_STORE.useContent();
   // Real-time analytics from Firestore (counters + recent feed + daily buckets).
   const analytics = window.ADMIN_STORE.useAnalytics();
   const resetAnalytics = async () => {
@@ -766,7 +778,7 @@ function AdminApp() {
   return (
     <div className="shell">
       <div className="nav-scrim" data-open={navOpen} onClick={() => setNavOpen(false)} />
-      <Sidebar route={route} go={go} content={content} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
+      <Sidebar route={route} go={go} content={content} draftSaving={draftSaving} onLogout={signOut} open={navOpen} onClose={() => setNavOpen(false)}
         adminTheme={adminTheme} setAdminTheme={setAdminTheme} adminAccent={adminAccent} setAdminAccent={setAdminAccent} />
       <div className="main">
         <div className="topbar">
@@ -774,6 +786,7 @@ function AdminApp() {
           <span className="topbar__crumb">amrit.os / <b>{Reflect.get(TITLES, route) || route}</b></span>
           <span className="topbar__spacer" />
           {window.ADMIN_INBOX && <window.ADMIN_INBOX.InboxRunnerIndicator go={go} placement="topbar" />}
+          <DraftSavingIndicator saving={draftSaving} placement="topbar" />
           {flash
             ? <span className="dirty saved"><span className="dot" />{flash}</span>
             : <span className={'dirty topbar__hide-sm' + ((hasUnpublishedEdits || draftDiffersFromPublished) ? '' : ' saved')}><span className="dot" />{hasUnpublishedEdits ? 'Draft · unpublished changes' : (draftDiffersFromPublished ? 'Draft · out of sync with live' : 'All changes published')}</span>}

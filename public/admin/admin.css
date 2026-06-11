@@ -3858,6 +3858,14 @@ body::before {
 
 .inboxrun:hover { border-color: var(--accent); }
 
+.inboxrun--status {
+   cursor: default;
+}
+
+.inboxrun--status:hover {
+   border-color: var(--line-2);
+}
+
 .inboxrun--sidebar {
    display: flex;
    width: 100%;
@@ -3873,6 +3881,10 @@ body::before {
 
 .inboxrun--sidebar:hover {
    background: color-mix(in oklab, var(--accent) 11%, var(--bg-elev));
+}
+
+.inboxrun--sidebar.inboxrun--status:hover {
+   background: color-mix(in oklab, var(--accent) 7%, var(--bg-elev));
 }
 
 .inboxrun--topbar {
