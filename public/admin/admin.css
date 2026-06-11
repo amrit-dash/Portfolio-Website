@@ -1490,18 +1490,21 @@ body::before {
 /* bullets editor */
 .bullet {
    display: flex;
-   align-items: flex-start;
+   align-items: center;
    gap: 8px;
    margin-bottom: 8px;
 }
 
 .bullet .grip {
    flex: 0 0 auto;
-   padding-top: 9px;
 }
 
 .bullet .inp {
    flex: 1;
+}
+
+.bullet .iconbtn {
+   flex: 0 0 auto;
 }
 
 .scorerow {

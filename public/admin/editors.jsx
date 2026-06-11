@@ -382,8 +382,8 @@ function CardsEditor({ content, setAt }) {
               : <Field label="Body paragraph"><TextArea rows={3} value={c.body} onChange={(v) => update(i, 'body', v)} /></Field>
           )}
           {(c.items.length > 0 || (c.id !== 'offduty' && c.id !== 'education')) && (
-            c.id === 'achievements'
-              ? <Field label="List items" hint="✨ to refine each entry · drag to reorder"><window.ADMIN_REFINER.RefineBulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder="Achievement" reorderable refineLabel="Achievement entry" refineContext="A single achievement or award line in the portfolio Achievements info card — concise, impressive, and factual." /></Field>
+            (c.id === 'achievements' || c.id === 'certifications')
+              ? <Field label="List items" hint="drag to reorder"><BulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder={c.id === 'achievements' ? 'Achievement' : 'Certification'} reorderable /></Field>
               : <Field label="List items"><BulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder="List item" /></Field>
           )}
           {c.scores && c.scores.length >= 0 && c.id === 'education' && (

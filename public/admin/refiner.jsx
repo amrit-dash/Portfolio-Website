@@ -185,7 +185,7 @@ function RefineImpactEntry({ label, html, onLabelChange, onHtmlChange, onAccept,
   );
 }
 
-/* Bullet list with per-row ✨ refine (e.g. achievements). */
+/* Bullet list with per-row ✨ refine (optional; cards editor uses plain BulletEditor). */
 function RefineBulletEditor({ items = [], onChange, placeholder = 'List item', refineLabel, refineContext, reorderable = false }) {
   const { Btn, AdminIcon, Reorderable } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
