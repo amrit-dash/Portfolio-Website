@@ -191,7 +191,7 @@ body::before {
 
 .login__bar {
    display: flex;
-   align-items: flex-end;
+   align-items: center;
    gap: 10px;
    padding: 9px 13px;
    background: linear-gradient(180deg, #2a2d22, #1c1f15);
@@ -883,7 +883,7 @@ body::before {
 
 .row {
    display: flex;
-   align-items: center;
+   align-items: flex-end;
    gap: 12px;
 }
 
@@ -1359,14 +1359,35 @@ body::before {
    cursor: grabbing;
 }
 
-/* Left reorder strip — vertical grip alongside card content (Impact timeline). */
-.item__reorder {
+/* Unified reorder row panel — bullets, score chips, meta strip, impact timeline */
+.reorder-panel {
    display: flex;
    align-items: stretch;
+   border: 1px solid var(--line);
+   border-radius: 8px;
+   background: color-mix(in srgb, var(--accent) 10%, var(--bg-elev));
+   overflow: hidden;
 }
 
-.item__reorder-grip {
-   flex: 0 0 20px;
+.item:has(> .reorder-panel) {
+   border: none;
+   background: transparent;
+   box-shadow: none;
+   overflow: visible;
+   margin-bottom: 6px;
+}
+
+.item:has(> .reorder-panel).dragging .reorder-panel {
+   opacity: .5;
+   border-color: var(--accent);
+}
+
+.item:has(> .reorder-panel).dragover .reorder-panel {
+   box-shadow: 0 -2px 0 var(--accent);
+}
+
+.reorder-panel__grip {
+   flex: 0 0 22px;
    display: flex;
    align-items: center;
    justify-content: center;
@@ -1374,29 +1395,120 @@ body::before {
    margin: 0;
    padding: 0;
    border: 0;
-   border-right: 1px solid var(--line);
    border-radius: 0;
    background: transparent;
    color: var(--fg-mute);
    cursor: grab;
    line-height: 0;
-   transition: color .14s, background .14s, box-shadow .14s;
+   transition: color .14s, background .14s;
 }
 
-.item__reorder-grip:hover {
+.reorder-panel__grip:hover {
    color: var(--accent);
-   background: color-mix(in srgb, var(--accent) 10%, transparent);
-   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
-.item__reorder-grip:active {
+.reorder-panel__grip:active {
    cursor: grabbing;
 }
 
-.item__reorder-body {
+.reorder-panel__sep {
+   flex: 0 0 0;
+   width: 0;
+   align-self: stretch;
+   border-right: 1px solid var(--line);
+}
+
+.reorder-panel__body {
    flex: 1 1 auto;
    min-width: 0;
-   padding: 10px 14px 16px;
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   padding: 6px 8px;
+}
+
+.reorder-panel__actions {
+   flex: 0 0 auto;
+   display: flex;
+   align-items: center;
+   align-self: center;
+   padding-right: 6px;
+}
+
+.reorder-panel__del {
+   flex: 0 0 auto;
+   width: calc(13.5px * 1.5 + 18px + 2px);
+   height: calc(13.5px * 1.5 + 18px + 2px);
+   padding: 0;
+   display: grid;
+   place-items: center;
+   border-radius: 8px;
+   appearance: none;
+   border: none;
+   background: transparent;
+   box-shadow: none;
+   color: var(--fg-dim);
+   cursor: pointer;
+}
+
+.reorder-panel__del:hover {
+   color: var(--danger);
+   background: color-mix(in oklab, var(--danger) 12%, transparent);
+}
+
+.reorder-panel__del:focus-visible {
+   outline: 2px solid color-mix(in oklab, var(--danger) 55%, transparent);
+   outline-offset: 1px;
+}
+
+/* Labeled field rows — score chips, About meta strip */
+.reorder-panel--fields .reorder-panel__body {
+   align-items: flex-end;
+   gap: 10px;
+   padding: 8px 8px 8px 6px;
+}
+
+.reorder-panel--fields .reorder-panel__body .field {
+   margin-bottom: 0;
+   flex: 1;
+   min-width: 0;
+}
+
+.reorder-panel--fields .reorder-panel__body > .field--del {
+   flex: 0 0 auto;
+   margin-left: auto;
+}
+
+.reorder-panel--meta .reorder-panel__body > .field--label {
+   flex: 1;
+}
+
+.reorder-panel--meta .reorder-panel__body > .field--value {
+   flex: 1.5;
+   min-width: 120px;
+}
+
+/* Impact timeline — multi-line refine entry */
+.reorder-panel--timeline .reorder-panel__body {
+   align-items: stretch;
+   padding: 10px 12px 14px;
+}
+
+/* Single-line bullet rows */
+.reorder-panel--bullet .reorder-panel__body {
+   padding: 5px 6px 5px 4px;
+}
+
+.reorder-panel--bullet .reorder-panel__body .inp {
+   flex: 1;
+   min-width: 0;
+}
+
+.reorder-panel--refine .reorder-panel__body .refine__spark {
+   flex: 0 0 auto;
+   width: calc(13.5px * 1.5 + 18px + 2px);
+   height: calc(13.5px * 1.5 + 18px + 2px);
 }
 
 .item__title {
@@ -1522,25 +1634,6 @@ body::before {
    min-height: var(--bullet-inp-h);
 }
 
-/* draggable rows sit inside .item cards — pad row, drop trailing margin */
-.bullet--reorder {
-   padding: 11px 13px;
-   margin-bottom: 0;
-   box-sizing: border-box;
-}
-
-.bullet .grip,
-.bullet .item__grip {
-   flex: 0 0 auto;
-   padding: 0;
-   margin: 0;
-   width: 28px;
-   height: var(--bullet-inp-h);
-   display: flex;
-   align-items: center;
-   justify-content: center;
-}
-
 .bullet .inp {
    flex: 1;
    min-width: 0;
@@ -1578,40 +1671,6 @@ body::before {
    flex: 0 0 auto;
    width: var(--bullet-inp-h);
    height: var(--bullet-inp-h);
-}
-
-/* Score chips + About meta strip — compact inline row inside Reorderable `.item`.
-   Intentionally NOT `.row`: global `.row > * { flex: 1 }` blows up grip/delete columns. */
-.scorerow {
-   display: flex;
-   align-items: flex-end;
-   gap: 10px;
-   padding: 9px 12px 10px 4px;
-}
-
-.scorerow .field {
-   margin-bottom: 0;
-   flex: 1;
-   min-width: 0;
-}
-
-.scorerow > .field--grip,
-.scorerow > .field--del {
-   flex: 0 0 auto;
-   align-self: center;
-}
-
-.scorerow > .field--del {
-   margin-left: auto;
-}
-
-.scorerow--meta > .field--label {
-   flex: 1;
-}
-
-.scorerow--meta > .field--value {
-   flex: 1.5;
-   min-width: 120px;
 }
 
 /* =====================================================
@@ -4234,8 +4293,8 @@ body::before {
 
    .item__hd--card .item__grip {
       grid-column: 1;
-      grid-row: 1 / -1;
-      align-self: center;
+      grid-row: 1;
+      align-self: start;
       padding: 2px;
       margin: 0;
    }
@@ -4262,14 +4321,14 @@ body::before {
    /* Work / Projects entries have no MOD badge — centre icon in the left stack */
    .item__hd--card:not(:has(.item__num)) .miniico,
    .item__hd--card:not(:has(.item__num)) .minithumb {
-      grid-row: 1 / -1;
-      align-self: center;
+      grid-row: 1;
+      align-self: start;
    }
 
    .item__hd--card .item__text {
       grid-column: 3;
-      grid-row: 1 / -1;
-      align-self: center;
+      grid-row: 1;
+      align-self: start;
    }
 
    .item__hd--card .spacer {
@@ -4549,8 +4608,8 @@ body::before {
 
    .socirow > .item__grip {
       grid-column: 1;
-      grid-row: 1 / -1;
-      align-self: center;
+      grid-row: 1;
+      align-self: start;
    }
 
    .socirow > .miniico {

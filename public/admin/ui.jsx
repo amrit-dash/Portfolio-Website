@@ -213,6 +213,29 @@ function GripHandle({ gripProps, className = '', stopPropagation = true }) {
   );
 }
 
+/* Unified reorder row — grip column + separator + body (+ optional right actions). */
+function ReorderPanel({ gripProps, children, className = '', actions }) {
+  const gripClick = gripProps?.onClick;
+  const grip = gripProps ? (
+    <span
+      className="reorder-panel__grip"
+      {...gripProps}
+      title={gripProps.title || 'Drag to reorder'}
+      onClick={(e) => { e.stopPropagation(); gripClick?.(e); }}
+    >
+      <AdminIcon name="grip" size={16} />
+    </span>
+  ) : null;
+  return (
+    <div className={'reorder-panel' + (className ? ' ' + className : '')}>
+      {grip}
+      {grip && <span className="reorder-panel__sep" aria-hidden="true" />}
+      <div className="reorder-panel__body">{children}</div>
+      {actions && <div className="reorder-panel__actions">{actions}</div>}
+    </div>
+  );
+}
+
 /* Delete button that sits inside a `.row` and lines up with sibling input
    fields (invisible label spacer + button matched to input height). Replaces
    ad-hoc flex-end delete divs that drifted below the input. */
@@ -454,17 +477,29 @@ function BulletEditor({ items = [], onChange, placeholder = 'Bullet point', reor
   const setItem = (i, val) => { const n = list.slice(); n[i] = val; onChange(n); };
   const removeItem = (i) => onChange(list.filter((_, j) => j !== i));
 
-  const renderBullet = (b, i, gripProps) => (
-    <div className={'bullet' + (reorderable ? ' bullet--reorder' : '')}>
-      {reorderable && gripProps && (
-        <span className="item__grip grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder">
-          <AdminIcon name="grip" size={16} />
-        </span>
-      )}
-      <input className="inp" value={b} placeholder={placeholder} onChange={(e) => setItem(i, e.target.value)} />
-      <button type="button" className="iconbtn iconbtn--danger" onClick={() => removeItem(i)} title="Remove" aria-label="Remove"><AdminIcon name="x" size={13} /></button>
-    </div>
-  );
+  const renderBullet = (b, i, gripProps) => {
+    if (reorderable && gripProps) {
+      return (
+        <ReorderPanel
+          gripProps={gripProps}
+          className="reorder-panel--bullet"
+          actions={
+            <button type="button" className="reorder-panel__del iconbtn iconbtn--danger" onClick={() => removeItem(i)} title="Remove" aria-label="Remove">
+              <AdminIcon name="x" size={13} />
+            </button>
+          }
+        >
+          <input className="inp" value={b} placeholder={placeholder} onChange={(e) => setItem(i, e.target.value)} />
+        </ReorderPanel>
+      );
+    }
+    return (
+      <div className="bullet">
+        <input className="inp" value={b} placeholder={placeholder} onChange={(e) => setItem(i, e.target.value)} />
+        <button type="button" className="iconbtn iconbtn--danger" onClick={() => removeItem(i)} title="Remove" aria-label="Remove"><AdminIcon name="x" size={13} /></button>
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -506,6 +541,6 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
 
 window.ADMIN_UI = {
   AdminIcon, SkillIcon, PageHead, Panel, Btn, Field, DelBtn, GripHandle, Input, SecretInput, TextArea, Select, Toggle, ToggleRow,
-  Segmented, TagInput, Swatches, Reorderable, ListItem, BulletEditor, fileToDataURL, fmtBytes, inputStr,
+  Segmented, TagInput, Swatches, Reorderable, ReorderPanel, ListItem, BulletEditor, fileToDataURL, fmtBytes, inputStr,
   storageReady, uploadToStorage, mdInline: renderMd,
 };

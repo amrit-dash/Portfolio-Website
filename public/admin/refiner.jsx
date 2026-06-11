@@ -187,7 +187,7 @@ function RefineImpactEntry({ label, html, onLabelChange, onHtmlChange, onAccept,
 
 /* Bullet list with per-row ✨ refine (optional; cards editor uses plain BulletEditor). */
 function RefineBulletEditor({ items = [], onChange, placeholder = 'List item', refineLabel, refineContext, reorderable = false }) {
-  const { Btn, AdminIcon, Reorderable } = window.ADMIN_UI;
+  const { Btn, AdminIcon, Reorderable, ReorderPanel } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
   const list = Array.isArray(items) ? items : [];
   const [activeIdx, setActiveIdx] = useRState(null);
@@ -234,23 +234,38 @@ function RefineBulletEditor({ items = [], onChange, placeholder = 'List item', r
   const renderRow = (b, i, gripProps) => {
     const frozen = activeIdx === i && (state === 'working' || state === 'proposed');
     const showVal = frozen ? snapRef.current : b;
+    const rowInner = (
+      <>
+        <input className="inp" value={showVal} placeholder={placeholder} readOnly={frozen}
+          onChange={(e) => updateItem(i, e.target.value)} />
+        <RefineSpark
+          busy={activeIdx === i && state === 'working'}
+          onClick={() => refine(i)}
+          disabled={(activeIdx !== null && activeIdx !== i) || (activeIdx === i && state === 'working') || !String(b || '').trim()}
+        />
+      </>
+    );
+    const removeBtn = (className) => (
+      <button type="button" className={className} onClick={() => onChange(list.filter((_, j) => j !== i))} title="Remove" aria-label="Remove">
+        <AdminIcon name="x" size={13} />
+      </button>
+    );
     return (
       <div>
-        <div className={'bullet' + (reorderable ? ' bullet--reorder' : '')}>
-          {reorderable && gripProps && (
-            <span className="item__grip grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder">
-              <AdminIcon name="grip" size={16} />
-            </span>
-          )}
-          <input className="inp" value={showVal} placeholder={placeholder} readOnly={frozen}
-            onChange={(e) => updateItem(i, e.target.value)} />
-          <RefineSpark
-            busy={activeIdx === i && state === 'working'}
-            onClick={() => refine(i)}
-            disabled={(activeIdx !== null && activeIdx !== i) || (activeIdx === i && state === 'working') || !String(b || '').trim()}
-          />
-          <button type="button" className="iconbtn iconbtn--danger" onClick={() => onChange(list.filter((_, j) => j !== i))} title="Remove" aria-label="Remove"><AdminIcon name="x" size={13} /></button>
-        </div>
+        {reorderable && gripProps ? (
+          <ReorderPanel
+            gripProps={gripProps}
+            className="reorder-panel--bullet reorder-panel--refine"
+            actions={removeBtn('reorder-panel__del iconbtn iconbtn--danger')}
+          >
+            {rowInner}
+          </ReorderPanel>
+        ) : (
+          <div className="bullet">
+            {rowInner}
+            {removeBtn('iconbtn iconbtn--danger')}
+          </div>
+        )}
         {activeIdx === i && state === 'working' && <div className="refine__status"><span className="refine__spin" aria-hidden="true" /> Refining…</div>}
         {activeIdx === i && state === 'error' && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {err}</div>}
         {activeIdx === i && state === 'proposed' && (

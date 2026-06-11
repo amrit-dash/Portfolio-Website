@@ -136,7 +136,7 @@ function newImpactId() {
 }
 
 function AboutEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon, Reorderable, GripHandle, inputStr } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon, Reorderable, ReorderPanel, inputStr } = window.ADMIN_UI;
   const { ImageSlot } = window.ADMIN_CROP;
   const a = content.about;
   const meta = Array.isArray(a.meta) ? a.meta : [];
@@ -156,12 +156,11 @@ function AboutEditor({ content, setAt }) {
         <Panel title="Meta strip" sub={`${meta.length} rows · drag to reorder`}>
           <Reorderable items={meta} getKey={(_, i) => i} onReorder={(next) => setAt('about.meta', next)}
             renderItem={(m, i, { gripProps }) => (
-              <div className="scorerow scorerow--meta">
-                <GripHandle gripProps={gripProps} />
+              <ReorderPanel gripProps={gripProps} className="reorder-panel--fields reorder-panel--meta">
                 <Field label="Label" className="field--label"><Input value={m.label} onChange={(v) => setMeta(i, 'label', v)} /></Field>
                 <Field label="Value" className="field--value"><Input value={m.value} onChange={(v) => setMeta(i, 'value', v)} /></Field>
                 <DelBtn onClick={() => setAt('about.meta', meta.filter((_, j) => j !== i))} />
-              </div>
+              </ReorderPanel>
             )} />
           <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.meta', [...meta, { label: '', value: '' }])}>Add meta row</Btn>
         </Panel>
@@ -174,20 +173,17 @@ function AboutEditor({ content, setAt }) {
         <Reorderable items={impact} getKey={(m) => m.id || m.label}
           onReorder={(next) => setAt('about.impact', next)}
           renderItem={(m, i, { gripProps }) => (
-            <div className="item__reorder">
-              <span className="item__reorder-grip" {...gripProps} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
-              <div className="item__reorder-body">
-                <window.ADMIN_REFINER.RefineImpactEntry
-                  label={m.label}
-                  html={m.html}
-                  onLabelChange={(v) => setImpact(i, 'label', v)}
-                  onHtmlChange={(v) => setImpact(i, 'html', v)}
-                  onAccept={(p) => setImpactEntry(i, p)}
-                  onDelete={() => setAt('about.impact', impact.filter((_, j) => j !== i))}
-                  context="A short label and description pair in the About impact timeline (Now / Then / Before)."
-                />
-              </div>
-            </div>
+            <ReorderPanel gripProps={gripProps} className="reorder-panel--timeline">
+              <window.ADMIN_REFINER.RefineImpactEntry
+                label={m.label}
+                html={m.html}
+                onLabelChange={(v) => setImpact(i, 'label', v)}
+                onHtmlChange={(v) => setImpact(i, 'html', v)}
+                onAccept={(p) => setImpactEntry(i, p)}
+                onDelete={() => setAt('about.impact', impact.filter((_, j) => j !== i))}
+                context="A short label and description pair in the About impact timeline (Now / Then / Before)."
+              />
+            </ReorderPanel>
           )} />
         <Btn sm icon="plus" kind="ghost" onClick={() => setAt('about.impact', [...impact, { id: newImpactId(), label: '', html: '' }])}>Add timeline entry</Btn>
       </Panel>
@@ -363,7 +359,7 @@ function ExpertiseEditor({ content, setAt }) {
 
 /* ============ ACHIEVEMENTS / EDUCATION / CERTS (cards) ============ */
 function CardsEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, BulletEditor, AdminIcon, Reorderable, GripHandle } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, BulletEditor, AdminIcon, Reorderable, ReorderPanel } = window.ADMIN_UI;
   const cards = content.cards;
   const update = (i, key, val) => setAt('cards', cards.map((c, j) => j === i ? { ...c, [key]: val } : c));
   return (
@@ -393,12 +389,11 @@ function CardsEditor({ content, setAt }) {
             <Field label="Score chips" hint="Drag to reorder">
               <Reorderable items={c.scores} getKey={(_, k) => k} onReorder={(next) => update(i, 'scores', next)}
                 renderItem={(s, k, { gripProps }) => (
-                  <div className="scorerow">
-                    <GripHandle gripProps={gripProps} />
+                  <ReorderPanel gripProps={gripProps} className="reorder-panel--fields">
                     <Field label="Label"><Input value={s.label} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, label: v } : x))} /></Field>
                     <Field label="Value"><Input value={s.value} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, value: v } : x))} /></Field>
                     <DelBtn onClick={() => update(i, 'scores', c.scores.filter((_, m) => m !== k))} />
-                  </div>
+                  </ReorderPanel>
                 )} />
               <Btn sm icon="plus" kind="ghost" onClick={() => update(i, 'scores', [...c.scores, { label: '', value: '' }])}>Add score</Btn>
             </Field>
