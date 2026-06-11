@@ -588,10 +588,27 @@ function Thinking() {
 }
 
 /* ---------- one turn's message bubble ---------- */
-function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, onQuickReply, onRetry, quickReplyDisabled }) {
+function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, onQuickReply, onRetry, quickReplyDisabled, publish, canPublish, publishing }) {
   const { AdminIcon, Btn, mdInline } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
   const [diffOpen, setDiffOpen] = useState(false);
+  const [publishErr, setPublishErr] = useState('');
+
+  if (msg.role === 'assistant' && msg.publishNotice) {
+    return (
+      <div className="agentmsg agentmsg--bot agentmsg--notice">
+        <div className="agentmsg__body">
+          <div className="agentmsg__reveal">{msg.text}</div>
+        </div>
+        {!!msg.ts && (
+          <div className="agentchat__meta">
+            <span />
+            <span>{formatMsgTime(msg.ts)}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (msg.role === 'user') {
     const atts = msg.attachments || [];
@@ -649,7 +666,28 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
       } catch (e) { /* offline */ }
     }
   };
+  const publishFromTurn = async () => {
+    if (!publish || publishing || !canPublish) return;
+    setPublishErr('');
+    try {
+      const ok = await publish();
+      if (ok) {
+        agentChat.push({
+          role: 'assistant',
+          text: 'Published to site ✓',
+          publishNotice: true,
+          ts: Date.now(),
+        });
+      } else {
+        setPublishErr('Publish failed — try again');
+      }
+    } catch (e) {
+      setPublishErr((e && e.message) || 'Publish failed — try again');
+    }
+  };
   const hasTools = !!(msg.toolCalls && msg.toolCalls.length);
+  const showPublish = hasChanges && !msg.undone;
+  const shipped = showPublish && !canPublish && !publishing;
 
   return (
     <div className="agentmsg agentmsg--bot">
@@ -742,7 +780,23 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
               <button key={r} type="button" className="linkbtn agentreview__page" onClick={() => go && go(r)}>{r}</button>
             ))}
             <Btn sm kind="ghost" icon="eye" onClick={() => openPreview && openPreview('draft')}>Preview ↗</Btn>
+            {showPublish && (
+              shipped
+                ? <span className="helptext agentreview__shipped">Live on site ✓</span>
+                : (
+                  <Btn
+                    sm
+                    kind="primary"
+                    icon="publish"
+                    onClick={publishFromTurn}
+                    disabled={!canPublish || publishing}
+                  >
+                    {publishing ? 'Publishing…' : 'Publish'}
+                  </Btn>
+                )
+            )}
           </div>
+          {!!publishErr && <div className="login__err" style={{ marginTop: 6 }}>⚠ {publishErr}</div>}
           {diffOpen && (
             <div className={'agentdiff' + (compact ? ' agentdiff--stacked' : '')}>
               {diffEntries.map((pu, i) => (
@@ -785,7 +839,7 @@ function MessageBubble({ msg, msgIndex, canUndoTurn, go, openPreview, compact, o
 }
 
 /* ---------- the shared chat surface (used by page + dock) ---------- */
-function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
+function AgentChat({ route, go, openPreview, setAgentBusy, compact, publish, canPublish, publishing }) {
   const { AdminIcon } = window.ADMIN_UI;
   const Store = window.ADMIN_STORE.Store;
   const chat = useAgentChat();
@@ -923,6 +977,9 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
             onQuickReply={onQuickReply}
             onRetry={onRetry}
             quickReplyDisabled={chat.sending}
+            publish={publish}
+            canPublish={canPublish}
+            publishing={publishing}
           />
         ))}
       </div>
@@ -1008,7 +1065,7 @@ function AgentChat({ route, go, openPreview, setAgentBusy, compact }) {
 }
 
 /* ---------- dedicated Agent page ---------- */
-function AgentPage({ route, go, openPreview, setAgentBusy }) {
+function AgentPage({ route, go, openPreview, setAgentBusy, publish, canPublish, publishing }) {
   const { PageHead, Segmented } = window.ADMIN_UI;
   const LogsView = window.ADMIN_LOGS && window.ADMIN_LOGS.LogsView;
   const [mode, setMode] = useState('chat');
@@ -1027,14 +1084,14 @@ function AgentPage({ route, go, openPreview, setAgentBusy }) {
       <div className="agentpage">
         {isLogs && LogsView
           ? <LogsView source="agent" height={520} />
-          : <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />}
+          : <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} publish={publish} canPublish={canPublish} publishing={publishing} />}
       </div>
     </div>
   );
 }
 
 /* ---------- floating dock (every screen) ---------- */
-function AgentDock({ route, go, openPreview, setAgentBusy }) {
+function AgentDock({ route, go, openPreview, setAgentBusy, publish, canPublish, publishing }) {
   const { AdminIcon } = window.ADMIN_UI;
   const [open, setOpen] = useState(false);
   const chat = useAgentChat();
@@ -1052,7 +1109,7 @@ function AgentDock({ route, go, openPreview, setAgentBusy }) {
             <button className="agentdock__btn" title="Open full page" onClick={() => { setOpen(false); go && go('agent'); }}><AdminIcon name="link" size={14} /></button>
             <button className="agentdock__btn" title="Collapse" onClick={() => setOpen(false)}><AdminIcon name="x" size={14} /></button>
           </div>
-          <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} compact />
+          <AgentChat route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} compact publish={publish} canPublish={canPublish} publishing={publishing} />
         </div>
       ) : (
         <button className="agentdock__bubble" title="Ask the agent" onClick={() => setOpen(true)}>

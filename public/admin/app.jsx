@@ -769,7 +769,7 @@ function AdminApp() {
       case 'media': return <E.MediaEditor content={content} setAt={setAt} analytics={analytics} />;
       case 'appearance': return <E.AppearanceEditor content={content} setAt={setAt} />;
       case 'bot': return <BOT.BotAdmin content={content} setAt={setAt} saveLLMConfig={saveLLMConfig} />;
-      case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />;
+      case 'agent': return <window.ADMIN_AGENT.AgentPage route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} publish={publish} canPublish={canPublish} publishing={publishing} />;
       case 'sync': return <SyncPage publishedAt={publishedAt} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} draftDiffersFromPublished={draftDiffersFromPublished} publishedSnapshot={publishedSnapshot} onPublish={doPublish} onSyncFromPublished={doSyncFromPublished} onDiscard={doDiscard} onPreview={() => openPreview('draft')} canPublish={canPublish} publishing={publishing} />;
       default: return <Overview content={content} analytics={analytics} hasUnpublishedEdits={hasUnpublishedEdits} showSyncFromLive={showSyncFromLive} onPublish={doPublish} onPreview={() => openPreview('draft')} onDiscard={doDiscard} onSyncFromPublished={doSyncFromPublished} onResetAnalytics={resetAnalytics} go={go} canPublish={canPublish} publishing={publishing} />;
     }
@@ -801,7 +801,7 @@ function AdminApp() {
       <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
         content={content} publishedContent={publishedSnapshot || window.ADMIN_STORE.Store.loadPublished()} showSyncFromLive={showSyncFromLive} onSyncFromPublished={doSyncFromPublished}
         canDiscard={hasUnpublishedEdits && !!publishedSnapshot} onDiscard={doDiscard} />
-      <window.ADMIN_AGENT.AgentDock route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} />
+      <window.ADMIN_AGENT.AgentDock route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} publish={publish} canPublish={canPublish} publishing={publishing} />
     </div>
   );
 }

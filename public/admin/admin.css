@@ -3759,6 +3759,16 @@ body::before {
    text-transform: capitalize;
 }
 
+.agentreview__shipped {
+   font-size: 12px;
+   color: var(--ok);
+}
+
+.agentmsg--notice .agentmsg__reveal {
+   color: var(--ok);
+   font-size: 13px;
+}
+
 .agentdiff {
    margin-top: 10px;
    padding-top: 10px;
