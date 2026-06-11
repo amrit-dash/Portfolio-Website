@@ -377,10 +377,14 @@ function CardsEditor({ content, setAt }) {
             <Field label="Subtitle"><Input value={c.sub} onChange={(v) => update(i, 'sub', v)} /></Field>
           </div>
           {c.body !== undefined && (c.items.length === 0 || c.id === 'offduty' || c.id === 'education') && (
-            <Field label="Body paragraph"><TextArea rows={3} value={c.body} onChange={(v) => update(i, 'body', v)} /></Field>
+            c.id === 'education'
+              ? <Field label="Body paragraph" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="Education description" context="The education description paragraph on the portfolio Education info card — coursework, clubs, and highlights beneath the degree and school name." rows={3} value={c.body} onChange={(v) => update(i, 'body', v)} /></Field>
+              : <Field label="Body paragraph"><TextArea rows={3} value={c.body} onChange={(v) => update(i, 'body', v)} /></Field>
           )}
           {(c.items.length > 0 || (c.id !== 'offduty' && c.id !== 'education')) && (
-            <Field label="List items"><BulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder="List item" /></Field>
+            c.id === 'achievements'
+              ? <Field label="List items" hint="✨ to refine each entry · drag to reorder"><window.ADMIN_REFINER.RefineBulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder="Achievement" reorderable refineLabel="Achievement entry" refineContext="A single achievement or award line in the portfolio Achievements info card — concise, impressive, and factual." /></Field>
+              : <Field label="List items"><BulletEditor items={c.items} onChange={(v) => update(i, 'items', v)} placeholder="List item" /></Field>
           )}
           {c.scores && c.scores.length >= 0 && c.id === 'education' && (
             <Field label="Score chips" hint="Drag to reorder">

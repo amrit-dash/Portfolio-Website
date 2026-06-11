@@ -185,4 +185,94 @@ function RefineImpactEntry({ label, html, onLabelChange, onHtmlChange, onAccept,
   );
 }
 
-window.ADMIN_REFINER = { RefineField, RefineImpactEntry };
+/* Bullet list with per-row ✨ refine (e.g. achievements). */
+function RefineBulletEditor({ items = [], onChange, placeholder = 'List item', refineLabel, refineContext, reorderable = false }) {
+  const { Btn, AdminIcon, Reorderable } = window.ADMIN_UI;
+  const Store = window.ADMIN_STORE.Store;
+  const list = Array.isArray(items) ? items : [];
+  const [activeIdx, setActiveIdx] = useRState(null);
+  const [state, setState] = useRState('idle');
+  const [proposal, setProposal] = useRState('');
+  const [err, setErr] = useRState('');
+  const snapRef = useRRef('');
+
+  const refine = async (i) => {
+    const snap = String(list[i] == null ? '' : list[i]);
+    if (!snap.trim()) return;
+    setActiveIdx(i);
+    snapRef.current = snap;
+    setState('working');
+    setErr('');
+    const res = await Store.refineText({ text: snap, label: refineLabel, context: refineContext });
+    if (res && res.proposal && typeof res.proposal === 'string') {
+      setProposal(res.proposal);
+      setState('proposed');
+    } else {
+      setErr((res && res.message) || 'refine failed');
+      setState('error');
+    }
+  };
+
+  const accept = () => {
+    if (activeIdx === null) return;
+    const next = list.slice();
+    next[activeIdx] = proposal;
+    onChange(next);
+    setState('idle');
+    setProposal('');
+    setActiveIdx(null);
+    snapRef.current = '';
+  };
+  const discard = () => { setState('idle'); setProposal(''); setActiveIdx(null); snapRef.current = ''; };
+
+  const updateItem = (i, val) => {
+    const next = list.slice();
+    next[i] = val;
+    onChange(next);
+  };
+
+  const renderRow = (b, i, gripProps) => {
+    const frozen = activeIdx === i && (state === 'working' || state === 'proposed');
+    const showVal = frozen ? snapRef.current : b;
+    return (
+      <div>
+        <div className="bullet">
+          {reorderable && gripProps && (
+            <span className="item__grip grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder">
+              <AdminIcon name="grip" size={16} />
+            </span>
+          )}
+          <input className="inp" value={showVal} placeholder={placeholder} readOnly={frozen}
+            onChange={(e) => updateItem(i, e.target.value)} />
+          <RefineSpark
+            busy={activeIdx === i && state === 'working'}
+            onClick={() => refine(i)}
+            disabled={(activeIdx !== null && activeIdx !== i) || (activeIdx === i && state === 'working') || !String(b || '').trim()}
+          />
+          <span className="iconbtn iconbtn--danger" onClick={() => onChange(list.filter((_, j) => j !== i))} title="Remove"><AdminIcon name="x" size={13} /></span>
+        </div>
+        {activeIdx === i && state === 'working' && <div className="refine__status"><span className="refine__spin" aria-hidden="true" /> Refining…</div>}
+        {activeIdx === i && state === 'error' && <div className="helptext" style={{ color: '#e0a341', marginTop: 6 }}>⚠ {err}</div>}
+        {activeIdx === i && state === 'proposed' && (
+          <RefineProposalPanel onAccept={accept} onRetry={() => refine(i)} onDiscard={discard} retryBusy={state === 'working'}>
+            <input className="inp" value={proposal} onChange={(e) => setProposal(e.target.value)} />
+          </RefineProposalPanel>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="refine">
+      {reorderable ? (
+        <Reorderable items={list} getKey={(_, i) => i} onReorder={onChange}
+          renderItem={(b, i, { gripProps }) => renderRow(b, i, gripProps)} />
+      ) : (
+        list.map((b, i) => <React.Fragment key={i}>{renderRow(b, i)}</React.Fragment>)
+      )}
+      <Btn sm icon="plus" kind="ghost" onClick={() => onChange([...list, ''])}>Add point</Btn>
+    </div>
+  );
+}
+
+window.ADMIN_REFINER = { RefineField, RefineImpactEntry, RefineBulletEditor };
