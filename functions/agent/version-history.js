@@ -56,6 +56,28 @@ function tsToMs(ts) {
   return null;
 }
 
+function mergeDraftApiKeys(publishedBase, draftCur) {
+  const next = deepClone(publishedBase);
+  try {
+    const curBy = draftCur && draftCur.bot && draftCur.bot.providers && draftCur.bot.providers.byProvider;
+    const nextProv = next.bot && next.bot.providers;
+    if (curBy && nextProv) {
+      const by = { ...(nextProv.byProvider || {}) };
+      for (const id of Object.keys(by)) {
+        if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+        const curP = Reflect.get(curBy, id);
+        const nextP = Reflect.get(by, id) || {};
+        Reflect.set(by, id, {
+          ...nextP,
+          apiKey: (curP && typeof curP.apiKey === 'string') ? curP.apiKey : '',
+        });
+      }
+      nextProv.byProvider = by;
+    }
+  } catch (e) { /* keep published as-is */ }
+  return next;
+}
+
 async function archiveDraftSnapshot({ db, FieldValue, content, source = 'autosave' }) {
   if (!content || typeof content !== 'object') return;
   await db.doc('content/draft_archive').set({
@@ -106,6 +128,12 @@ async function revertToPublishedVersion({ db, FieldValue, versionId }) {
   const content = deepClone(data.content || null);
   if (!content) return { ok: false, error: 'empty-version' };
 
+  const draftSnap = await db.doc('content/draft').get();
+  const draftCur = draftSnap.exists ? (draftSnap.data() || {}).content : null;
+  if (draftCur) {
+    await archiveDraftSnapshot({ db, FieldValue, content: draftCur, source: 'pre-revert' });
+  }
+
   const batch = db.batch();
   const all = await db.collection('content/published/versions').get();
   all.forEach((doc) => {
@@ -119,12 +147,22 @@ async function revertToPublishedVersion({ db, FieldValue, versionId }) {
 
   await saveLLMConfigPreserveKeys(db, FieldValue, content);
 
+  const mergedDraft = mergeDraftApiKeys(content, draftCur);
+  await db.doc('content/draft').set({
+    content: firestoreSafeValue(deepClone(mergedDraft)),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  const pubDoc = await db.doc('content/published').get();
+  const pubData = pubDoc.exists ? (pubDoc.data() || {}) : {};
+
   return {
     ok: true,
     reverted: true,
     versionId,
-    content,
-    publishedAt: tsToMs(data.publishedAt),
+    content: pubData.content || content,
+    draftContent: mergedDraft,
+    publishedAt: tsToMs(pubData.updatedAt) || tsToMs(data.publishedAt),
   };
 }
 
@@ -133,6 +171,7 @@ module.exports = {
   archiveDraftSnapshot,
   archivePublishedVersion,
   revertToPublishedVersion,
+  mergeDraftApiKeys,
   trimPublishedVersions,
   tsToMs,
 };
