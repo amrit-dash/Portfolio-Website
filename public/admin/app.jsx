@@ -430,8 +430,8 @@ function SyncPage({
       </Panel>
 
       <div className="sync-firestore-links">
-        <span className="helptext">Firestore · Storage · Auth</span>
-        <a className="sync-firestore-links__open" href={consoleHref('firestore/data')} target="_blank" rel="noreferrer">Open console ↗</a>
+        <span className="helptext">Firebase Console</span>
+        <a className="sync-firestore-links__open" href={consoleHref('')} target="_blank" rel="noreferrer">Open console ↗</a>
       </div>
     </div>
   );
