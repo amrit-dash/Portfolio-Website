@@ -136,7 +136,7 @@ function newImpactId() {
 }
 
 function AboutEditor({ content, setAt }) {
-  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon, Reorderable, inputStr } = window.ADMIN_UI;
+  const { PageHead, Panel, Field, DelBtn, Input, TextArea, Btn, AdminIcon, Reorderable, GripHandle, inputStr } = window.ADMIN_UI;
   const { ImageSlot } = window.ADMIN_CROP;
   const a = content.about;
   const meta = Array.isArray(a.meta) ? a.meta : [];
@@ -156,10 +156,10 @@ function AboutEditor({ content, setAt }) {
         <Panel title="Meta strip" sub={`${meta.length} rows · drag to reorder`}>
           <Reorderable items={meta} getKey={(_, i) => i} onReorder={(next) => setAt('about.meta', next)}
             renderItem={(m, i, { gripProps }) => (
-              <div className="row scorerow">
-                <span className="item__grip" {...gripProps} onClick={(e) => e.stopPropagation()} title="Drag to reorder"><AdminIcon name="grip" size={16} /></span>
-                <Field label="Label"><Input value={m.label} onChange={(v) => setMeta(i, 'label', v)} /></Field>
-                <Field label="Value"><Input value={m.value} onChange={(v) => setMeta(i, 'value', v)} /></Field>
+              <div className="scorerow scorerow--meta">
+                <GripHandle gripProps={gripProps} />
+                <Field label="Label" className="field--label"><Input value={m.label} onChange={(v) => setMeta(i, 'label', v)} /></Field>
+                <Field label="Value" className="field--value"><Input value={m.value} onChange={(v) => setMeta(i, 'value', v)} /></Field>
                 <DelBtn onClick={() => setAt('about.meta', meta.filter((_, j) => j !== i))} />
               </div>
             )} />
@@ -393,7 +393,7 @@ function CardsEditor({ content, setAt }) {
             <Field label="Score chips" hint="Drag to reorder">
               <Reorderable items={c.scores} getKey={(_, k) => k} onReorder={(next) => update(i, 'scores', next)}
                 renderItem={(s, k, { gripProps }) => (
-                  <div className="row scorerow">
+                  <div className="scorerow">
                     <GripHandle gripProps={gripProps} />
                     <Field label="Label"><Input value={s.label} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, label: v } : x))} /></Field>
                     <Field label="Value"><Input value={s.value} onChange={(v) => update(i, 'scores', c.scores.map((x, m) => m === k ? { ...x, value: v } : x))} /></Field>

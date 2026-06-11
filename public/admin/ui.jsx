@@ -165,9 +165,9 @@ function Btn({ kind, sm, icon, children, onClick, type, disabled, title }) {
 }
 
 /* ---------- Form fields ---------- */
-function Field({ label, hint, req, children }) {
+function Field({ label, hint, req, children, className = '' }) {
   return (
-    <div className="field">
+    <div className={'field' + (className ? ' ' + className : '')}>
       {label && <label>{label}{req && <span className="req">*</span>}{hint && <span style={{ marginLeft: 'auto', color: 'var(--fg-mute)', letterSpacing: 0 }}>{hint}</span>}</label>}
       {children}
     </div>
