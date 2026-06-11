@@ -9,7 +9,7 @@ function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '
 
 /* ============ WORK ============ */
 function WorkItemBody({ e, onChange }) {
-  const { Field, Input, TextArea, Btn, BulletEditor, TagInput, Toggle, ToggleRow, AdminIcon, HoldReorderPills } = window.ADMIN_UI;
+  const { Field, Input, TextArea, Btn, BulletEditor, TagInput, ToggleRow, AdminIcon, HoldReorderPills } = window.ADMIN_UI;
   const [roleTab, setRoleTab] = useStateWP(0);
   const hasRoles = Array.isArray(e.roles) && e.roles.length > 0;
   const set = (key, val) => onChange({ ...e, [key]: val });
@@ -43,12 +43,8 @@ function WorkItemBody({ e, onChange }) {
         <Field label="Role / title"><Input value={e.role} onChange={(v) => set('role', v)} /></Field>
         <Field label="Subtitle"><Input value={e.sub} onChange={(v) => set('sub', v)} /></Field>
       </div>
-      <div className="row">
-        <Field label="Date range"><Input value={e.date} onChange={(v) => set('date', v)} /></Field>
-        <Field label="Current role" hint="green dot on tab" className="field--toggle">
-          <Toggle value={!!e.current} onChange={(v) => set('current', v)} />
-        </Field>
-      </div>
+      <Field label="Date range"><Input value={e.date} onChange={(v) => set('date', v)} /></Field>
+      <ToggleRow title="Currently working in this role" value={!!e.current} onChange={(v) => set('current', v)} />
       <Field label="Description" hint="✨ to refine"><window.ADMIN_REFINER.RefineField label="Work experience description" context="The role description paragraph shown when a work history entry is selected — scope, impact, and what was built at this company." rows={2} value={e.desc} onChange={(v) => set('desc', v)} /></Field>
 
       <div className="divider" />
@@ -116,7 +112,7 @@ function WorkEditor({ content, setAt }) {
         <Reorderable items={list} getKey={(e, i) => e.id || i} onReorder={(next) => setAt('experience', next)}
           renderItem={(e, i, { gripProps }) => (
             <ListItem layout="card" gripProps={gripProps} icon={<AdminIcon name="work" size={15} />}
-              title={<span className="item__title-inline">{e.current && <span className="current-dot" title="Current role" />}{e.company}</span>}
+              title={<span className="item__title-inline">{e.company}{e.current && <span className="item__current-role"><span className="current-dot" aria-hidden="true" /><span className="current-role-label">Current role</span></span>}</span>}
               sub={`${e.role} · ${e.date}${e.roles ? ' · ' + e.roles.length + ' sub-roles' : ''}`}
               open={open === i} onToggle={() => setOpen(open === i ? null : i)}
               onDelete={() => { setAt('experience', list.filter((_, j) => j !== i)); setOpen(null); }}>

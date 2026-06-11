@@ -1035,7 +1035,7 @@ function ExperienceFolder() {
                 data-active={e.id === active}
                 onClick={() => setActive(e.id)}>
 
-                <span className="exp-tab__name">{e.current && <span className="exp-tab__dot" aria-hidden="true" />}{e.short}</span>
+                <span className="exp-tab__name">{e.short}{e.current && <span className="exp-tab__dot" aria-hidden="true" />}</span>
                 <span className="exp-tab__date">{e.date}</span>
               </button>
             )}

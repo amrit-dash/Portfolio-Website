@@ -1305,7 +1305,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   border-radius: 50%;
   background: #28c840;
   box-shadow: 0 0 6px #28c840;
-  margin-right: 6px;
+  margin-left: 8px;
   vertical-align: 2px;
 }
 .exp-tab__date { font-size: 10px; color: var(--fg-mute); letter-spacing: .1em; }

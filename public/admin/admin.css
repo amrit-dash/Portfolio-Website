@@ -1543,6 +1543,13 @@ body::before {
    gap: 8px;
 }
 
+.item__current-role {
+   display: inline-flex;
+   align-items: center;
+   gap: 6px;
+   margin-left: 4px;
+}
+
 .current-dot {
    display: inline-block;
    width: 7px;
@@ -1551,6 +1558,14 @@ body::before {
    background: var(--ok);
    box-shadow: 0 0 6px var(--ok);
    flex-shrink: 0;
+}
+
+.current-role-label {
+   font-family: var(--font-mono);
+   font-size: 10px;
+   letter-spacing: .06em;
+   color: var(--ok);
+   text-transform: uppercase;
 }
 
 .item__sub {
