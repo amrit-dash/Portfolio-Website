@@ -460,8 +460,10 @@ const DEFAULT_COSMETICS = {
   wallpaperBrightness: 50, // pattern visibility: 0 faint · 50 default · 100 bright
   wallpaperIntensity: 50,  // pattern density: 0 sparse · 50 default · 100 dense
   wallpaperAnimSpeed: 50, // animated pattern motion: 0 slow · 50 default · 100 fast
+  wallpaperAnimPaused: false, // freeze animated wallpaper motion (pattern stays visible)
   wallpaperRandomness: 40, // chaos mixer: 0 = uniform sliders · 40 default · 100 = per-element overrides
   rainDirection: 'down',
+  waveDirection: 'up',
   starSize: 50,
   cometDensity: 40,
   cometDirection: 'right-down',
@@ -470,8 +472,25 @@ const DEFAULT_COSMETICS = {
   particleOpacity: 70,
   particleDrift: 'up',
   morphStyle: 'spin',
+  morphBlobCount: 4,
+  morphSmoothness: 72,
+  morphMergeStrength: 50,
   numberFormat: 'binary',
   binaryFontSize: 50,
+  honeycombStyle: 'outline',
+  cursorInteractStrength: 55,
+  cursorTrailLength: 50,
+  cursorParticleDensity: 40,
+  cursorSweepRadius: 50,
+  cursorEffect: 'none',
+  cursorEffectTrailStyle: 'glow',
+  cursorEffectTrailLength: 50,
+  cursorEffectIntensity: 55,
+  cursorEffectRippleCount: 50,
+  cursorEffectRippleSpeed: 50,
+  cursorEffectCometDirection: 'cursor',
+  cursorEffectCometIntensity: 50,
+  cursorEffectCometSpeed: 50,
   wallpaperUseAccent: true, // wallpaper tint follows accent when true
   wallpaperColor: '',     // custom wallpaper tint when wallpaperUseAccent is false
   vignetteIntensity: 45,  // wallpaper edge fade: 0 off · 45 legacy center · 100 strong
@@ -481,14 +500,7 @@ const DEFAULT_COSMETICS = {
   vibe: 'classic',        // last-applied preset (admin convenience; front-end ignores)
   customVibes: (window.SHARED_SCHEMA && window.SHARED_SCHEMA.createDefaultCustomVibes)
     ? window.SHARED_SCHEMA.createDefaultCustomVibes()
-    : [
-      { id: 'custom-1', name: '', label: 'Custom vibe 1', cos: null },
-      { id: 'custom-2', name: '', label: 'Custom vibe 2', cos: null },
-      { id: 'custom-3', name: '', label: 'Custom vibe 3', cos: null },
-      { id: 'custom-4', name: '', label: 'Custom vibe 4', cos: null },
-      { id: 'custom-5', name: '', label: 'Custom vibe 5', cos: null },
-      { id: 'custom-6', name: '', label: 'Custom vibe 6', cos: null },
-    ],
+    : [],
 };
 
 const LLM_PROVIDERS = [
@@ -760,7 +772,14 @@ window.applyCosmeticsToRoot = function applyCosmeticsToRoot(cos, opts) {
   if (_cos.type && _cos.type !== 'default') _root.dataset.type = _cos.type; else delete _root.dataset.type;
   if (_cos.headingFont && _cos.headingFont !== 'match') _root.dataset.heading = _cos.headingFont; else delete _root.dataset.heading;
   if (_cos.tracking && _cos.tracking !== 'normal') _root.dataset.tracking = _cos.tracking; else delete _root.dataset.tracking;
-  _root.dataset.bg = _cos.bgPattern || 'grid';
+  _root.dataset.bg = (() => {
+    const raw = _cos.bgPattern || 'grid';
+    const schema = window.SHARED_SCHEMA || {};
+    const allowed = schema.BG_PATTERNS || [];
+    const legacy = schema.LEGACY_BG_PATTERNS || { scan: 'grid', starfield: 'cosmos', pulse: 'aurora', smoke: 'nebula', halftone: 'dots', radar: 'circuits' };
+    if (allowed.includes(raw)) return raw;
+    return legacy[raw] || 'grid';
+  })();
   if (_cos.radius && _cos.radius !== 'soft') _root.dataset.radius = _cos.radius; else delete _root.dataset.radius;
   if (typeof window.applyWallpaperCosmetics === 'function') {
     window.applyWallpaperCosmetics(_root, _cos, _toned);
