@@ -37,6 +37,7 @@
   --glow: 1; /* accent bloom multiplier — driven by cosmetics.glow (admin Appearance) */
   --ui-glass-mix: 100%;
   --ui-glass-blur: 0px;
+  --ui-glass-bg: var(--bg-card);
   --titlebar: linear-gradient(180deg, #2a2d22 0%, #1c1f15 100%);
   --titlebar-solid: #21241a; /* opaque fallback for fixed bars iOS won't paint a gradient on */
   --titlebar-text: #ecead6;
@@ -515,16 +516,54 @@ html[data-theme="dark"][data-boot="active"] body::after {
   .boot__ascii { font-size: 8px; }
 }
 
+/* ---------- Panel translucency (cosmetics.uiGlassOpacity) ---------- */
+.ui-glass,
+.window,
+.exp-folder,
+.info-card,
+.contact-card,
+.about-photo,
+.expertise-card,
+.exp-sidebar,
+.project-modal__art,
+.bot-msg__bubble,
+.console__input {
+  background: color-mix(in oklab, var(--ui-glass-bg, var(--bg-card)) var(--ui-glass-mix, 100%), transparent);
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
+}
+.expertise-card,
+.contact-card,
+.about-photo,
+.exp-sidebar,
+.project-modal__art,
+.bot-msg__bubble {
+  --ui-glass-bg: var(--bg-elev);
+}
+.projects-desktop {
+  --ui-glass-bg: var(--bg-elev);
+  background-color: color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent);
+  background-image:
+    radial-gradient(circle, var(--line) 1px, transparent 1px);
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
+}
+.console {
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklab, var(--bg-card) calc(var(--ui-glass-mix, 100%) * 0.92), transparent) 0%,
+      color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent) 100%);
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
+}
+
 /* ---------- Generic Window ---------- */
 .window {
-  background: color-mix(in oklab, var(--bg-card) var(--ui-glass-mix, 100%), transparent);
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: var(--shadow);
   overflow: hidden;
   position: relative;
-  backdrop-filter: blur(var(--ui-glass-blur, 0px));
-  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 .window__titlebar {
   display: flex; align-items: center;
@@ -737,18 +776,12 @@ html[data-theme="dark"][data-boot="active"] body::after {
   max-width: 460px;
   margin: 0 auto;
   height: 520px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in oklab, var(--bg-card) calc(var(--ui-glass-mix, 100%) * 0.92), transparent) 0%,
-      color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent) 100%);
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  backdrop-filter: blur(var(--ui-glass-blur, 0px));
-  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 .console::before {
   /* subtle ambient accent glow */
@@ -861,7 +894,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
   margin-top: 2px;
 }
 .bot-msg__bubble {
-  background: color-mix(in oklab, var(--bg-elev) 75%, transparent);
   border: 1px solid var(--line);
   padding: 8px 12px;
   border-radius: 12px 12px 12px 4px;
@@ -1006,7 +1038,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px 14px;
   border-top: 1px solid var(--line);
-  background: color-mix(in oklab, var(--bg-card) 80%, transparent);
 }
 .console__prompt {
   color: var(--accent);
@@ -1088,7 +1119,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
-  background: var(--bg-elev);
   aspect-ratio: 4 / 5;
 }
 .about-stamp-header {
@@ -1220,14 +1250,11 @@ html[data-theme="dark"][data-boot="active"] body::after {
   margin-top: 20px;
 }
 .expertise-card {
-  background: color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px 18px 16px;
   position: relative;
   transition: border-color .2s, transform .2s, background .2s, box-shadow .2s;
-  backdrop-filter: blur(var(--ui-glass-blur, 0px));
-  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
   /* Reset button styles since this is now a <button> */
   font: inherit;
   color: inherit;
@@ -1240,7 +1267,11 @@ html[data-theme="dark"][data-boot="active"] body::after {
 }
 .expertise-card[data-active="true"] {
   border-color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 8%, var(--bg-elev));
+  background: color-mix(
+    in oklab,
+    var(--accent) 8%,
+    color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent)
+  );
   box-shadow: 0 0 0 1px var(--accent), 0 6px 18px color-mix(in oklab, var(--accent) 20%, transparent);
 }
 .expertise-card[data-active="true"] .expertise-card__num,
@@ -1334,11 +1365,8 @@ html[data-theme="dark"][data-boot="active"] body::after {
 .exp-folder {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: color-mix(in oklab, var(--bg-card) var(--ui-glass-mix, 100%), transparent);
   box-shadow: var(--shadow);
   overflow: hidden;
-  backdrop-filter: blur(var(--ui-glass-blur, 0px));
-  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 .exp-folder__body {
   display: grid;
@@ -1346,7 +1374,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
   min-height: 360px;
 }
 .exp-sidebar {
-  background: var(--bg-elev);
   border-right: 1px solid var(--line);
   padding: 16px 0;
 }
@@ -1555,7 +1582,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
 }
 .info-card {
   border: 1px solid var(--line);
-  background: var(--bg-card);
   border-radius: 10px;
   padding: 22px;
   box-shadow: var(--shadow-sm);
@@ -1622,12 +1648,9 @@ html[data-theme="dark"][data-boot="active"] body::after {
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 28px 18px;
   padding: 36px 24px;
-  background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: 12px;
   position: relative;
-  background-image:
-    radial-gradient(circle, var(--line) 1px, transparent 1px);
   background-size: 24px 24px;
   background-position: 0 0;
 }
@@ -1767,7 +1790,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
   overflow: auto;
 }
 .project-modal__art {
-  background: var(--bg-elev);
   border-right: 1px solid var(--line);
   display: grid; place-items: center;
   padding: 20px;
@@ -1867,7 +1889,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
 .contact-card {
   display: flex; flex-direction: column;
   gap: 20px;
-  background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 24px;
