@@ -18,14 +18,13 @@
   const CURSOR_EFFECTS = ['none', 'trail', 'comet', 'ripple', 'spark', 'glow'];
   const CURSOR_EFFECT_TRAIL_STYLES = ['glow', 'line', 'dotted', 'particles'];
   const CURSOR_EFFECT_COMET_DIRECTIONS = ['cursor', 'up', 'down', 'random'];
-  const BG_PATTERNS = ['grid', 'dots', 'diagonal', 'crosshatch', '3dgrid', 'honeycomb', 'honeycombGlow', 'padgrid', 'waves', 'brick', 'noise', 'circuits', 'aurora', 'cosmos', 'matrixrain', 'particles', 'lightning', 'rain', 'binarystream', 'nebula', 'morphgeo', 'snowinteractive', 'ripplepool', 'fireflies', 'none'];
+  const BG_PATTERNS = ['grid', 'dots', 'diagonal', 'crosshatch', '3dgrid', 'honeycomb', 'honeycombGlow', 'padgrid', 'waves', 'brick', 'noise', 'circuits', 'aurora', 'cosmos', 'matrixrain', 'particles', 'lightning', 'rain', 'binarystream', 'nebula', 'morphgeo', 'fluidcore', 'snowinteractive', 'ripplepool', 'fireflies', 'none'];
   const HONEYCOMB_STYLES = ['outline', 'fill'];
   const CURSOR_WALLPAPERS = ['snowinteractive', 'ripplepool', 'fireflies'];
   const RAIN_DIRECTIONS = ['down', 'diagonal-left', 'diagonal-right', 'left', 'right'];
   const WAVE_DIRECTIONS = ['up', 'down', 'left', 'right', 'diagonal-up', 'diagonal-down'];
   const COMET_DIRECTIONS = ['right-down', 'left-down', 'right', 'left', 'up-right'];
   const PARTICLE_DRIFT_DIRECTIONS = ['up', 'down', 'diagonal-up', 'diagonal-down', 'left', 'right'];
-  const MORPH_STYLES = ['spin', 'pulse', 'warp', 'orbit'];
   const NUMBER_FORMATS = ['binary', 'octal', 'decimal', 'hex'];
   /* Pattern metadata for admin labels (animated badge) and wallpaper tuning. */
   const BG_PATTERN_META = {
@@ -49,13 +48,14 @@
     rain: { label: 'Rain', animated: true, supportsRandomness: true },
     binarystream: { label: 'Binary stream', animated: true, supportsRandomness: true },
     nebula: { label: 'Nebula', animated: true, supportsRandomness: true },
-    morphgeo: { label: 'Fluid morph', animated: true, supportsRandomness: true },
+    morphgeo: { label: 'Soft blobs', animated: true, supportsRandomness: true },
+    fluidcore: { label: 'Fluid core', animated: true, supportsRandomness: true },
     snowinteractive: { label: 'Snow interactive', animated: true, cursorReactive: true },
     ripplepool: { label: 'Ripple pool', animated: true, cursorReactive: true },
     fireflies: { label: 'Fireflies', animated: true, cursorReactive: true },
     none: { label: 'None', animated: false },
   };
-  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'binarystream', 'nebula', 'circuits', 'particles', 'morphgeo', 'honeycombGlow', 'snowinteractive', 'ripplepool', 'fireflies'];
+  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'binarystream', 'nebula', 'circuits', 'particles', 'morphgeo', 'fluidcore', 'honeycombGlow', 'snowinteractive', 'ripplepool', 'fireflies'];
   const CSS_ANIM_WALLPAPERS = ['aurora', 'waves'];
   const LEGACY_BG_PATTERNS = {
     scan: 'grid',
@@ -101,7 +101,7 @@
     { id: 'royal', label: 'Royal', desc: 'Dark · violet cosmos', category: 'dark',
       cos: { theme: 'dark', accent: '#9d7cff', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'cosmos', wallpaperBrightness: 45, wallpaperIntensity: 35, wallpaperAnimSpeed: 38, starSize: 58, cometDensity: 42, wallpaperUseAccent: true, cursorEffect: 'glow', cursorEffectIntensity: 50, vignetteIntensity: 35, vignetteDirection: 'center', glow: 120, radius: 'soft', vibe: 'royal' } },
     { id: 'crimson', label: 'Crimson', desc: 'Dark · morphing rose geometry', category: 'dark',
-      cos: { theme: 'dark', accent: '#e85c89', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#fda4af', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'warp', wallpaperBrightness: 56, wallpaperIntensity: 46, wallpaperAnimSpeed: 42, wallpaperUseAccent: false, wallpaperColor: '#be185d', cursorEffect: 'glow', cursorEffectIntensity: 55, glow: 120, radius: 'soft', vibe: 'crimson' } },
+      cos: { theme: 'dark', accent: '#e85c89', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#fda4af', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 56, wallpaperIntensity: 46, wallpaperAnimSpeed: 42, wallpaperUseAccent: false, wallpaperColor: '#be185d', cursorEffect: 'glow', cursorEffectIntensity: 55, glow: 120, radius: 'soft', vibe: 'crimson' } },
     /* extended: blue waves overlap deepsea / sky — user-requested hide */
     { id: 'midnight', label: 'Midnight', desc: 'Dark · deep blue waves', category: 'dark', hidden: true,
       cos: { theme: 'dark', accent: '#4a9eff', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#60a5fa', scanlines: false, bgPattern: 'waves', wallpaperBrightness: 44, wallpaperIntensity: 48, wallpaperAnimSpeed: 42, waveDirection: 'up', wallpaperUseAccent: false, wallpaperColor: '#1d4ed8', cursorEffect: 'glow', cursorEffectIntensity: 48, vignetteIntensity: 50, vignetteDirection: 'center', glow: 110, radius: 'soft', vibe: 'midnight' } },
@@ -165,8 +165,8 @@
     { id: 'storm', label: 'Storm', desc: 'Dark · electric sky', category: 'dark', hidden: true,
       cos: { theme: 'dark', accent: '#60a5fa', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#93c5fd', scanlines: false, bgPattern: 'lightning', wallpaperBrightness: 52, wallpaperIntensity: 55, wallpaperAnimSpeed: 62, wallpaperUseAccent: true, cursorEffect: 'spark', cursorEffectIntensity: 68, vignetteIntensity: 48, vignetteDirection: 'top', glow: 135, radius: 'soft', vibe: 'storm' } },
     /* extended: violet nebula overlaps void / royal — user-requested hide */
-    { id: 'abyss', label: 'Abyss', desc: 'Dark · cosmic nebula', category: 'dark', hidden: true,
-      cos: { theme: 'dark', accent: '#818cf8', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#a5b4fc', scanlines: false, bgPattern: 'nebula', wallpaperBrightness: 52, wallpaperIntensity: 46, wallpaperAnimSpeed: 32, wallpaperUseAccent: false, wallpaperColor: '#4338ca', cursorEffect: 'glow', cursorEffectIntensity: 52, vignetteIntensity: 52, vignetteDirection: 'center', glow: 118, radius: 'round', vibe: 'abyss' } },
+    { id: 'abyss', label: 'Abyss', desc: 'Dark · fluid core vignette', category: 'dark', hidden: true,
+      cos: { theme: 'dark', accent: '#818cf8', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#a5b4fc', scanlines: false, bgPattern: 'fluidcore', wallpaperBrightness: 52, wallpaperIntensity: 46, wallpaperAnimSpeed: 28, fluidSize: 58, fluidMorphSpeed: 38, wallpaperUseAccent: false, wallpaperColor: '#4338ca', cursorEffect: 'glow', cursorEffectIntensity: 52, vignetteIntensity: 52, vignetteDirection: 'center', glow: 118, radius: 'round', vibe: 'abyss' } },
     /* extended: grey nebula near-duplicate of abyss */
     { id: 'void', label: 'Void', desc: 'Dark · soft nebula', category: 'dark', hidden: true,
       cos: { theme: 'dark', accent: '#94a3b8', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#e2e8f0', scanlines: false, bgPattern: 'nebula', wallpaperBrightness: 44, wallpaperIntensity: 50, wallpaperAnimSpeed: 28, wallpaperUseAccent: false, wallpaperColor: '#64748b', vignetteIntensity: 42, vignetteDirection: 'all', glow: 72, radius: 'sharp', vibe: 'void' } },
@@ -174,7 +174,7 @@
       cos: { theme: 'light', accent: '#475569', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#334155', scanlines: false, bgPattern: 'snowinteractive', wallpaperBrightness: 44, wallpaperIntensity: 48, wallpaperAnimSpeed: 48, cursorInteractStrength: 55, cursorSweepRadius: 58, cursorParticleDensity: 48, wallpaperUseAccent: false, wallpaperColor: '#64748b', glow: 78, radius: 'soft', vibe: 'drizzle' } },
     /* extended: amber morphgeo light overlaps citrus multi-tone */
     { id: 'cream', label: 'Cream', desc: 'Light · morphing shapes', category: 'light', hidden: true,
-      cos: { theme: 'light', accent: '#b45309', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#92400e', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'spin', wallpaperBrightness: 50, wallpaperIntensity: 42, wallpaperAnimSpeed: 40, wallpaperUseAccent: false, wallpaperColor: '#d97706', glow: 86, radius: 'round', vibe: 'cream' } },
+      cos: { theme: 'light', accent: '#b45309', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#92400e', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 50, wallpaperIntensity: 42, wallpaperAnimSpeed: 40, wallpaperUseAccent: false, wallpaperColor: '#d97706', glow: 86, radius: 'round', vibe: 'cream' } },
     /* extended: green binarystream overlaps matrix / glitch */
     { id: 'phosphor', label: 'Phosphor', desc: 'Retro · green data stream', category: 'retro', hidden: true,
       cos: { theme: 'dark', accent: '#39ff14', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'beam', cursorColor: '#39ff14', scanlines: true, bgPattern: 'binarystream', wallpaperBrightness: 50, wallpaperIntensity: 62, wallpaperAnimSpeed: 68, binaryFontSize: 72, wallpaperUseAccent: true, cursorEffect: 'glow', cursorEffectIntensity: 80, glow: 125, radius: 'sharp', vibe: 'phosphor' } },
@@ -186,13 +186,13 @@
       cos: { theme: 'dark', accent: '#facc15', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#fef08a', scanlines: false, bgPattern: 'circuits', wallpaperBrightness: 60, wallpaperIntensity: 72, wallpaperAnimSpeed: 78, wallpaperUseAccent: false, wallpaperColor: '#ca8a04', vignetteIntensity: 35, vignetteDirection: 'center', glow: 155, radius: 'round', vibe: 'volta' } },
     /* extended: pink morphgeo overlaps crimson / prism */
     { id: 'helix', label: 'Helix', desc: 'Bold · morphing geometry', category: 'bold', hidden: true,
-      cos: { theme: 'dark', accent: '#ec4899', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#f472b6', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'orbit', wallpaperBrightness: 56, wallpaperIntensity: 58, wallpaperAnimSpeed: 55, wallpaperUseAccent: false, wallpaperColor: '#7c3aed', vignetteIntensity: 32, vignetteDirection: 'center', glow: 148, radius: 'round', vibe: 'helix' } },
+      cos: { theme: 'dark', accent: '#ec4899', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#f472b6', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 56, wallpaperIntensity: 58, wallpaperAnimSpeed: 55, wallpaperUseAccent: false, wallpaperColor: '#7c3aed', vignetteIntensity: 32, vignetteDirection: 'center', glow: 148, radius: 'round', vibe: 'helix' } },
     /* extended: teal binary overlaps matrix / phosphor */
     { id: 'cipher', label: 'Cipher', desc: 'Bold · scrolling binary', category: 'bold', hidden: true,
       cos: { theme: 'dark', accent: '#14b8a6', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'beam', cursorColor: '#2dd4bf', scanlines: true, bgPattern: 'binarystream', wallpaperBrightness: 46, wallpaperIntensity: 70, wallpaperAnimSpeed: 82, wallpaperUseAccent: true, glow: 112, radius: 'sharp', vibe: 'cipher' } },
     /* extended: indigo morphgeo spark overlaps crimson */
     { id: 'prism', label: 'Prism', desc: 'Bold · pulsing geometry + sparks', category: 'bold', hidden: true,
-      cos: { theme: 'dark', accent: '#818cf8', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#c4b5fd', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'pulse', wallpaperBrightness: 54, wallpaperIntensity: 55, wallpaperAnimSpeed: 48, wallpaperUseAccent: false, wallpaperColor: '#4338ca', cursorEffect: 'spark', cursorEffectIntensity: 68, vignetteIntensity: 38, vignetteDirection: 'center', glow: 142, radius: 'round', vibe: 'prism' } },
+      cos: { theme: 'dark', accent: '#818cf8', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#c4b5fd', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 54, wallpaperIntensity: 55, wallpaperAnimSpeed: 48, wallpaperUseAccent: false, wallpaperColor: '#4338ca', cursorEffect: 'spark', cursorEffectIntensity: 68, vignetteIntensity: 38, vignetteDirection: 'center', glow: 142, radius: 'round', vibe: 'prism' } },
     /* extended: grey rain+ripple overlaps storm / drizzle weather family */
     { id: 'static', label: 'Static', desc: 'Bold · storm rain + ripples', category: 'bold', hidden: true,
       cos: { theme: 'dark', accent: '#94a3b8', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#cbd5e1', scanlines: false, bgPattern: 'rain', rainDirection: 'diagonal-right', wallpaperBrightness: 44, wallpaperIntensity: 58, wallpaperAnimSpeed: 65, wallpaperUseAccent: true, cursorEffect: 'ripple', cursorEffectIntensity: 62, cursorEffectRippleCount: 60, vignetteIntensity: 42, vignetteDirection: 'top', glow: 88, radius: 'sharp', vibe: 'static' } },
@@ -212,7 +212,7 @@
       cos: { theme: 'light', accent: '#0f172a', type: 'slab', headingFont: 'slab', tracking: 'tight', cursorStyle: 'bold', cursorColor: '#e11d48', scanlines: false, bgPattern: 'waves', waveDirection: 'left', wallpaperBrightness: 52, wallpaperIntensity: 50, wallpaperAnimSpeed: 46, wallpaperUseAccent: false, wallpaperColor: '#475569', cursorEffect: 'ripple', cursorEffectIntensity: 48, cursorEffectRippleCount: 42, glow: 72, radius: 'sharp', vibe: 'inkwave' } },
     /* extended: lime morph overlaps crimson / cream */
     { id: 'citrus', label: 'Citrus', desc: 'Multi · lime morph + red cursor', category: 'multi-tone', hidden: true,
-      cos: { theme: 'light', accent: '#4d7c0f', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#dc2626', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'orbit', wallpaperBrightness: 58, wallpaperIntensity: 48, wallpaperAnimSpeed: 44, wallpaperUseAccent: false, wallpaperColor: '#92400e', glow: 92, radius: 'round', vibe: 'citrus' } },
+      cos: { theme: 'light', accent: '#4d7c0f', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#dc2626', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 58, wallpaperIntensity: 48, wallpaperAnimSpeed: 44, wallpaperUseAccent: false, wallpaperColor: '#92400e', glow: 92, radius: 'round', vibe: 'citrus' } },
     /* extended: silver honeycombGlow overlaps digital / noir */
     { id: 'noir', label: 'Noir', desc: 'Multi · silver glow + amber cursor', category: 'multi-tone', hidden: true,
       cos: { theme: 'dark', accent: '#e2e8f0', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#fbbf24', scanlines: false, bgPattern: 'honeycombGlow', honeycombStyle: 'outline', wallpaperBrightness: 55, wallpaperIntensity: 62, wallpaperAnimSpeed: 52, wallpaperUseAccent: false, wallpaperColor: '#94a3b8', glow: 95, radius: 'sharp', vibe: 'noir' } },
@@ -222,7 +222,7 @@
       cos: { theme: 'dark', accent: '#0ea5e9', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#fb923c', scanlines: false, bgPattern: 'aurora', wallpaperBrightness: 58, wallpaperIntensity: 48, wallpaperAnimSpeed: 34, wallpaperUseAccent: false, wallpaperColor: '#7dd3fc', cursorEffect: 'glow', cursorEffectIntensity: 58, vignetteIntensity: 42, vignetteDirection: 'bottom', glow: 118, radius: 'round', vibe: 'polar' } },
     /* extended: violet morph overlaps crimson / prism — user-requested hide */
     { id: 'gilded', label: 'Gilded', desc: 'Multi · violet morph + gold cursor', category: 'multi-tone', hidden: true,
-      cos: { theme: 'dark', accent: '#c084fc', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#fcd34d', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'pulse', wallpaperBrightness: 58, wallpaperIntensity: 54, wallpaperAnimSpeed: 46, wallpaperUseAccent: false, wallpaperColor: '#8b5cf6', cursorEffect: 'comet', cursorEffectCometDirection: 'cursor', cursorEffectCometIntensity: 55, cursorEffectCometSpeed: 48, vignetteIntensity: 36, vignetteDirection: 'center', glow: 132, radius: 'round', vibe: 'gilded' } },
+      cos: { theme: 'dark', accent: '#c084fc', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#fcd34d', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 58, wallpaperIntensity: 54, wallpaperAnimSpeed: 46, wallpaperUseAccent: false, wallpaperColor: '#8b5cf6', cursorEffect: 'comet', cursorEffectCometDirection: 'cursor', cursorEffectCometIntensity: 55, cursorEffectCometSpeed: 48, vignetteIntensity: 36, vignetteDirection: 'center', glow: 132, radius: 'round', vibe: 'gilded' } },
   ];
 
   function isVibeHidden(vibe) {
@@ -245,7 +245,8 @@
     'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperAnimPaused', 'wallpaperRandomness',
     'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection',
     'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
-    'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'morphStyle', 'morphBlobCount', 'morphSmoothness', 'morphMergeStrength', 'numberFormat', 'binaryFontSize',
+    'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'numberFormat', 'binaryFontSize',
+    'fluidSize', 'fluidMorphSpeed',
     'honeycombStyle', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
     'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
     'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
@@ -900,14 +901,6 @@
       case 'particleDrift':
         if (!PARTICLE_DRIFT_DIRECTIONS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.particleDrift must be one of: ${PARTICLE_DRIFT_DIRECTIONS.join(', ')}` };
         break;
-      case 'morphStyle':
-        if (!MORPH_STYLES.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.morphStyle must be one of: ${MORPH_STYLES.join(', ')}` };
-        break;
-      case 'morphBlobCount': {
-        const n = Number(value);
-        if (!Number.isFinite(n) || n < 2 || n > 8) return { error: 'invalid-cosmetics', message: 'cosmetics.morphBlobCount must be a number 2–8' };
-        break;
-      }
       case 'honeycombStyle':
         if (!HONEYCOMB_STYLES.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.honeycombStyle must be one of: ${HONEYCOMB_STYLES.join(', ')}` };
         break;
@@ -925,9 +918,9 @@
       case 'particleSize':
       case 'particleDensity':
       case 'particleOpacity':
-      case 'morphSmoothness':
-      case 'morphMergeStrength':
       case 'binaryFontSize':
+      case 'fluidSize':
+      case 'fluidMorphSpeed':
       case 'cursorInteractStrength':
       case 'cursorTrailLength':
       case 'cursorParticleDensity':
@@ -943,7 +936,8 @@
         const ranges = {
           accentTone: [0, 100], fontScale: [85, 120], wallpaperBrightness: [0, 100], wallpaperIntensity: [0, 100],
           wallpaperAnimSpeed: [0, 100], wallpaperRandomness: [0, 100], starSize: [0, 100], cometDensity: [0, 100],
-          particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], morphSmoothness: [0, 100], morphMergeStrength: [0, 100], binaryFontSize: [0, 100],
+          particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], binaryFontSize: [0, 100],
+          fluidSize: [0, 100], fluidMorphSpeed: [0, 100],
           cursorInteractStrength: [0, 100], cursorTrailLength: [0, 100], cursorParticleDensity: [0, 100], cursorSweepRadius: [0, 100],
           cursorEffectTrailLength: [0, 100], cursorEffectIntensity: [0, 100], cursorEffectRippleCount: [0, 100], cursorEffectRippleSpeed: [0, 100], cursorEffectCometIntensity: [0, 100], cursorEffectCometSpeed: [0, 100],
           vignetteIntensity: [0, 100], glow: [0, 160],
@@ -998,8 +992,6 @@
         : k === 'wallpaperAnimPaused' ? false
         : k === 'cometDirection' ? 'right-down'
         : k === 'particleDrift' ? 'up'
-        : k === 'morphStyle' ? 'spin'
-        : k === 'morphBlobCount' ? 4
         : k === 'honeycombStyle' ? 'outline'
         : k === 'numberFormat' ? 'binary'
         : k === 'cursorEffect' ? 'none'
@@ -1027,16 +1019,16 @@
   function cosmeticsFieldHint() {
     return [
       'Appearance (cosmetics.*): theme · accent · accentTone · type · headingFont · tracking · fontScale',
-      'bgPattern (grid|dots|diagonal|crosshatch|3dgrid|honeycomb|honeycombGlow|padgrid|circuits|waves|brick|noise|aurora|cosmos|matrixrain|particles|lightning|rain|binarystream|nebula|morphgeo|snowinteractive|ripplepool|fireflies|none)',
+      'bgPattern (grid|dots|diagonal|crosshatch|3dgrid|honeycomb|honeycombGlow|padgrid|circuits|waves|brick|noise|aurora|cosmos|matrixrain|particles|lightning|rain|binarystream|nebula|morphgeo|fluidcore|snowinteractive|ripplepool|fireflies|none)',
       'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperAnimPaused (freeze animated motion) · wallpaperRandomness (0=deterministic/uniform sliders · 100=chaos overrides direction/speed/phase per element) · wallpaperUseAccent (pattern ink follows accent when true) · wallpaperColor (custom pattern tint when wallpaperUseAccent is false; accent color always used for glow/hi on canvas patterns)',
-      'Per-pattern: honeycombStyle (outline|fill) · rainDirection · waveDirection · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · morphStyle (spin|pulse|warp|orbit) · morphBlobCount (2–8) · morphSmoothness (0–100 spline tension) · morphMergeStrength (0–100 blob attraction) · numberFormat · binaryFontSize · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
+      'Per-pattern: honeycombStyle (outline|fill) · rainDirection · waveDirection · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · numberFormat · binaryFontSize · fluidSize · fluidMorphSpeed (fluidcore blob scale + morph/flow rate; wallpaperAnimSpeed controls rotation) · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
       'cursorEffect (none|trail|comet|ripple|spark|glow) — global overlay independent of wallpaper · cursorEffectTrailStyle (glow|line|dotted|particles) · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount (ripple burst: 0=1 ring · 100=8 varied) · cursorEffectRippleSpeed (0=slow expansion · 100=fast) · cursorEffectCometDirection (cursor|up|down|random) · cursorEffectCometIntensity · cursorEffectCometSpeed',
       'vignetteIntensity (0=off) · vignetteDirection · glow · radius · scanlines · cursorStyle · cursorColor',
       'botIcon · botIconColor · vibe (built-in preset id or custom-* slot id; segments: dark, light, retro, bold, multi-tone; admin shows 20 core presets — 28 extended tier hidden by default; agent applyVibePreset accepts any id) · customVibes (unlimited saved slots). Read: readAppearanceConfig. Write: setContentPath (cosmetics.*), updateAppearance (batch fields), applyVibePreset / applyCustomVibe, saveCustomVibe.',
       'Multi-tone presets: wallpaperUseAccent false + explicit wallpaperColor for pattern ink; cursorColor often differs from accent and wallpaper tint.',
       'Static honeycomb: honeycombStyle outline (grid lines) · fill (sparse filled cells via wallpaperIntensity). Animated: honeycombGlow (random accent hex pulses).',
       'Interactive wallpapers: snowinteractive (continuous snowfall swept by cursor) · ripplepool (cursor disturbs water ripples) · fireflies (motes scatter from cursor).',
-      'Animated patterns: circuits · waves · aurora · cosmos · matrixrain · particles · lightning · rain · binarystream · nebula · morphgeo · honeycombGlow.',
+      'Animated patterns: circuits · waves · aurora · cosmos · matrixrain · particles · lightning · rain · binarystream · nebula · morphgeo (soft drifting blobs — uses global brightness/intensity/animSpeed/randomness) · fluidcore (centered water blob — fluidSize · fluidMorphSpeed · wallpaperAnimSpeed=rotation) · honeycombGlow.',
     ].join(' ');
   }
 
@@ -1172,13 +1164,11 @@
     const particleOpacity = clampCosmeticNumber(c.particleOpacity, 0, 100, 70);
     const particleDrift = PARTICLE_DRIFT_DIRECTIONS.includes(c.particleDrift) ? c.particleDrift : 'up';
     const binaryFontSize = clampCosmeticNumber(c.binaryFontSize, 0, 100, 50);
+    const fluidSize = clampCosmeticNumber(c.fluidSize, 0, 100, 50);
+    const fluidMorphSpeed = clampCosmeticNumber(c.fluidMorphSpeed, 0, 100, 45);
     const rainDirection = RAIN_DIRECTIONS.includes(c.rainDirection) ? c.rainDirection : 'down';
     const waveDirection = WAVE_DIRECTIONS.includes(c.waveDirection) ? c.waveDirection : 'up';
     const cometDirection = COMET_DIRECTIONS.includes(c.cometDirection) ? c.cometDirection : 'right-down';
-    const morphStyle = MORPH_STYLES.includes(c.morphStyle) ? c.morphStyle : 'spin';
-    const morphBlobCount = Math.round(clampCosmeticNumber(c.morphBlobCount, 2, 8, 4));
-    const morphSmoothness = clampCosmeticNumber(c.morphSmoothness, 0, 100, 72);
-    const morphMergeStrength = clampCosmeticNumber(c.morphMergeStrength, 0, 100, 50);
     const honeycombStyle = HONEYCOMB_STYLES.includes(c.honeycombStyle) ? c.honeycombStyle : 'outline';
     const cursorInteractStrength = clampCosmeticNumber(c.cursorInteractStrength, 0, 100, 55);
     const cursorTrailLength = clampCosmeticNumber(c.cursorTrailLength, 0, 100, 50);
@@ -1196,9 +1186,9 @@
     const speedSec = Math.max(1.5, Math.round(60 - (animSpeed / 100) * 58.5));
     const speedMult = 20 / speedSec;
     const starScale = 0.55 + (starSize / 100) * 1.45;
+    const fluidScale = 0.14 + (fluidSize / 100) * 0.36;
+    const fluidMorphMult = 0.12 + (fluidMorphSpeed / 100) * 1.35;
     const cometFreq = 0.35 + (cometDensity / 100) * 0.85;
-    const morphVariant = morphStyle === 'spin' ? 0 : morphStyle === 'pulse' ? 1 : morphStyle === 'warp' ? 2 : 3;
-    const morphVariantAfter = Math.round(chaosLerp(morphVariant, (morphVariant + 2) % 4, randomness));
     const randDurA = (0.55 + rand * 0.35 + (1 - rand) * 0.2).toFixed(3);
     const randDurB = (0.7 + rand * 1.05).toFixed(3);
     const randPhaseA = (rand * 137.5).toFixed(1);
@@ -1263,13 +1253,6 @@
       randDurB,
       randPhaseA,
       randPhaseB,
-      morphVariant,
-      morphVariantAfter,
-      morphStyle,
-      morphBlobCount,
-      morphSmoothness,
-      morphMergeStrength,
-      morphPhase: randPhaseA + 'deg',
       honeycombStyle,
       cursorInteractStrength,
       cursorTrailLength,
@@ -1311,6 +1294,10 @@
       numberFormat,
       numberGlyphs: numberGlyphs[numberFormat] || numberGlyphs.binary,
       binaryFontPx: Math.round(9 + (binaryFontSize / 100) * 9),
+      fluidSize,
+      fluidMorphSpeed,
+      fluidScale,
+      fluidMorphMult,
       nebulaBlobCount: Math.round(4 + i * 10),
       circuitPathCount: Math.round(10 + i * 32),
       circuitCellSize: Math.max(28, Math.round(52 - i * 22)),
@@ -1514,8 +1501,6 @@
     root.style.setProperty('--wp-rand-phase-a', (wp.randPhaseA || '0') + 'deg');
     root.style.setProperty('--wp-rand-phase-b', (wp.randPhaseB || '0') + 'deg');
     root.style.setProperty('--wp-column-count', wp.columnCount.toString());
-    if (wp.morphStyle) root.dataset.morphStyle = wp.morphStyle;
-    else delete root.dataset.morphStyle;
     const gridMix = root.dataset.theme === 'light' ? '32%' : '38%';
     root.style.setProperty('--grid', 'color-mix(in oklab, var(--wallpaper-color) ' + gridMix + ', transparent)');
     const bgPat = healBgPattern(c.bgPattern);
@@ -1768,7 +1753,6 @@
     WAVE_DIRECTIONS,
     COMET_DIRECTIONS,
     PARTICLE_DRIFT_DIRECTIONS,
-    MORPH_STYLES,
     NUMBER_FORMATS,
     CANVAS_WALLPAPERS,
     CSS_ANIM_WALLPAPERS,
