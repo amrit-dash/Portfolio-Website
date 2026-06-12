@@ -10,13 +10,22 @@ const {
   validateCosmeticsWrite,
   cosmeticsFieldHint,
   VIBES,
-  CUSTOM_VIBE_IDS,
   isCustomVibeId,
   getCustomVibe,
   snapshotCosmetics,
-  createDefaultCustomVibes,
+  coerceCustomVibes,
+  nextCustomVibeId,
+  customVibeNum,
+  resolveEffectiveCosmetics,
+  COSMETIC_SNAPSHOT_KEYS,
+  getVisibleVibes,
+  getExtendedVibes,
 } = schema;
 const VIBE_IDS = VIBES.map((v) => v.id);
+const VIBE_VISIBLE_COUNT = getVisibleVibes().length;
+const VIBE_EXTENDED_COUNT = getExtendedVibes().length;
+const VIBE_TOTAL_COUNT = VIBES.length;
+const COSMETICS_WRITE_HINT = 'cursorEffect (none|trail|comet|ripple|spark|glow) · cursorEffectTrailStyle · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount · cursorEffectRippleSpeed · cursorEffectCometDirection · cursorEffectCometIntensity · cursorEffectCometSpeed · honeycombStyle · cursorInteractStrength · cursorTrailLength · cursorParticleDensity · cursorSweepRadius · wallpaperColor · wallpaperUseAccent · interactive: snowinteractive|ripplepool|fireflies';
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
@@ -112,36 +121,75 @@ const STRUCTURED_TOOLS = [
     parameters: { type: 'object', properties: { collection: { type: 'string' }, index: { type: 'number' }, id: { type: 'string' } }, required: ['collection'] }, mutates: true },
   { name: 'reorder', description: 'Reorder a collection to match the given order of ids or indices.',
     parameters: { type: 'object', properties: { collection: { type: 'string' }, order: { type: 'array', items: { type: 'string' } } }, required: ['collection', 'order'] }, mutates: true },
-  { name: 'applyVibePreset', description: 'Apply a built-in cosmetic vibe preset to cosmetics. 36 presets: dark (+storm, abyss, void), light (+drizzle, cream), retro (+phosphor, tube), bold (+volta, helix, cipher), plus classic/matrix/royal/etc. Sets theme, accent, fonts, cursor, wallpaper (static: grid/dots/scan/etc · animated: circuits, aurora, cosmos, matrixrain, particles, pulse, lightning, rain, smoke, binarystream, nebula, morphgeo), brightness/density/animSpeed/randomness/tint/vignette, per-pattern params (rainDirection, starSize, cometDensity, particleSize/Density, morphStyle, numberFormat, binaryFontSize), glow, radius, scanlines. Does not apply custom-1..custom-6 slots — use applyCustomVibe.',
+  { name: 'applyVibePreset', description: 'Apply a built-in cosmetic vibe preset to cosmetics. ' + VIBE_TOTAL_COUNT + ' presets total (' + VIBE_VISIBLE_COUNT + ' core visible in admin · ' + VIBE_EXTENDED_COUNT + ' extended tier hidden by default — agent may apply any id). Multi-tone vibes split accent, wallpaperColor (pattern ink), and cursorColor independently (wallpaperUseAccent: false). Sets theme, accent, fonts, cursor, wallpaper (static: grid/dots/diagonal/crosshatch/3dgrid/honeycomb/padgrid/brick/noise · animated: circuits, waves, aurora, cosmos, matrixrain, particles, lightning, rain, binarystream, nebula, morphgeo, honeycombGlow · interactive: snowinteractive, ripplepool, fireflies), ' + COSMETICS_WRITE_HINT + ', brightness/density/animSpeed/wallpaperAnimPaused/randomness/tint/vignette, per-pattern params, glow, radius, scanlines. Does not apply custom-* saved slots — use applyCustomVibe.',
     parameters: {
       type: 'object',
       properties: {
         id: {
           type: 'string',
           enum: VIBE_IDS,
-          description: 'Built-in vibe preset id — 36 presets across dark, light, retro, bold categories.',
+          description: 'Built-in vibe preset id — ' + VIBE_TOTAL_COUNT + ' presets (' + VIBE_VISIBLE_COUNT + ' core + ' + VIBE_EXTENDED_COUNT + ' extended).',
         },
       },
       required: ['id'],
     },
     mutates: true },
-  { name: 'applyCustomVibe', description: 'Apply a saved custom vibe slot (custom-1..custom-6) from cosmetics.customVibes. Merges the slot snapshot into active cosmetics.',
+  { name: 'applyCustomVibe', description: 'Apply a saved custom vibe slot (custom-* id) from cosmetics.customVibes. Merges the slot snapshot into active cosmetics.',
     parameters: {
       type: 'object',
       properties: {
-        id: { type: 'string', enum: CUSTOM_VIBE_IDS, description: 'Custom slot id custom-1 through custom-6' },
+        id: { type: 'string', description: 'Custom slot id (e.g. custom-1, custom-7) — must exist in cosmetics.customVibes' },
       },
       required: ['id'],
     },
     mutates: true },
-  { name: 'saveCustomVibe', description: 'Save current cosmetics snapshot to a custom vibe slot (custom-1..custom-6). Persists in draft cosmetics.customVibes.',
+  { name: 'saveCustomVibe', description: 'Save current cosmetics snapshot to a custom vibe slot (includes cursorEffect*, honeycombStyle, interactive wallpaper params, wallpaperColor). Auto-assigns the next custom-* id when id is omitted. Persists in draft cosmetics.customVibes (unlimited slots).',
     parameters: {
       type: 'object',
       properties: {
-        id: { type: 'string', enum: CUSTOM_VIBE_IDS, description: 'Custom slot id to save into' },
+        id: { type: 'string', description: 'Optional custom slot id to update; omit to create a new slot' },
         name: { type: 'string', description: 'Optional display name for the slot' },
       },
+    },
+    mutates: true },
+  { name: 'listCustomVibes', description: 'List all saved custom vibe slots with id, name, label, and key cosmetics summary (theme, accent, bgPattern, type, radius).',
+    parameters: { type: 'object', properties: {} },
+    mutates: false },
+  { name: 'readCustomVibe', description: 'Read one custom vibe slot\'s full cos snapshot from cosmetics.customVibes.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Custom slot id (custom-*)' },
+      },
       required: ['id'],
+    },
+    mutates: false },
+  { name: 'deleteCustomVibe', description: 'Remove a saved custom vibe slot from cosmetics.customVibes. Resets active vibe to classic if the deleted slot was active.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Custom slot id to delete' },
+      },
+      required: ['id'],
+    },
+    mutates: true },
+  { name: 'readAppearanceConfig', description: 'Read full cosmetics config including ' + COSMETICS_WRITE_HINT + ', vignette, and all pattern-specific fields. Returns active fields, customVibes slots, resolveEffectiveCosmetics, and presetCatalog (total/visible/extended ids — extended presets hidden in admin by default). Write: updateAppearance (batch), setContentPath (cosmetics.* single field), applyVibePreset / applyCustomVibe, saveCustomVibe.',
+    parameters: { type: 'object', properties: {} },
+    mutates: false },
+  { name: 'updateAppearance', description: 'Apply one or more validated cosmetics fields in a single write. Keys: ' + COSMETICS_WRITE_HINT + ', plus theme, accent, bgPattern, wallpaperBrightness/Intensity/AnimSpeed/AnimPaused/Randomness, vignetteIntensity/Direction, glow, radius, scanlines, cursorStyle/Color, type, fonts. Same validation as setContentPath on cosmetics.*. Optional saveToCustom saves the result to a custom vibe slot.',
+    parameters: {
+      type: 'object',
+      properties: {
+        fields: {
+          type: 'object',
+          description: 'Partial cosmetics map — keys from cosmeticsFieldHint (' + COSMETICS_WRITE_HINT + ', theme, accent, bgPattern, etc.).',
+        },
+        saveToCustom: {
+          type: 'string',
+          description: 'Optional custom-* slot id to overwrite, or omit/false to skip. Use saveCustomVibe separately to snapshot without other field edits.',
+        },
+      },
+      required: ['fields'],
     },
     mutates: true },
   { name: 'setProjectImage', description: 'Set a project thumbnail or gallery image URL (place-only — no generation).',
@@ -475,34 +523,123 @@ function execApplyVibe(a, session) {
   const vibe = schema.getVibe(a.id);
   if (!vibe) return { ok: false, error: 'unknown-vibe', id: a.id };
   const cur = getAtPath(session.content, 'cosmetics') || {};
-  return session.setPath('cosmetics', { ...cur, ...deepClone(vibe.cos), customVibes: cur.customVibes || createDefaultCustomVibes() });
+  return session.setPath('cosmetics', { ...cur, ...deepClone(vibe.cos), customVibes: coerceCustomVibes(cur.customVibes) });
 }
 
 function execApplyCustomVibe(a, session) {
   if (!isCustomVibeId(a.id)) return { ok: false, error: 'unknown-vibe', id: a.id };
   const cur = getAtPath(session.content, 'cosmetics') || {};
-  const slots = Array.isArray(cur.customVibes) ? cur.customVibes : createDefaultCustomVibes();
+  const slots = coerceCustomVibes(cur.customVibes);
   const slot = getCustomVibe(a.id, slots);
   if (!slot || !slot.cos) return { ok: false, error: 'empty-custom-slot', id: a.id };
   return session.setPath('cosmetics', { ...cur, ...deepClone(slot.cos), vibe: a.id, customVibes: slots });
 }
 
 function execSaveCustomVibe(a, session) {
-  if (!isCustomVibeId(a.id)) return { ok: false, error: 'invalid-slot', id: a.id };
   const cur = getAtPath(session.content, 'cosmetics') || {};
-  const defaults = createDefaultCustomVibes();
-  const slots = defaults.map((def, i) => ({ ...def, ...((Array.isArray(cur.customVibes) && cur.customVibes[i]) || {}) }));
-  const idx = CUSTOM_VIBE_IDS.indexOf(a.id);
-  if (idx < 0) return { ok: false, error: 'invalid-slot', id: a.id };
+  let slots = coerceCustomVibes(cur.customVibes);
   const snap = snapshotCosmetics(cur);
-  slots[idx] = {
-    ...slots[idx],
-    id: a.id,
-    name: typeof a.name === 'string' ? a.name : (slots[idx].name || ''),
-    label: slots[idx].label || defaults[idx].label,
+  const id = (typeof a.id === 'string' && isCustomVibeId(a.id)) ? a.id : nextCustomVibeId(slots);
+  const idx = slots.findIndex((s) => s.id === id);
+  const num = customVibeNum(id) || slots.length + 1;
+  const slot = {
+    id,
+    name: typeof a.name === 'string' ? a.name : (idx >= 0 ? slots[idx].name : ''),
+    label: 'Custom vibe ' + num,
     cos: snap,
   };
-  return session.setPath('cosmetics', { ...cur, vibe: a.id, customVibes: slots });
+  if (idx >= 0) slots = slots.map((s, i) => (i === idx ? { ...s, ...slot } : s));
+  else slots = [...slots, slot];
+  return session.setPath('cosmetics', { ...cur, vibe: id, customVibes: slots });
+}
+
+function execListCustomVibes(session) {
+  const cur = getAtPath(session.content, 'cosmetics') || {};
+  const slots = coerceCustomVibes(cur.customVibes);
+  return {
+    ok: true,
+    count: slots.length,
+    activeVibe: cur.vibe,
+    slots: slots.map((s) => ({
+      id: s.id,
+      name: s.name || '',
+      label: s.label,
+      theme: s.cos && s.cos.theme,
+      accent: s.cos && s.cos.accent,
+      bgPattern: s.cos && s.cos.bgPattern,
+      type: s.cos && s.cos.type,
+      radius: s.cos && s.cos.radius,
+    })),
+  };
+}
+
+function execReadCustomVibe(a, session) {
+  if (!a.id || !isCustomVibeId(a.id)) return { ok: false, error: 'invalid-slot', id: a.id };
+  const cur = getAtPath(session.content, 'cosmetics') || {};
+  const slot = getCustomVibe(a.id, coerceCustomVibes(cur.customVibes));
+  if (!slot || !slot.cos) return { ok: false, error: 'empty-custom-slot', id: a.id };
+  return { ok: true, slot };
+}
+
+function execDeleteCustomVibe(a, session) {
+  if (!a.id || !isCustomVibeId(a.id)) return { ok: false, error: 'invalid-slot', id: a.id };
+  const cur = getAtPath(session.content, 'cosmetics') || {};
+  const slots = coerceCustomVibes(cur.customVibes).filter((s) => s.id !== a.id);
+  if (slots.length === coerceCustomVibes(cur.customVibes).length) {
+    return { ok: false, error: 'slot-not-found', id: a.id };
+  }
+  const vibe = cur.vibe === a.id ? 'classic' : cur.vibe;
+  return session.setPath('cosmetics', { ...cur, vibe, customVibes: slots });
+}
+
+function execReadAppearanceConfig(session) {
+  const cur = getAtPath(session.content, 'cosmetics') || {};
+  const customVibes = coerceCustomVibes(cur.customVibes);
+  const extended = getExtendedVibes().map((v) => ({ id: v.id, label: v.label, category: v.category }));
+  return attachLinks({
+    ok: true,
+    cosmetics: cur,
+    customVibes,
+    effective: resolveEffectiveCosmetics({ ...cur, customVibes }),
+    presetCatalog: {
+      total: VIBE_TOTAL_COUNT,
+      visible: VIBE_VISIBLE_COUNT,
+      extended: VIBE_EXTENDED_COUNT,
+      extendedIds: extended.map((v) => v.id),
+      extendedPresets: extended,
+      note: 'Extended presets are hidden in admin UI by default; applyVibePreset accepts any built-in id.',
+    },
+    writeTools: ['updateAppearance', 'setContentPath', 'applyVibePreset', 'applyCustomVibe', 'saveCustomVibe'],
+  }, ['appearance']);
+}
+
+function execUpdateAppearance(a, session) {
+  const fields = a.fields;
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+    return { ok: false, error: 'invalid-fields', message: 'fields must be an object of cosmetics keys' };
+  }
+  const cur = getAtPath(session.content, 'cosmetics') || {};
+  const next = { ...cur };
+  const applied = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (k === 'customVibes') continue;
+    if (!COSMETIC_SNAPSHOT_KEYS.includes(k) && k !== 'vibe') continue;
+    const err = validateCosmeticsWrite('cosmetics.' + k, v);
+    if (err) return { ok: false, ...err, field: k };
+    next[k] = v;
+    applied.push(k);
+  }
+  if (!applied.length) {
+    return { ok: false, error: 'no-valid-fields', message: 'No valid cosmetics keys in fields' };
+  }
+  next.customVibes = coerceCustomVibes(cur.customVibes);
+  const result = session.setPath('cosmetics', next);
+  if (!result.ok) return result;
+  if (typeof a.saveToCustom === 'string' && isCustomVibeId(a.saveToCustom)) {
+    const saved = execSaveCustomVibe({ id: a.saveToCustom, name: '' }, session);
+    return attachLinks({ ...saved, applied }, ['appearance']);
+  }
+  return attachLinks({ ok: true, applied, cosmetics: next }, ['appearance']);
 }
 
 function execSetProjectImage(a, session) {
@@ -1162,6 +1299,11 @@ async function executeTool(name, args, ctx) {
     applyVibePreset: () => execApplyVibe(a, session),
     applyCustomVibe: () => execApplyCustomVibe(a, session),
     saveCustomVibe: () => execSaveCustomVibe(a, session),
+    listCustomVibes: () => execListCustomVibes(session),
+    readCustomVibe: () => execReadCustomVibe(a, session),
+    deleteCustomVibe: () => execDeleteCustomVibe(a, session),
+    readAppearanceConfig: () => execReadAppearanceConfig(session),
+    updateAppearance: () => execUpdateAppearance(a, session),
     setProjectImage: () => execSetProjectImage(a, session),
     generateImage: () => execGenerateImage(a, session, ctx),
     setCv: () => execSetCv(a, session),
