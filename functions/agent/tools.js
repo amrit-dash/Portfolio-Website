@@ -25,7 +25,7 @@ const VIBE_IDS = VIBES.map((v) => v.id);
 const VIBE_VISIBLE_COUNT = getVisibleVibes().length;
 const VIBE_EXTENDED_COUNT = getExtendedVibes().length;
 const VIBE_TOTAL_COUNT = VIBES.length;
-const COSMETICS_WRITE_HINT = 'cursorEffect (none|trail|comet|ripple|spark|glow) · cursorEffectTrailStyle · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount · cursorEffectRippleSpeed · cursorEffectCometDirection · cursorEffectCometIntensity · cursorEffectCometSpeed · honeycombStyle · cursorInteractStrength · cursorTrailLength · cursorParticleDensity · cursorSweepRadius · wallpaperColor · wallpaperUseAccent · interactive: snowinteractive|ripplepool|fireflies';
+const COSMETICS_WRITE_HINT = 'cursorEffect (none|trail|comet|ripple|spark|glow) · cursorEffectTrailStyle · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount · cursorEffectRippleSpeed · cursorEffectCometDirection · cursorEffectCometIntensity · cursorEffectCometSpeed · honeycombStyle · honeycombGlowDensity · cursorInteractStrength · cursorTrailLength · cursorParticleDensity · cursorSweepRadius · wallpaperColor · wallpaperUseAccent · interactive: snowinteractive|ripplepool|fireflies';
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
