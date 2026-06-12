@@ -1449,6 +1449,7 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "fluidSize": 50,
   "fluidMorphSpeed": 45,
   "honeycombStyle": "outline",
+  "honeycombGlowDensity": 50,
   "cursorInteractStrength": 55,
   "cursorParticleDensity": 40,
   "cursorSweepRadius": 50,
@@ -2140,6 +2141,7 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
           const cy = row * rowPitch + r;
           const h0 = hash2(col, row);
           const h1 = hash2(col + 7, row + 11);
+          const h2 = hash2(col + 19, row + 3);
           honeyCells.push({
             col,
             row,
@@ -2147,35 +2149,51 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
             cy,
             r,
             phase: h0 * Math.PI * 2,
-            cycle: 2.8 + h1 * (4.2 + randAmt() * 3.5),
-            gate: h0 < 0.12 + intenseNorm() * 0.14 + randAmt() * 0.18,
+            cycle: 2.2 + h1 * (5.8 + randAmt() * 4.2),
+            sparkle: h2,
           });
         }
       }
+    };
+
+    const honeycombCellGlow = (cell, t, rAmt, now) => {
+      const wave = Math.sin(t * ((Math.PI * 2) / cell.cycle) + cell.phase);
+      let glow = Math.max(0, wave);
+      glow = glow * glow;
+      if (rAmt > 0.25 && hash2(cell.col + Math.floor(now / 420), cell.row + Math.floor(now / 680)) < rAmt * cell.sparkle * 0.14) {
+        glow = Math.max(glow, 0.28 + cell.sparkle * 0.42);
+      }
+      return glow;
     };
 
     const drawHoneycombGlow = (colors, aBase, sm, now) => {
       honeyGlowNow = now;
       const intense = intenseNorm();
       const rAmt = randAmt();
-      const cycleMs = 9000;
-      const t = (now % cycleMs) / 1000;
+      const t = (now / 1000) * (getProps().speedMult || 1);
       const rowStroke = aBase * (0.2 + intense * 0.16);
+      const density = getProps().wp.honeycombGlowDensity != null ? getProps().wp.honeycombGlowDensity : 50;
+      const maxFrac = 0.06 + (density / 100) * 0.44;
+      const maxGlowCells = Math.max(1, Math.floor(honeyCells.length * maxFrac));
+      const ranked = honeyCells.map((cell) => ({ cell, glow: honeycombCellGlow(cell, t, rAmt, now) }));
+      ranked.sort((a, b) => b.glow - a.glow);
+      const glowByCell = new Map();
+      let lit = 0;
+      ranked.forEach(({ cell, glow }) => {
+        if (glow > 0.04 && lit < maxGlowCells) {
+          glowByCell.set(cell, glow);
+          lit += 1;
+        } else {
+          glowByCell.set(cell, 0);
+        }
+      });
 
       ctx.save();
       ctx.lineWidth = 0.85;
       ctx.lineJoin = 'round';
       honeyCells.forEach((cell) => {
         const corners = flatTopHexCorners(cell.cx, cell.cy, cell.r);
-        let glow = 0;
-        if (cell.gate) {
-          const wave = Math.sin((t / cell.cycle) * Math.PI * 2 + cell.phase);
-          glow = Math.max(0, wave);
-          glow = glow * glow;
-          if (rAmt > 0.25 && hash2(cell.col + Math.floor(t * 3), cell.row) < rAmt * 0.08) {
-            glow = Math.max(glow, 0.35 + Math.random() * 0.45);
-          }
-        }
+        const glow = glowByCell.get(cell) || 0;
 
         ctx.beginPath();
         corners.forEach((pt, i) => { if (i === 0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]); });
@@ -3002,6 +3020,7 @@ const TWEAK_DEFAULTS = (() => {
     fluidSize: typeof c.fluidSize === 'number' ? c.fluidSize : _COSMETICS_BASE.fluidSize,
     fluidMorphSpeed: typeof c.fluidMorphSpeed === 'number' ? c.fluidMorphSpeed : _COSMETICS_BASE.fluidMorphSpeed,
     honeycombStyle: typeof c.honeycombStyle === 'string' ? c.honeycombStyle : _COSMETICS_BASE.honeycombStyle,
+    honeycombGlowDensity: typeof c.honeycombGlowDensity === 'number' ? c.honeycombGlowDensity : _COSMETICS_BASE.honeycombGlowDensity,
     cursorInteractStrength: typeof c.cursorInteractStrength === 'number' ? c.cursorInteractStrength : _COSMETICS_BASE.cursorInteractStrength,
     cursorTrailLength: typeof c.cursorTrailLength === 'number' ? c.cursorTrailLength : _COSMETICS_BASE.cursorTrailLength,
     cursorParticleDensity: typeof c.cursorParticleDensity === 'number' ? c.cursorParticleDensity : _COSMETICS_BASE.cursorParticleDensity,
@@ -3103,7 +3122,7 @@ function App() {
       'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
       'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'numberFormat', 'binaryFontSize',
       'fluidSize', 'fluidMorphSpeed',
-      'honeycombStyle', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
+      'honeycombStyle', 'honeycombGlowDensity', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
       'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
       'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
       'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
