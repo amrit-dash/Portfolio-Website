@@ -1172,8 +1172,35 @@ body::before {
 }
 
 /* vibe presets — one-click appearance bundles */
+.vibe[data-extended="true"] {
+  opacity: 0.82;
+}
+
+.vibe[data-extended="true"] .vibe__txt b::after {
+  content: ' · ext';
+  font-weight: 500;
+  font-size: 10px;
+  opacity: 0.55;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panel__hd .vibes-toggle {
+  flex-shrink: 0;
+}
+
+/* Vibes panel — extra vertical padding on header (title + show-all toggle) */
+.panel--vibes .panel__hd {
+  padding: 18px 18px;
+  gap: 12px;
+}
+
+.panel--vibes .panel__bd {
+  padding-top: 20px;
+}
+
 .vibe-cat {
-   margin-bottom: 16px;
+  margin-bottom: 16px;
 }
 
 .vibe-cat:last-of-type {
@@ -1288,7 +1315,7 @@ body::before {
    width: 100%;
    margin: 4px 0 16px;
    padding: 12px 16px;
-   border: 1px dashed var(--line-2);
+   border: 1px solid var(--line-2);
    border-radius: 10px;
    background: var(--bg-elev);
    color: var(--fg-mute);
@@ -1303,6 +1330,27 @@ body::before {
 .advanced-toggle:hover {
    border-color: var(--accent);
    color: var(--accent);
+}
+
+.effects-split-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.effects-split-row > .field {
+  margin-bottom: 0;
+  min-height: 0;
+}
+
+.effects-split-row .seg,
+.effects-split-row .sel {
+  min-height: 38px;
+}
+@media (max-width: 640px) {
+  .effects-split-row { grid-template-columns: 1fr; }
 }
 
 .appearance-advanced {

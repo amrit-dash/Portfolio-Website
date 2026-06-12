@@ -310,12 +310,22 @@ function TextArea({ value, onChange, placeholder, rows = 3, mono, ...rest }) {
 }
 
 function Select({ value, onChange, options }) {
+  const renderOption = (o) => {
+    const v = typeof o === 'object' ? o.value : o;
+    const l = typeof o === 'object' ? o.label : o;
+    return <option key={v} value={v}>{l}</option>;
+  };
   return (
     <select className="sel" value={value == null ? '' : String(value)} onChange={(e) => { if (onChange) onChange(e.target.value); }}>
       {options.map((o) => {
-        const v = typeof o === 'object' ? o.value : o;
-        const l = typeof o === 'object' ? o.label : o;
-        return <option key={v} value={v}>{l}</option>;
+        if (o && o.group && Array.isArray(o.options)) {
+          return (
+            <optgroup key={o.group} label={o.group}>
+              {o.options.map(renderOption)}
+            </optgroup>
+          );
+        }
+        return renderOption(o);
       })}
     </select>
   );

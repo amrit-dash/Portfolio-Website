@@ -33,10 +33,36 @@ const BOT_ICONS = [
    styles.css + app.jsx (background pattern, corner radius, heading font,
    letter-spacing). Keep values in sync with the CSS selectors. */
 const _BG_SCHEMA = window.SHARED_SCHEMA || {};
-const BG_PATTERNS = (_BG_SCHEMA.BG_PATTERNS || []).map((value) => {
-  const meta = (_BG_SCHEMA.BG_PATTERN_META || {})[value] || { label: value, animated: false };
-  return { value, label: meta.label + (meta.animated ? ' ✦ animated' : '') };
-});
+const BG_PATTERNS = (() => {
+  const patterns = _BG_SCHEMA.BG_PATTERNS || [];
+  const meta = _BG_SCHEMA.BG_PATTERN_META || {};
+  const toOption = (value) => {
+    const m = meta[value] || { label: value, animated: false };
+    const tag = m.cursorReactive ? ' ✦ interactive' : (m.animated ? ' ✦ animated' : '');
+    return { value, label: m.label + tag };
+  };
+  const staticOpts = [];
+  const animOpts = [];
+  const interactiveOpts = [];
+  patterns.forEach((value) => {
+    if (value === 'none') return;
+    const m = meta[value] || { animated: false };
+    if (m.cursorReactive) interactiveOpts.push(toOption(value));
+    else if (m.animated) animOpts.push(toOption(value));
+    else staticOpts.push(toOption(value));
+  });
+  const groups = [
+    { group: 'Static', options: staticOpts },
+    { group: 'Animated', options: animOpts },
+  ];
+  if (interactiveOpts.length) groups.push({ group: 'Interactive', options: interactiveOpts });
+  groups.push({ group: 'Other', options: [toOption('none')] });
+  return groups;
+})();
+const HONEYCOMB_STYLE_OPTIONS = (_BG_SCHEMA.HONEYCOMB_STYLES || ['outline', 'fill']).map((v) => ({
+  value: v,
+  label: v === 'outline' ? 'Outline · grid lines' : 'Fill · sparse cells',
+}));
 const CURSOR_STYLES = [
   { value: 'ring', label: 'Ring' },
   { value: 'pixel', label: 'Pixel arrow' },
@@ -80,6 +106,12 @@ const RAIN_DIRECTION_OPTIONS = (_BG_SCHEMA.RAIN_DIRECTIONS || ['down', 'diagonal
   value: v,
   label: v === 'down' ? 'Straight down' : v.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
 }));
+const WAVE_DIRECTION_OPTIONS = (_BG_SCHEMA.WAVE_DIRECTIONS || ['up', 'down', 'left', 'right', 'diagonal-up', 'diagonal-down']).map((v) => ({
+  value: v,
+  label: v === 'up' ? 'Roll upward'
+    : v === 'down' ? 'Roll downward'
+    : v.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+}));
 const COMET_DIRECTION_OPTIONS = (_BG_SCHEMA.COMET_DIRECTIONS || ['right-down', 'left-down', 'right', 'left', 'up-right']).map((v) => ({
   value: v,
   label: v.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
@@ -89,6 +121,18 @@ const PARTICLE_DRIFT_OPTIONS = (_BG_SCHEMA.PARTICLE_DRIFT_DIRECTIONS || ['up', '
   label: v === 'up' ? 'Float up'
     : v === 'down' ? 'Float down'
     : v.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+}));
+const CURSOR_EFFECT_OPTIONS = (_BG_SCHEMA.CURSOR_EFFECTS || ['none', 'trail', 'comet', 'ripple', 'spark', 'glow']).map((v) => ({
+  value: v,
+  label: v === 'none' ? 'None' : v.charAt(0).toUpperCase() + v.slice(1),
+}));
+const CURSOR_EFFECT_TRAIL_STYLE_OPTIONS = (_BG_SCHEMA.CURSOR_EFFECT_TRAIL_STYLES || ['glow', 'line', 'dotted', 'particles']).map((v) => ({
+  value: v,
+  label: v.charAt(0).toUpperCase() + v.slice(1),
+}));
+const CURSOR_EFFECT_COMET_DIRECTION_OPTIONS = (_BG_SCHEMA.CURSOR_EFFECT_COMET_DIRECTIONS || ['cursor', 'up', 'down', 'random']).map((v) => ({
+  value: v,
+  label: v === 'cursor' ? 'Follow cursor' : v.charAt(0).toUpperCase() + v.slice(1),
 }));
 const MORPH_STYLE_OPTIONS = (_BG_SCHEMA.MORPH_STYLES || ['spin', 'pulse', 'warp', 'orbit']).map((v) => ({
   value: v,
@@ -108,26 +152,14 @@ const VIGNETTE_DIRECTION_OPTIONS = VIGNETTE_DIRECTIONS.map((v) => ({
 }));
 
 const _SCHEMA = window.SHARED_SCHEMA || {};
-const _IS_CUSTOM_VIBE = (id) => (_SCHEMA.isCustomVibeId ? _SCHEMA.isCustomVibeId(id) : /^custom-[1-6]$/.test(id));
-const _CUSTOM_VIBE_MAX = (_SCHEMA.CUSTOM_VIBE_IDS && _SCHEMA.CUSTOM_VIBE_IDS.length) || 6;
-const _DEFAULT_CUSTOM_VIBES = (_SCHEMA.createDefaultCustomVibes ? _SCHEMA.createDefaultCustomVibes() : [
-  { id: 'custom-1', name: '', label: 'Custom vibe 1', cos: null },
-  { id: 'custom-2', name: '', label: 'Custom vibe 2', cos: null },
-  { id: 'custom-3', name: '', label: 'Custom vibe 3', cos: null },
-  { id: 'custom-4', name: '', label: 'Custom vibe 4', cos: null },
-  { id: 'custom-5', name: '', label: 'Custom vibe 5', cos: null },
-  { id: 'custom-6', name: '', label: 'Custom vibe 6', cos: null },
-]);
+const _coerceCustomVibes = (value) => (_SCHEMA.coerceCustomVibes ? _SCHEMA.coerceCustomVibes(value) : (Array.isArray(value) ? value : []));
+const _nextCustomVibeId = (slots) => (_SCHEMA.nextCustomVibeId ? _SCHEMA.nextCustomVibeId(slots) : 'custom-1');
 const _SNAPSHOT_COS = (cos) => (_SCHEMA.snapshotCosmetics ? _SCHEMA.snapshotCosmetics(cos) : cos);
-const _customVibeNum = (id) => parseInt(String(id || '').replace('custom-', ''), 10);
+const _customVibeNum = (id) => (_SCHEMA.customVibeNum ? _SCHEMA.customVibeNum(id) : parseInt(String(id || '').replace('custom-', ''), 10));
 const _customVibeLabel = (id) => 'Custom vibe ' + (_customVibeNum(id) || '');
-const _isSavedCustomSlot = (slot) => !!(slot && slot.cos && typeof slot.cos === 'object');
-const _findNextCustomSlot = (slots) => {
-  const emptyIdx = slots.findIndex((s) => !_isSavedCustomSlot(s));
-  if (emptyIdx >= 0) return { idx: emptyIdx, overwrite: false };
-  return { idx: _CUSTOM_VIBE_MAX - 1, overwrite: true };
-};
+const _isVibeHidden = (vibe) => (_SCHEMA.isVibeHidden ? _SCHEMA.isVibeHidden(vibe) : false);
 const VIBES = (_SCHEMA.VIBES) || [];
+const VIBE_VISIBLE_COUNT = (_SCHEMA.getVisibleVibes ? _SCHEMA.getVisibleVibes().length : VIBES.length);
 const VIBE_CATEGORIES = (_SCHEMA.VIBE_CATEGORIES) || [
   { id: 'dark', label: 'Dark mode' },
   { id: 'light', label: 'Light mode' },
@@ -567,9 +599,9 @@ function MediaEditor({ content, setAt, analytics }) {
 /* ============ APPEARANCE (cosmetics) ============ */
 
 /* One vibe button — shows the preset's accent + a label, highlights when active. */
-function VibeButton({ vibe, active, onClick }) {
+function VibeButton({ vibe, active, onClick, extended }) {
   return (
-    <button type="button" className="vibe" data-on={active} onClick={onClick} title={vibe.desc}>
+    <button type="button" className="vibe" data-on={active} data-extended={extended ? 'true' : undefined} onClick={onClick} title={vibe.desc}>
       <span className="vibe__swatch" style={{ background: vibe.cos.accent }} />
       <span className="vibe__txt"><b>{vibe.label}</b><span>{vibe.desc}</span></span>
     </button>
@@ -607,22 +639,22 @@ function AppearanceEditor({ content, setAt }) {
   const bgPattern = c.bgPattern || 'grid';
   const bgMeta = (_BG_SCHEMA.BG_PATTERN_META || {})[bgPattern] || { label: bgPattern, animated: false };
   const bgAnimated = !!bgMeta.animated;
-  const bgSupportsRandomness = bgMeta.supportsRandomness != null ? bgMeta.supportsRandomness : bgAnimated;
+  const bgCursorReactive = !!bgMeta.cursorReactive;
+  const bgSupportsRandomness = bgMeta.supportsRandomness != null ? bgMeta.supportsRandomness : (bgAnimated && !bgCursorReactive);
   const wallpaperRandomness = c.wallpaperRandomness == null ? 40 : c.wallpaperRandomness;
   const chaosMode = wallpaperRandomness >= 95;
   const bgPatternLabel = bgMeta.label || bgPattern;
-  const customVibes = useMemo(() => {
-    const slots = Array.isArray(c.customVibes) ? c.customVibes : [];
-    return _DEFAULT_CUSTOM_VIBES.map((def, i) => ({ ...def, ...(slots[i] || {}), id: def.id, label: def.label }));
-  }, [c.customVibes]);
-  const savedCustomVibes = useMemo(() => customVibes.filter(_isSavedCustomSlot), [customVibes]);
+  const customVibes = useMemo(() => _coerceCustomVibes(c.customVibes), [c.customVibes]);
+  const savedCustomVibes = customVibes;
   const cosBaselineRef = useRef(_SNAPSHOT_COS(c));
   const editIntentRef = useRef(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [showAllVibes, setShowAllVibes] = useState(() => {
+    try { return localStorage.getItem('amritos.vibes.showAll') === '1'; } catch (e) { return false; }
+  });
   const [editingCustomId, setEditingCustomId] = useState(null);
   const [pendingCustomEdit, setPendingCustomEdit] = useState(false);
   const [createName, setCreateName] = useState('');
-  const [vibeToast, setVibeToast] = useState('');
 
   React.useEffect(() => {
     cosBaselineRef.current = _SNAPSHOT_COS(c);
@@ -640,12 +672,6 @@ function AppearanceEditor({ content, setAt }) {
     const changed = JSON.stringify(_SNAPSHOT_COS(c)) !== JSON.stringify(cosBaselineRef.current);
     setPendingCustomEdit(changed);
   }, [c, advancedOpen]);
-
-  React.useEffect(() => {
-    if (!vibeToast) return undefined;
-    const t = setTimeout(() => setVibeToast(''), 4200);
-    return () => clearTimeout(t);
-  }, [vibeToast]);
 
   const setCosAt = useCallback((path, value) => {
     setAt(path, value);
@@ -687,10 +713,11 @@ function AppearanceEditor({ content, setAt }) {
       return;
     }
 
-    const { idx, overwrite } = _findNextCustomSlot(customVibes);
-    if (overwrite) setVibeToast('All 6 custom vibe slots are full — Custom vibe 6 was overwritten.');
-    const next = customVibes.map((slot, i) => (i === idx ? { ...slot, name, cos: snapshot } : slot));
-    setAt('cosmetics', { ...c, vibe: next[idx].id, customVibes: next });
+    const id = _nextCustomVibeId(customVibes);
+    const num = _customVibeNum(id) || customVibes.length + 1;
+    const newSlot = { id, name, label: 'Custom vibe ' + num, cos: snapshot };
+    const next = [...customVibes, newSlot];
+    setAt('cosmetics', { ...c, vibe: id, customVibes: next });
     setCreateName('');
     cosBaselineRef.current = snapshot;
     setPendingCustomEdit(false);
@@ -698,6 +725,17 @@ function AppearanceEditor({ content, setAt }) {
 
   const vibeCount = VIBES.length;
   const savedCount = savedCustomVibes.length;
+  const presetVibes = useMemo(() => {
+    if (showAllVibes) return VIBES;
+    return VIBES.filter((v) => !_isVibeHidden(v) || v.id === c.vibe);
+  }, [showAllVibes, c.vibe]);
+  const toggleShowAllVibes = () => {
+    setShowAllVibes((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('amritos.vibes.showAll', next ? '1' : '0'); } catch (e) { /* quota */ }
+      return next;
+    });
+  };
   const showCreatePanel = advancedOpen && (editingCustomId || pendingCustomEdit);
   const createPanelTitle = editingCustomId ? 'Update custom vibe' : 'Create new custom vibe';
   const editingSlot = editingCustomId ? customVibes.find((s) => s.id === editingCustomId) : null;
@@ -706,15 +744,39 @@ function AppearanceEditor({ content, setAt }) {
     <div className="canvas--narrow">
       <PageHead eyebrow="/APPEARANCE.CFG" title="Appearance & cosmetics">Every site-wide tweak in one place — these become the published defaults visitors land on. Start from a vibe, then fine-tune below.</PageHead>
 
-      <Panel title="Vibes" sub={'one-click presets · ' + vibeCount + ' vibes · 4 categories'}>
+      <Panel
+        className="panel--vibes"
+        title="Vibes"
+        sub={'one-click presets · ' + (showAllVibes ? vibeCount : VIBE_VISIBLE_COUNT) + ' shown · ' + vibeCount + ' total · ' + VIBE_CATEGORIES.length + ' categories'}
+        actions={
+          <button
+            type="button"
+            className="iconbtn vibes-toggle"
+            onClick={toggleShowAllVibes}
+            title={showAllVibes ? 'Show fewer vibes' : 'Show all vibes'}
+            aria-label={showAllVibes ? 'Show fewer vibes' : 'Show all vibes'}
+            aria-pressed={showAllVibes}
+          >
+            <AdminIcon name={showAllVibes ? 'chevron-up' : 'chevron-down'} size={16} />
+          </button>
+        }
+      >
         {VIBE_CATEGORIES.map((cat) => {
-          const items = VIBES.filter((v) => v.category === cat.id);
+          const items = presetVibes.filter((v) => v.category === cat.id);
           if (!items.length) return null;
           return (
             <div className="vibe-cat" key={cat.id}>
               <div className="vibe-cat__head">{cat.label}</div>
               <div className="vibes">
-                {items.map((v) => <VibeButton key={v.id} vibe={v} active={c.vibe === v.id} onClick={() => applyVibe(v)} />)}
+                {items.map((v) => (
+                  <VibeButton
+                    key={v.id}
+                    vibe={v}
+                    active={c.vibe === v.id}
+                    extended={_isVibeHidden(v)}
+                    onClick={() => applyVibe(v)}
+                  />
+                ))}
               </div>
             </div>
           );
@@ -724,7 +786,7 @@ function AppearanceEditor({ content, setAt }) {
 
       <Panel
         title="Custom vibes"
-        sub={savedCount + ' saved look' + (savedCount === 1 ? '' : 's') + ' · up to ' + _CUSTOM_VIBE_MAX}
+        sub={savedCount + ' saved look' + (savedCount === 1 ? '' : 's')}
       >
         {savedCount > 0 ? (
           <div className="vibes custom-vibes__grid">
@@ -779,6 +841,9 @@ function AppearanceEditor({ content, setAt }) {
                 <Field label="Pattern density" hint="sparse ← → dense"><RangeRow label="Density" value={c.wallpaperIntensity == null ? 50 : c.wallpaperIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperIntensity', v)} /></Field>
               </>
             )}
+            {bgPattern === 'honeycomb' && (
+              <Field label="Honeycomb style" hint="outline = wire grid · fill = sparse filled cells"><Select value={c.honeycombStyle || 'outline'} options={HONEYCOMB_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.honeycombStyle', v)} /></Field>
+            )}
             <ToggleRow title="Use accent for wallpaper" sub="when off, pick a separate tint below" value={useAccentWallpaper} onChange={(v) => setCosAt('cosmetics.wallpaperUseAccent', v)} />
             {!useAccentWallpaper && (
               <Field label="Wallpaper color"><Swatches value={c.wallpaperColor || c.accent} options={ACCENT_OPTIONS} onChange={(v) => setCosAt('cosmetics.wallpaperColor', v)} allowCustom={true} /></Field>
@@ -798,6 +863,7 @@ function AppearanceEditor({ content, setAt }) {
                 <Field label="Pattern density" hint="sparse ← → dense"><RangeRow label="Density" value={c.wallpaperIntensity == null ? 50 : c.wallpaperIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperIntensity', v)} /></Field>
               )}
               <Field label="Animation speed" hint="slow ← → fast"><RangeRow label="Speed" value={c.wallpaperAnimSpeed == null ? 50 : c.wallpaperAnimSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperAnimSpeed', v)} /></Field>
+              <ToggleRow title="Freeze animation" sub="keep the pattern visible but stop motion" value={!!c.wallpaperAnimPaused} onChange={(v) => setCosAt('cosmetics.wallpaperAnimPaused', v)} />
               {bgSupportsRandomness && (
                 <>
                   <Field label="Randomness" hint="0 = uniform (other sliders rule) · 100 = chaos (per-element direction, speed & phase override uniformity)">
@@ -812,6 +878,9 @@ function AppearanceEditor({ content, setAt }) {
               <div className={chaosMode ? 'wallpaper-chaos-dim' : undefined}>
               {bgPattern === 'rain' && (
                 <Field label="Rain direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'angle of falling drops'}><Select value={c.rainDirection || 'down'} options={RAIN_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.rainDirection', v)} /></Field>
+              )}
+              {bgPattern === 'waves' && (
+                <Field label="Wave direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'travel direction for rolling bands'}><Select value={c.waveDirection || 'up'} options={WAVE_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.waveDirection', v)} /></Field>
               )}
               {bgPattern === 'cosmos' && (
                 <>
@@ -829,7 +898,23 @@ function AppearanceEditor({ content, setAt }) {
                 </>
               )}
               {bgPattern === 'morphgeo' && (
-                <Field label="Morph style" hint={chaosMode ? 'layers may diverge at 100% randomness' : 'keyframe motion variant'}><Select value={c.morphStyle || 'spin'} options={MORPH_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.morphStyle', v)} /></Field>
+                <>
+                  <Field label="Morph style" hint={chaosMode ? 'layers may diverge at 100% randomness' : 'motion variant — spin · pulse · warp · orbit'}><Select value={c.morphStyle || 'spin'} options={MORPH_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.morphStyle', v)} /></Field>
+                  <Field label="Blob count" hint="few ← → many overlapping shapes"><RangeRow label="Blobs" value={c.morphBlobCount == null ? 4 : c.morphBlobCount} min={2} max={8} step={1} unit="" onChange={(v) => setCosAt('cosmetics.morphBlobCount', v)} /></Field>
+                  <Field label="Curve smoothness" hint="soft organic ← → tighter curves"><RangeRow label="Smooth" value={c.morphSmoothness == null ? 72 : c.morphSmoothness} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.morphSmoothness', v)} /></Field>
+                  <Field label="Merge strength" hint="separate ← → blobs attract and blend"><RangeRow label="Merge" value={c.morphMergeStrength == null ? 50 : c.morphMergeStrength} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.morphMergeStrength', v)} /></Field>
+                </>
+              )}
+              {bgCursorReactive && (
+                <>
+                  <Field label="Interact strength" hint="subtle ← → strong pointer response"><RangeRow label="Strength" value={c.cursorInteractStrength == null ? 55 : c.cursorInteractStrength} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorInteractStrength', v)} /></Field>
+                  {(bgPattern === 'snowinteractive' || bgPattern === 'fireflies') && (
+                    <Field label="Particle density" hint="sparse ← → dense"><RangeRow label="Density" value={c.cursorParticleDensity == null ? 40 : c.cursorParticleDensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorParticleDensity', v)} /></Field>
+                  )}
+                  {bgPattern === 'snowinteractive' && (
+                    <Field label="Sweep radius" hint="small ← → wide cursor clear area"><RangeRow label="Sweep" value={c.cursorSweepRadius == null ? 50 : c.cursorSweepRadius} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorSweepRadius', v)} /></Field>
+                  )}
+                </>
               )}
               {bgPattern === 'binarystream' && (
                 <>
@@ -842,7 +927,34 @@ function AppearanceEditor({ content, setAt }) {
           )}
 
           <Panel title="Effects & cursor">
-            <Field label="Corner radius" hint="UI boxes & windows"><Segmented value={c.radius || 'soft'} options={RADIUS_OPTIONS} onChange={(v) => setCosAt('cosmetics.radius', v)} /></Field>
+            <div className="effects-split-row">
+              <Field label="Corner radius" hint="UI boxes & windows"><Segmented value={c.radius || 'soft'} options={RADIUS_OPTIONS} onChange={(v) => setCosAt('cosmetics.radius', v)} /></Field>
+              <Field label="Cursor effect" hint="global overlay — works on any wallpaper"><Select value={c.cursorEffect || 'none'} options={CURSOR_EFFECT_OPTIONS} onChange={(v) => setCosAt('cosmetics.cursorEffect', v)} /></Field>
+            </div>
+            {(c.cursorEffect || 'none') === 'trail' && (
+              <>
+                <Field label="Trail style"><Select value={c.cursorEffectTrailStyle || 'glow'} options={CURSOR_EFFECT_TRAIL_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.cursorEffectTrailStyle', v)} /></Field>
+                <Field label="Trail length" hint="short ← → long"><RangeRow label="Length" value={c.cursorEffectTrailLength == null ? 50 : c.cursorEffectTrailLength} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectTrailLength', v)} /></Field>
+                <Field label="Effect intensity" hint="subtle ← → vivid"><RangeRow label="Intensity" value={c.cursorEffectIntensity == null ? 55 : c.cursorEffectIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectIntensity', v)} /></Field>
+              </>
+            )}
+            {(c.cursorEffect || 'none') === 'comet' && (
+              <>
+                <Field label="Comet direction"><Select value={c.cursorEffectCometDirection || 'cursor'} options={CURSOR_EFFECT_COMET_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.cursorEffectCometDirection', v)} /></Field>
+                <Field label="Comet intensity" hint="sparse ← → frequent"><RangeRow label="Intensity" value={c.cursorEffectCometIntensity == null ? 50 : c.cursorEffectCometIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectCometIntensity', v)} /></Field>
+                <Field label="Comet speed" hint="slow ← → fast"><RangeRow label="Speed" value={c.cursorEffectCometSpeed == null ? 50 : c.cursorEffectCometSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectCometSpeed', v)} /></Field>
+              </>
+            )}
+            {(c.cursorEffect || 'none') === 'ripple' && (
+              <>
+                <Field label="Effect intensity" hint="subtle ← → vivid (ring brightness)"><RangeRow label="Intensity" value={c.cursorEffectIntensity == null ? 55 : c.cursorEffectIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectIntensity', v)} /></Field>
+                <Field label="Ripple count" hint="1 ring ← → 8 staggered waves"><RangeRow label="Count" value={c.cursorEffectRippleCount == null ? 50 : c.cursorEffectRippleCount} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectRippleCount', v)} /></Field>
+                <Field label="Ripple speed" hint="slow expansion ← → fast"><RangeRow label="Speed" value={c.cursorEffectRippleSpeed == null ? 50 : c.cursorEffectRippleSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectRippleSpeed', v)} /></Field>
+              </>
+            )}
+            {['spark', 'glow'].includes(c.cursorEffect || '') && (
+              <Field label="Effect intensity" hint="subtle ← → vivid"><RangeRow label="Intensity" value={c.cursorEffectIntensity == null ? 55 : c.cursorEffectIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectIntensity', v)} /></Field>
+            )}
             <Field label="Accent glow" hint="bloom on accent-colored UI"><RangeRow label="Bloom" value={c.glow == null ? 100 : c.glow} min={0} max={160} step={10} unit="%" onChange={(v) => setCosAt('cosmetics.glow', v)} /></Field>
             <div className="divider" />
             <ToggleRow title="CRT scanlines" sub="retro overlay across the page" value={c.scanlines} onChange={(v) => setCosAt('cosmetics.scanlines', v)} />
@@ -862,12 +974,6 @@ function AppearanceEditor({ content, setAt }) {
           {showCreatePanel && (
             <>
               <div className="divider" style={{ margin: '20px 0' }} />
-              {vibeToast && (
-                <div className="callout" style={{ marginBottom: 12 }}>
-                  <AdminIcon name="info" size={16} />
-                  <div>{vibeToast}</div>
-                </div>
-              )}
               <Panel title={createPanelTitle} sub={editingCustomId ? 'save changes to this custom vibe slot' : 'name and save your tweaked look'} className="custom-vibes__create">
                 <Field label="Vibe name" hint="shown on the card">
                   <Input
