@@ -1303,40 +1303,88 @@ body::before {
 
 .custom-vibe-card {
    position: relative;
-   padding: 0;
-   overflow: hidden;
+   overflow: visible;
    cursor: default;
+   padding-right: 36px;
 }
 
 .custom-vibe-card__main {
    display: flex;
    align-items: center;
    gap: 10px;
-   width: 100%;
+   flex: 1;
+   min-width: 0;
    text-align: left;
-   padding: 10px 44px 10px 12px;
+   padding: 0;
    border: none;
    background: transparent;
    color: inherit;
    cursor: pointer;
 }
 
+.custom-vibe-card__delete {
+   position: absolute;
+   top: -6px;
+   right: -6px;
+   z-index: 2;
+   width: 20px;
+   height: 20px;
+   padding: 0;
+   display: grid;
+   place-items: center;
+   flex-shrink: 0;
+   appearance: none;
+   border: 1px solid var(--line-2);
+   border-radius: 50%;
+   background: var(--bg-elev);
+   box-shadow: 0 1px 4px -1px rgba(0, 0, 0, .22);
+   color: var(--fg-dim);
+   cursor: pointer;
+   transition: color .14s, background .14s, border-color .14s;
+}
+
+.custom-vibe-card:hover .custom-vibe-card__delete:not(:hover) {
+   background: var(--bg-elev);
+   color: var(--fg-dim);
+   border-color: var(--line-2);
+   box-shadow: 0 1px 4px -1px rgba(0, 0, 0, .22);
+}
+
+.custom-vibe-card__delete:hover {
+   color: #fff;
+   background: var(--danger);
+   border-color: var(--danger);
+   box-shadow: none;
+}
+
+.custom-vibe-card__delete:focus-visible {
+   outline: 2px solid color-mix(in srgb, var(--danger) 55%, transparent);
+   outline-offset: 1px;
+}
+
 .custom-vibe-card__edit {
    position: absolute;
    top: 50%;
-   right: 8px;
-   transform: translateY(-50%);
-   flex-shrink: 0;
+   right: 16px;
    z-index: 1;
+   width: 24px;
+   height: 24px;
+   padding: 0;
+   display: grid;
+   place-items: center;
+   flex-shrink: 0;
+   transform: translateY(-50%);
    appearance: none;
    border: none;
+   border-radius: 7px;
    background: transparent;
    box-shadow: none;
    color: var(--fg-dim);
+   cursor: pointer;
+   transition: color .14s, background .14s;
 }
 
 .custom-vibe-card__edit:hover {
-   border: none;
    color: var(--accent);
    background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
@@ -1348,7 +1396,6 @@ body::before {
 
 .custom-vibe-card__edit--active,
 .custom-vibe-card[data-editing="true"] .custom-vibe-card__edit {
-   border: none;
    color: var(--accent);
    background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
@@ -1401,6 +1448,11 @@ body::before {
   margin-top: 2px;
 }
 
+.effects-cursor-sliders:not(:empty) {
+  margin-bottom: 20px;
+  padding-bottom: 4px;
+}
+
 .effects-cursor-sliders:empty {
   display: none;
 }
@@ -1412,6 +1464,10 @@ body::before {
 
 .effects-cursor-sliders > .field:last-child {
   margin-bottom: 0;
+}
+
+.effects-accent-glow {
+  margin-top: 6px;
 }
 
 @media (max-width: 640px) {

@@ -622,7 +622,7 @@ function UnsavedVibeCard({ active }) {
 }
 
 /* Saved custom vibe card — mirrors preset vibe card layout. */
-function CustomVibeCard({ slot, active, editing, onSelect, onEdit }) {
+function CustomVibeCard({ slot, active, editing, onSelect, onEdit, onDelete }) {
   const { AdminIcon } = window.ADMIN_UI;
   const accent = (slot.cos && slot.cos.accent) || '#c8e856';
   const title = (slot.name && slot.name.trim()) ? slot.name.trim() : 'Untitled';
@@ -636,7 +636,16 @@ function CustomVibeCard({ slot, active, editing, onSelect, onEdit }) {
       </button>
       <button
         type="button"
-        className={'custom-vibe-card__edit iconbtn' + (editing ? ' custom-vibe-card__edit--active' : '')}
+        className="custom-vibe-card__delete"
+        onClick={(e) => { e.stopPropagation(); onDelete(slot); }}
+        title="Delete custom vibe"
+        aria-label="Delete custom vibe"
+      >
+        <AdminIcon name="x" size={10} />
+      </button>
+      <button
+        type="button"
+        className={'custom-vibe-card__edit' + (editing ? ' custom-vibe-card__edit--active' : '')}
         onClick={(e) => { e.stopPropagation(); onEdit(slot); }}
         title={editing ? 'Editing this vibe' : 'Edit custom vibe'}
         aria-label={editing ? 'Editing this vibe' : 'Edit custom vibe'}
@@ -650,7 +659,7 @@ function CustomVibeCard({ slot, active, editing, onSelect, onEdit }) {
 
 function AppearanceEditor({ content, setAt }) {
   const { PageHead, Panel, Field, Select, Segmented, Swatches, ToggleRow, Input, AdminIcon, Btn } = window.ADMIN_UI;
-  const { CUSTOM_VIBE_UI, getCustomVibeUiState, getCustomVibeDisplayId, snapshotCosForCompare } = window.ADMIN_STORE;
+  const { CUSTOM_VIBE_UI, getCustomVibeUiState, getCustomVibeDisplayId, snapshotCosForCompare, deleteCustomVibeSlot } = window.ADMIN_STORE;
   const c = content.cosmetics;
   const useAccentWallpaper = c.wallpaperUseAccent !== false;
   const wallpaperTint = useAccentWallpaper ? (c.accent || '#c8e856') : (c.wallpaperColor || c.accent || '#c8e856');
@@ -743,6 +752,25 @@ function AppearanceEditor({ content, setAt }) {
     }
     setEditingCustomId(null);
     setCreateName('');
+  };
+
+  const handleDeleteCustom = (slot) => {
+    if (!slot || !slot.id) return;
+    const title = (slot.name && slot.name.trim()) ? slot.name.trim() : _customVibeLabel(slot.id);
+    if (!confirm('Delete "' + title + '"? This removes the saved custom vibe from your draft.')) return;
+
+    if (editingCustomId === slot.id) {
+      setEditingCustomId(null);
+      setCreateName('');
+    }
+    editIntentRef.current = null;
+
+    const next = deleteCustomVibeSlot(c, slot.id);
+    if (!next) return;
+    setAt('cosmetics', next);
+    const baseline = snapshotCosForCompare(next);
+    cosBaselineRef.current = baseline;
+    setCosBaseline(baseline);
   };
 
   const saveCustomFromPanel = () => {
@@ -856,6 +884,7 @@ function AppearanceEditor({ content, setAt }) {
               editing={editingCustomId === slot.id}
               onSelect={() => handleSelectCustom(slot)}
               onEdit={handleEditCustom}
+              onDelete={handleDeleteCustom}
             />
           ))}
         </div>
@@ -1018,7 +1047,9 @@ function AppearanceEditor({ content, setAt }) {
               <Field label="Effect intensity" hint="subtle ← → vivid"><RangeRow label="Intensity" value={c.cursorEffectIntensity == null ? 55 : c.cursorEffectIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectIntensity', v)} /></Field>
             )}
             </div>
-            <Field label="Accent glow" hint="bloom on accent-colored UI"><RangeRow label="Bloom" value={c.glow == null ? 100 : c.glow} min={0} max={160} step={10} unit="%" onChange={(v) => setCosAt('cosmetics.glow', v)} /></Field>
+            <Field label="Accent glow" hint="bloom on accent-colored UI" className="effects-accent-glow"><RangeRow label="Bloom" value={c.glow == null ? 100 : c.glow} min={0} max={160} step={10} unit="%" onChange={(v) => setCosAt('cosmetics.glow', v)} /></Field>
+            <Field label="Ring follow" hint="snappy ← → floaty (ring & trail cursors)"><RangeRow label="Lag" value={c.cursorRingLag == null ? 50 : c.cursorRingLag} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorRingLag', v)} /></Field>
+            <Field label="Panel translucency" hint="opaque ← → glassy windows & cards"><RangeRow label="Glass" value={c.uiGlassOpacity == null ? 0 : c.uiGlassOpacity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.uiGlassOpacity', v)} /></Field>
             <div className="divider" />
             <ToggleRow title="CRT scanlines" sub="retro overlay across the page" value={c.scanlines} onChange={(v) => setCosAt('cosmetics.scanlines', v)} />
             <div className="grid2" style={{ marginBottom: 0 }}>
@@ -1051,7 +1082,13 @@ function AppearanceEditor({ content, setAt }) {
                     {saveButtonLabel}
                   </Btn>
                   {editingCustomId && (
-                    <Btn kind="ghost" onClick={cancelCustomEdit}>Cancel</Btn>
+                    <>
+                      <Btn kind="ghost" onClick={cancelCustomEdit}>Cancel</Btn>
+                      <Btn kind="ghost" onClick={() => editingSlot && handleDeleteCustom(editingSlot)}>
+                        <AdminIcon name="trash" size={13} />
+                        Delete vibe
+                      </Btn>
+                    </>
                   )}
                 </div>
               </Panel>

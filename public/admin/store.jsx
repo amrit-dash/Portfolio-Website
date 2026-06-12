@@ -2101,8 +2101,29 @@ function getCustomVibeDisplayId(cosmetics, editingCustomId, baselineSnapshot) {
   return typeof cos.vibe === 'string' ? cos.vibe : 'classic';
 }
 
+/* Remove a custom vibe slot; reset to classic preset when the deleted slot was active. */
+function deleteCustomVibeSlot(cosmetics, slotId) {
+  const schema = window.SHARED_SCHEMA || {};
+  const coerce = schema.coerceCustomVibes ? schema.coerceCustomVibes.bind(schema) : (v) => (Array.isArray(v) ? v : []);
+  const cos = cosmetics && typeof cosmetics === 'object' ? cosmetics : {};
+  const slots = coerce(cos.customVibes);
+  const nextSlots = slots.filter((s) => s && s.id !== slotId);
+  if (nextSlots.length === slots.length) return null;
+
+  let next = { ...cos, customVibes: nextSlots };
+  if (cos.vibe === slotId) {
+    const classic = schema.getVibe ? schema.getVibe('classic') : null;
+    if (classic && classic.cos) {
+      next = { ...next, ...classic.cos, vibe: 'classic', customVibes: nextSlots };
+    } else {
+      next.vibe = 'classic';
+    }
+  }
+  return next;
+}
+
 window.ADMIN_STORE = {
   Store, buildDefaultContent, useContent, useAnalytics, useVersionHistory, LLM_PROVIDERS, LS,
   contentFingerprint, draftMatchesPublished, mergeDraftApiKeys, canonicalPublishedFromDraft, fsTsToIso, MAX_PUBLISHED_VERSIONS,
-  CUSTOM_VIBE_UI, snapshotCosForCompare, cosmeticsSnapshotsEqual, getCustomVibeUiState, getCustomVibeDisplayId,
+  CUSTOM_VIBE_UI, snapshotCosForCompare, cosmeticsSnapshotsEqual, getCustomVibeUiState, getCustomVibeDisplayId, deleteCustomVibeSlot,
 };
