@@ -380,41 +380,39 @@ function BootSequence({ onDone }) {
       onAnimationEnd={handleFadeEnd}
       aria-live="polite"
     >
-      <div className="boot__crt-frame">
-        {phase === 'booting' &&
-          <div className="boot__panel">
-            <div className="boot__header">
-              <span className="acc">●</span> <span>system boot</span>
-              <span className="boot__progress-num">[ {progress.toString().padStart(3, ' ')}% ]</span>
-            </div>
-            <div className="boot__progress">
-              <div className="boot__progress-fill" style={{ width: progress + '%' }} />
-            </div>
-            <div className="boot__lines">
-              {BOOT_LINES.slice(0, visible).map((line, i) =>
-                <div key={i} className="crt__line">
-                  <span className={line.color || ''}>{line.text || '\u00A0'}</span>
-                </div>
-              )}
-              {visible < BOOT_LINES.length && <span className="boot__cursor" />}
-            </div>
+      {phase === 'booting' &&
+        <div className="boot__panel">
+          <div className="boot__header">
+            <span className="acc">●</span> <span>system boot</span>
+            <span className="boot__progress-num">[ {progress.toString().padStart(3, ' ')}% ]</span>
           </div>
-        }
+          <div className="boot__progress">
+            <div className="boot__progress-fill" style={{ width: progress + '%' }} />
+          </div>
+          <div className="boot__lines">
+            {BOOT_LINES.slice(0, visible).map((line, i) =>
+              <div key={i} className="crt__line">
+                <span className={line.color || ''}>{line.text || '\u00A0'}</span>
+              </div>
+            )}
+            {visible < BOOT_LINES.length && <span className="boot__cursor" />}
+          </div>
+        </div>
+      }
 
-        {(phase === 'logo' || phase === 'fading') &&
-          <div className="boot__logo">
-            <pre className="boot__ascii">{`   █████╗ ███╗   ███╗██████╗ ██╗████████╗
+      {(phase === 'logo' || phase === 'fading') &&
+        <div className="boot__logo">
+          <pre className="boot__ascii">{`   █████╗ ███╗   ███╗██████╗ ██╗████████╗
   ██╔══██╗████╗ ████║██╔══██╗██║╚══██╔══╝
   ███████║██╔████╔██║██████╔╝██║   ██║
   ██╔══██║██║╚██╔╝██║██╔══██╗██║   ██║
   ██║  ██║██║ ╚═╝ ██║██║  ██║██║   ██║
   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝   ╚═╝
               .  O  S`}</pre>
-            <div className="boot__tagline">a software engineer's portfolio</div>
-            <div className="boot__hint mono">press any key or click to continue_</div>
-          </div>
-        }
-      </div>
+          <div className="boot__tagline">a software engineer's portfolio</div>
+          <div className="boot__hint mono">press any key or click to continue_</div>
+        </div>
+      }
     </div>);
 }
 
@@ -1435,8 +1433,10 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "wallpaperBrightness": 50,
   "wallpaperIntensity": 50,
   "wallpaperAnimSpeed": 50,
+  "wallpaperAnimPaused": false,
   "wallpaperRandomness": 40,
   "rainDirection": "down",
+  "waveDirection": "up",
   "starSize": 50,
   "cometDensity": 40,
   "cometDirection": "right-down",
@@ -1445,8 +1445,24 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "particleOpacity": 70,
   "particleDrift": "up",
   "morphStyle": "spin",
+  "morphBlobCount": 4,
+  "morphSmoothness": 72,
+  "morphMergeStrength": 50,
   "numberFormat": "binary",
   "binaryFontSize": 50,
+  "honeycombStyle": "outline",
+  "cursorInteractStrength": 55,
+  "cursorParticleDensity": 40,
+  "cursorSweepRadius": 50,
+  "cursorEffect": "none",
+  "cursorEffectTrailStyle": "glow",
+  "cursorEffectTrailLength": 50,
+  "cursorEffectIntensity": 55,
+  "cursorEffectRippleCount": 50,
+  "cursorEffectRippleSpeed": 50,
+  "cursorEffectCometDirection": "cursor",
+  "cursorEffectCometIntensity": 50,
+  "cursorEffectCometSpeed": 50,
   "wallpaperUseAccent": true,
   "wallpaperColor": "",
   "vignetteIntensity": 45,
@@ -1467,14 +1483,11 @@ window.applyWallpaperCosmetics = function applyWallpaperCosmetics(root, cos, ton
     root.style.setProperty('--wallpaper-color', wpColor);
     root.style.setProperty('--wp-opacity', (0.12 + (bright / 100) * 0.88).toString());
     root.style.setProperty('--wp-size', Math.round(56 - (intense / 100) * 44) + 'px');
-    const fieldSize = (cos.bgPattern === 'starfield')
-      ? Math.round(520 + (1 - intense / 100) * 480)
-      : Math.round(480 - (intense / 100) * 360);
-    root.style.setProperty('--wp-field-size', fieldSize + 'px');
+    root.style.setProperty('--wp-field-size', Math.round(480 - (intense / 100) * 360) + 'px');
   }
 };
 
-/* Canvas + CSS-anim wallpaper layer — cosmos, matrix rain, aurora, particles, pulse. */
+/* Canvas + CSS-anim wallpaper layer — cosmos, matrix rain, aurora, particles, morphgeo, waves. */
 function hexToRgb(hex) {
   try {
     const m = (hex || '#c8e856').replace('#', '');
@@ -1483,7 +1496,7 @@ function hexToRgb(hex) {
   } catch (e) { return { r: 200, g: 232, b: 86 }; }
 }
 
-function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, randomness, theme, cos }) {
+function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity, animSpeed, randomness, theme, cos }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const propsRef = useRef({});
@@ -1499,15 +1512,17 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
     ? schema.resolveWallpaperCosmetics(cosInput)
     : { opacity: 0.7, starCount: 40, cometInterval: 8, columnCount: 30, speedSec: 20, speedMult: 1, particleCount: 20, rand: 0, cometIntervalVar: 0 };
   const canvasPatterns = schema.CANVAS_WALLPAPERS || ['cosmos', 'matrixrain'];
-  const cssPatterns = schema.CSS_ANIM_WALLPAPERS || ['aurora', 'particles', 'pulse', 'smoke', 'morphgeo'];
+  const cssPatterns = schema.CSS_ANIM_WALLPAPERS || ['aurora', 'waves'];
   const isCanvas = canvasPatterns.includes(pattern);
   const isCssAnim = cssPatterns.includes(pattern);
   const active = isCanvas || isCssAnim;
 
   const rgb = hexToRgb(color);
+  const accentRgb = hexToRgb(accentColor || color);
   const alpha = wp.opacity || 0.7;
   propsRef.current = {
-    pattern, brightness, intensity, animSpeed, randomness, theme, rgb, alpha, wp,
+    pattern, brightness, intensity, animSpeed, randomness, theme, rgb, accentRgb, alpha, wp,
+    animPaused: !!(cosInput && cosInput.wallpaperAnimPaused),
     speedMult: wp.speedMult || 1,
     rand: wp.rand || 0,
   };
@@ -1545,9 +1560,16 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
     };
     const ink = () => {
       const p = getProps();
-      return (p.wp && schema.resolveWallpaperCanvasInk)
+      const base = (p.wp && schema.resolveWallpaperCanvasInk)
         ? schema.resolveWallpaperCanvasInk(p.theme, p.rgb, p.intensity, p.pattern)
         : { r: p.rgb.r, g: p.rgb.g, b: p.rgb.b, hi: [255, 255, 255], flash: 0.12, alphaBoost: 1 };
+      const acc = p.accentRgb || p.rgb;
+      base.hi = [
+        Math.min(255, Math.round((acc.r + 255) * 0.55)),
+        Math.min(255, Math.round((acc.g + 255) * 0.52)),
+        Math.min(255, Math.round((acc.b + 255) * 0.58)),
+      ];
+      return base;
     };
     const vary = (base, spread) => mixRand(base, base * spread, randPct());
     const baseColSpeed = () => {
@@ -1636,6 +1658,19 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
     let circuitPulses = [];
     let circuitCell = 44;
     let circuitPads = [];
+    let floatParticles = [];
+    let morphBlobs = [];
+    let morphTick = 0;
+    let honeyCells = [];
+    let honeyGlowNow = 0;
+    let snowFlakes = [];
+    let ripples = [];
+    let fireflies = [];
+    let lastRippleSpawn = 0;
+    let pointer = { x: 0, y: 0, px: 0, py: 0, down: false, speed: 0, active: false, lastMoveAt: 0 };
+    const RIPPLE_POOL_MOVE_THRESHOLD = 0.75;
+    const RIPPLE_POOL_SETTLE_MS = 50;
+    let reducedMotion = false;
     let lastLightning = 0;
     let lastFrame = 0;
     let nextStrikeGap = null;
@@ -1702,12 +1737,10 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
         const dx = gx1 - gx;
         const dy = gy1 - gy;
         const moves = [];
-        if (dx !== 0) moves.push({ gx: gx + Math.sign(dx), gy, diag: false });
-        if (dy !== 0) moves.push({ gx, gy: gy + Math.sign(dy), diag: false });
+        if (dx !== 0) moves.push({ gx: gx + Math.sign(dx), gy });
+        if (dy !== 0) moves.push({ gx, gy: gy + Math.sign(dy) });
         if (allowDiag && dx !== 0 && dy !== 0 && Math.abs(dx) === Math.abs(dy)) {
-          moves.push({ gx: gx + Math.sign(dx), gy: gy + Math.sign(dy), diag: true });
-        } else if (allowDiag && dx !== 0 && dy !== 0 && Math.random() < 0.28 + randAmt() * 0.22) {
-          moves.push({ gx: gx + Math.sign(dx), gy: gy + Math.sign(dy), diag: true });
+          moves.push({ gx: gx + Math.sign(dx), gy: gy + Math.sign(dy) });
         }
         const pick = moves[Math.floor(Math.random() * moves.length)];
         if (!pick) break;
@@ -1780,23 +1813,38 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
       });
     };
 
-    const circuitPointAt = (path, t) => {
-      const dist = ((t % 1) + 1) % 1 * path.totalLen;
+    const circuitPointAtDist = (path, dist) => {
+      const d = Math.max(0, Math.min(path.totalLen, dist));
       for (let i = 0; i < path.segs.length; i++) {
         const seg = path.segs[i];
-        if (dist <= seg.start + seg.len || i === path.segs.length - 1) {
-          const local = Math.max(0, Math.min(seg.len, dist - seg.start));
+        if (d <= seg.start + seg.len || i === path.segs.length - 1) {
+          const local = Math.max(0, Math.min(seg.len, d - seg.start));
           const ratio = seg.len > 0 ? local / seg.len : 0;
           return {
             x: seg.a.x + (seg.b.x - seg.a.x) * ratio,
             y: seg.a.y + (seg.b.y - seg.a.y) * ratio,
-            seg,
-            ratio,
           };
         }
       }
       const last = path.points[path.points.length - 1];
-      return { x: last.x, y: last.y, seg: null, ratio: 1 };
+      return { x: last.x, y: last.y };
+    };
+
+    const circuitPointsBetween = (path, distStart, distEnd) => {
+      if (path.totalLen <= 0 || distEnd <= distStart) return [];
+      const a = Math.max(0, distStart);
+      const b = Math.min(path.totalLen, distEnd);
+      const pts = [circuitPointAtDist(path, a)];
+      path.segs.forEach((seg) => {
+        const segEnd = seg.start + seg.len;
+        if (segEnd > a + 0.5 && segEnd <= b + 0.5) {
+          pts.push({ x: seg.b.x, y: seg.b.y });
+        }
+      });
+      const endPt = circuitPointAtDist(path, b);
+      const last = pts[pts.length - 1];
+      if (Math.hypot(endPt.x - last.x, endPt.y - last.y) > 0.5) pts.push(endPt);
+      return pts;
     };
 
     const drawCircuitLayer = (colors, aBase) => {
@@ -1824,22 +1872,25 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
         const path = circuitPaths[pulse.pathIdx];
         if (!path || path.totalLen <= 0) return;
         pulse.t += pulse.speed * (1 + Math.sin(pulse.phase + performance.now() * 0.0004) * randAmt() * 0.08);
-        const head = circuitPointAt(path, pulse.t);
-        const tailT = pulse.t - pulse.tailFrac;
-        const tail = circuitPointAt(path, tailT);
-        const grd = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
-        grd.addColorStop(0, 'rgba(0,0,0,0)');
-        grd.addColorStop(0.35, `rgba(${colors.r},${colors.g},${colors.b},${aBase * 0.35})`);
-        grd.addColorStop(0.82, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase * 0.82})`);
-        grd.addColorStop(1, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase})`);
-        ctx.strokeStyle = grd;
+        const headDist = ((pulse.t % 1) + 1) % 1 * path.totalLen;
+        const tailDist = Math.max(0, headDist - pulse.tailFrac * path.totalLen);
+        const pts = circuitPointsBetween(path, tailDist, headDist);
+        if (pts.length < 2) return;
+        const head = pts[pts.length - 1];
         ctx.lineWidth = 2.2;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
         ctx.shadowColor = `rgba(${colors.r},${colors.g},${colors.b},0.95)`;
         ctx.shadowBlur = 10 + intenseNorm() * 14;
-        ctx.beginPath();
-        ctx.moveTo(tail.x, tail.y);
-        ctx.lineTo(head.x, head.y);
-        ctx.stroke();
+        for (let i = 0; i < pts.length - 1; i++) {
+          const frac = (i + 1) / (pts.length - 1);
+          const segA = aBase * (0.08 + frac * 0.92);
+          ctx.strokeStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${segA})`;
+          ctx.beginPath();
+          ctx.moveTo(pts[i].x, pts[i].y);
+          ctx.lineTo(pts[i + 1].x, pts[i + 1].y);
+          ctx.stroke();
+        }
         ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.fillStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase * 0.95})`;
@@ -1855,6 +1906,563 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
       ctx.fillRect(0, 0, w, h);
     };
 
+    const hash2 = (i, j) => {
+      const x = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+      return x - Math.floor(x);
+    };
+
+    const seedFloatParticles = () => {
+      floatParticles = [];
+      const p = getProps();
+      const density = (p.wp.particleDensity != null ? p.wp.particleDensity : 35) / 100;
+      const count = p.wp.particleCount || Math.min(90, Math.round(8 + Math.pow(density, 1.35) * 72));
+      const sizeScale = p.wp.particleSizeScale || 1;
+      const opNorm = p.wp.particleOpacityNorm != null ? p.wp.particleOpacityNorm : 0.7;
+      const driftX = p.wp.particleDriftX != null ? p.wp.particleDriftX : 0;
+      const driftY = p.wp.particleDriftY != null ? p.wp.particleDriftY : -1;
+      const baseSpd = 0.14 + intenseNorm() * 0.32;
+      for (let i = 0; i < count; i++) {
+        const h1 = hash2(i, 1);
+        const h2 = hash2(i, 2);
+        const h3 = hash2(i, 3);
+        const h4 = hash2(i, 4);
+        const h5 = hash2(i, 5);
+        const x = ((i * 0.6180339887 + h1 * 0.37) % 1) * w;
+        const y = ((i * 0.3819660112 + h2 * 0.53) % 1) * h;
+        const angleChaos = (Math.random() - 0.5) * Math.PI * 2;
+        const detAngle = Math.atan2(driftY, driftX || -0.001);
+        const angle = chaosLerp(detAngle, angleChaos, randPct());
+        const spd = vary(baseSpd * (0.42 + h3 * 0.95), 0.55);
+        floatParticles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+          r: (1.1 + h4 * 2.6) * sizeScale,
+          alpha: (0.32 + h5 * 0.58) * opNorm,
+          tw: h1 * Math.PI * 2,
+          twSpd: 0.007 + h2 * 0.022,
+        });
+      }
+    };
+
+    const drawFloatParticles = (colors, aBase, sm) => {
+      floatParticles.forEach((pt) => {
+        pt.x += pt.vx * sm;
+        pt.y += pt.vy * sm;
+        if (pt.x < -pt.r) pt.x += w + pt.r * 2;
+        if (pt.x > w + pt.r) pt.x -= w + pt.r * 2;
+        if (pt.y < -pt.r) pt.y += h + pt.r * 2;
+        if (pt.y > h + pt.r) pt.y -= h + pt.r * 2;
+        pt.tw += pt.twSpd * sm;
+        const flick = 0.7 + Math.sin(pt.tw) * 0.3;
+        const a = aBase * pt.alpha * flick;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${colors.r},${colors.g},${colors.b},${a})`;
+        ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        ctx.fill();
+        if (pt.r > 1.8) {
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${a * 0.2})`;
+          ctx.arc(pt.x, pt.y, pt.r * 2.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    };
+
+    const MORPH_SAMPLES = 72;
+    const morphEase = (t) => t * t * (3 - 2 * t);
+    const MORPH_HARM_FREQS = [2, 3, 4, 5, 6];
+
+    const morphHarmonicTargets = (blob, i) => {
+      blob.harmonics.forEach((h, j) => {
+        h.amp = h.amp + (h.targetAmp - h.amp);
+        h.phase = h.targetPhase;
+        const spread = 0.08 + randAmt() * 0.14;
+        h.targetAmp = blob.baseR * (0.04 + hash2(i + j, 83) * spread + intenseNorm() * 0.06);
+        h.targetPhase = h.phase + (hash2(i, j + 97) - 0.5) * Math.PI * 0.75;
+      });
+    };
+
+    const morphRadiusAt = (blob, theta, tGlobal) => {
+      const mt = morphEase(blob.morphT);
+      let r = blob.baseR;
+      blob.harmonics.forEach((h) => {
+        const amp = h.amp + (h.targetAmp - h.amp) * mt;
+        const phase = h.phase + (h.targetPhase - h.phase) * mt;
+        r += amp * Math.sin(h.freq * theta + phase + tGlobal * h.freq * 0.11);
+      });
+      const breathe = 1 + Math.sin(tGlobal * 0.62 + blob.phase) * blob.pulseAmp;
+      return Math.max(blob.baseR * 0.35, r * breathe);
+    };
+
+    const morphSamplePoints = (blob, tGlobal) => {
+      const pts = [];
+      for (let i = 0; i < MORPH_SAMPLES; i++) {
+        const theta = blob.rot + (i / MORPH_SAMPLES) * Math.PI * 2;
+        const rad = morphRadiusAt(blob, theta, tGlobal);
+        pts.push({ x: blob.cx + Math.cos(theta) * rad, y: blob.cy + Math.sin(theta) * rad });
+      }
+      return pts;
+    };
+
+    const morphTraceSmoothPath = (pts, tensionNorm) => {
+      const n = pts.length;
+      if (n < 3) return;
+      const t = 0.28 + tensionNorm * 0.62;
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 0; i < n; i++) {
+        const p0 = pts[(i - 1 + n) % n];
+        const p1 = pts[i];
+        const p2 = pts[(i + 1) % n];
+        const p3 = pts[(i + 2) % n];
+        const cp1x = p1.x + ((p2.x - p0.x) / 6) * t;
+        const cp1y = p1.y + ((p2.y - p0.y) / 6) * t;
+        const cp2x = p2.x - ((p3.x - p1.x) / 6) * t;
+        const cp2y = p2.y - ((p3.y - p1.y) / 6) * t;
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+      }
+      ctx.closePath();
+    };
+
+    const morphLayoutSlots = (count) => {
+      const slots = [];
+      const cx = w * 0.5;
+      const cy = h * 0.48;
+      if (count <= 1) {
+        slots.push({ cx, cy, scale: 1.2 });
+        return slots;
+      }
+      slots.push({ cx, cy, scale: 1.18 });
+      const ring = Math.min(w, h) * (0.17 + count * 0.018);
+      for (let i = 0; i < count - 1; i++) {
+        const ang = (i / (count - 1)) * Math.PI * 2 - Math.PI / 2;
+        slots.push({
+          cx: cx + Math.cos(ang) * ring,
+          cy: cy + Math.sin(ang) * ring * 0.92,
+          scale: 0.78 + hash2(i, 7) * 0.28,
+        });
+      }
+      return slots;
+    };
+
+    const seedMorphGeo = () => {
+      morphBlobs = [];
+      morphTick = 0;
+      const p = getProps();
+      const n = p.wp.morphBlobCount || Math.round(2 + intenseNorm() * 4);
+      const style = p.wp.morphStyle || 'spin';
+      const slots = morphLayoutSlots(n);
+      for (let i = 0; i < n; i++) {
+        const slot = slots[i] || slots[0];
+        const baseR = Math.min(w, h) * (0.055 + hash2(i, 19) * (0.07 + intenseNorm() * 0.06));
+        const harmonics = MORPH_HARM_FREQS.map((freq, j) => {
+          const amp = baseR * (0.05 + hash2(i, j * 11 + 3) * (0.1 + intenseNorm() * 0.08));
+          const phase = hash2(i, j * 13 + 7) * Math.PI * 2;
+          return { freq, amp, targetAmp: amp, phase, targetPhase: phase };
+        });
+        morphBlobs.push({
+          cx: slot.cx,
+          cy: slot.cy,
+          homeCx: slot.cx,
+          homeCy: slot.cy,
+          baseR: baseR * (slot.scale || 1),
+          harmonics,
+          morphT: hash2(i, 29) * 0.4,
+          morphSpd: vary(0.0012 + hash2(i, 43) * 0.0024, 0.3) * (style === 'warp' ? 1.25 : 1),
+          rot: hash2(i, 31) * Math.PI * 2,
+          rotSpd: vary(0.0018 + hash2(i, 47) * 0.005, 0.3) * (style === 'spin' ? 1.45 : 0.85),
+          phase: hash2(i, 37) * Math.PI * 2,
+          vx: (hash2(i, 61) - 0.5) * 0.22,
+          vy: (hash2(i, 67) - 0.5) * 0.18,
+          orbitR: style === 'orbit' ? Math.min(w, h) * (0.035 + hash2(i, 71) * 0.07) : 0,
+          orbitSpd: (hash2(i, 73) - 0.5) * 0.011,
+          pulseAmp: style === 'pulse' ? 0.1 + hash2(i, 79) * 0.09 : 0.04 + hash2(i, 79) * 0.03,
+        });
+      }
+    };
+
+    const updateMorphBlobs = (sm, mergeNorm) => {
+      const t = morphTick;
+      const style = getProps().wp.morphStyle || 'spin';
+      const rAmt = randAmt();
+      const motion = reducedMotion ? sm * 0.12 : sm;
+      morphBlobs.forEach((b, idx) => {
+        b.morphT += b.morphSpd * motion * (1 + rAmt * 0.22);
+        if (b.morphT >= 1) {
+          morphHarmonicTargets(b, idx);
+          b.morphT = 0;
+        }
+        const orbitAng = t * b.orbitSpd * (style === 'orbit' ? 2.1 : 0.45);
+        const pulse = 1 + Math.sin(t * 0.78 + b.phase) * b.pulseAmp * (style === 'pulse' ? 1.35 : 0.85);
+        const drift = reducedMotion ? 4 : 14;
+        b.cx = b.homeCx + Math.cos(orbitAng + b.phase) * b.orbitR + b.vx * t * drift;
+        b.cy = b.homeCy + Math.sin(orbitAng + b.phase) * b.orbitR * 0.9 + b.vy * t * drift * 0.88;
+        b.cx += (b.homeCx - b.cx) * 0.0008 * motion;
+        b.cy += (b.homeCy - b.cy) * 0.0008 * motion;
+        b.rot += b.rotSpd * motion * 28 * pulse;
+        if (style === 'warp' && !reducedMotion) {
+          b.vx += Math.sin(t * 0.38 + b.phase) * 0.0014 * motion;
+          b.vy += Math.cos(t * 0.33 + b.phase) * 0.0014 * motion;
+        }
+      });
+      const mergePull = 0.008 + mergeNorm * 0.028;
+      for (let i = 0; i < morphBlobs.length; i++) {
+        for (let j = i + 1; j < morphBlobs.length; j++) {
+          const a = morphBlobs[i];
+          const b = morphBlobs[j];
+          const dx = b.cx - a.cx;
+          const dy = b.cy - a.cy;
+          const dist = Math.hypot(dx, dy);
+          const mergeAt = (a.baseR + b.baseR) * (0.62 + mergeNorm * 0.22 + rAmt * 0.08);
+          if (dist > mergeAt || dist < 1) continue;
+          const pull = (1 - dist / mergeAt) * mergePull * motion;
+          a.cx += dx * pull;
+          a.cy += dy * pull;
+          b.cx -= dx * pull * 0.92;
+          b.cy -= dy * pull * 0.92;
+          if (dist < mergeAt * 0.48) {
+            const sync = 0.0025 * motion * (0.4 + mergeNorm * 0.6);
+            a.morphT = Math.min(1, a.morphT + sync);
+            b.morphT = Math.min(1, b.morphT + sync);
+          }
+        }
+      }
+    };
+
+    const drawMorphGeo = (colors, aBase, sm) => {
+      const motion = reducedMotion ? sm * 0.1 : sm;
+      morphTick += 0.016 * motion;
+      const t = morphTick;
+      const p = getProps();
+      const light = p.theme === 'light';
+      const smoothNorm = (p.wp.morphSmoothness != null ? p.wp.morphSmoothness : 72) / 100;
+      const mergeNorm = (p.wp.morphMergeStrength != null ? p.wp.morphMergeStrength : 50) / 100;
+      updateMorphBlobs(sm, mergeNorm);
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.globalCompositeOperation = light ? 'multiply' : 'screen';
+      morphBlobs.forEach((b) => {
+        const pts = morphSamplePoints(b, t);
+        if (pts.length < 3) return;
+        const fillA = aBase * (0.07 + intenseNorm() * 0.06);
+        const strokeA = aBase * (0.16 + intenseNorm() * 0.1);
+        const haloA = fillA * (0.35 + mergeNorm * 0.25);
+
+        ctx.beginPath();
+        ctx.arc(b.cx, b.cy, b.baseR * (1.35 + mergeNorm * 0.35), 0, Math.PI * 2);
+        const halo = ctx.createRadialGradient(b.cx, b.cy, 0, b.cx, b.cy, b.baseR * (1.55 + mergeNorm * 0.4));
+        halo.addColorStop(0, `rgba(${colors.r},${colors.g},${colors.b},${haloA * 0.45})`);
+        halo.addColorStop(0.55, `rgba(${colors.r},${colors.g},${colors.b},${haloA * 0.12})`);
+        halo.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = halo;
+        ctx.fill();
+
+        ctx.beginPath();
+        morphTraceSmoothPath(pts, smoothNorm);
+        const grd = ctx.createRadialGradient(b.cx, b.cy, 0, b.cx, b.cy, b.baseR * 1.25);
+        grd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${fillA * 0.28})`);
+        grd.addColorStop(0.42, `rgba(${colors.r},${colors.g},${colors.b},${fillA})`);
+        grd.addColorStop(1, `rgba(${colors.r},${colors.g},${colors.b},${fillA * 0.08})`);
+        ctx.fillStyle = grd;
+        ctx.fill();
+        ctx.shadowBlur = 6 + intenseNorm() * 8;
+        ctx.shadowColor = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${strokeA * 0.55})`;
+        ctx.lineWidth = 0.85;
+        ctx.strokeStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${strokeA})`;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      });
+      ctx.restore();
+    };
+
+    const flatTopHexCorners = (cx, cy, r) => {
+      const hw = Math.sqrt(3) * r;
+      return [
+        [cx, cy - r],
+        [cx + hw / 2, cy - r / 2],
+        [cx + hw / 2, cy + r / 2],
+        [cx, cy + r],
+        [cx - hw / 2, cy + r / 2],
+        [cx - hw / 2, cy - r / 2],
+      ];
+    };
+
+    const seedHoneycombGlow = () => {
+      honeyCells = [];
+      const p = getProps();
+      const rowH = p.wp.size || 36;
+      const r = rowH / 1.5;
+      const colW = Math.sqrt(3) * r;
+      const rowPitch = rowH;
+      const cols = Math.ceil(w / colW) + 3;
+      const rows = Math.ceil(h / rowPitch) + 3;
+      for (let row = -1; row < rows; row++) {
+        for (let col = -1; col < cols; col++) {
+          const cx = col * colW + (row % 2 ? colW / 2 : 0) + colW / 2;
+          const cy = row * rowPitch + r;
+          const h0 = hash2(col, row);
+          const h1 = hash2(col + 7, row + 11);
+          honeyCells.push({
+            col,
+            row,
+            cx,
+            cy,
+            r,
+            phase: h0 * Math.PI * 2,
+            cycle: 2.8 + h1 * (4.2 + randAmt() * 3.5),
+            gate: h0 < 0.12 + intenseNorm() * 0.14 + randAmt() * 0.18,
+          });
+        }
+      }
+    };
+
+    const drawHoneycombGlow = (colors, aBase, sm, now) => {
+      honeyGlowNow = now;
+      const intense = intenseNorm();
+      const rAmt = randAmt();
+      const cycleMs = 9000;
+      const t = (now % cycleMs) / 1000;
+      const rowStroke = aBase * (0.2 + intense * 0.16);
+
+      ctx.save();
+      ctx.lineWidth = 0.85;
+      ctx.lineJoin = 'round';
+      honeyCells.forEach((cell) => {
+        const corners = flatTopHexCorners(cell.cx, cell.cy, cell.r);
+        let glow = 0;
+        if (cell.gate) {
+          const wave = Math.sin((t / cell.cycle) * Math.PI * 2 + cell.phase);
+          glow = Math.max(0, wave);
+          glow = glow * glow;
+          if (rAmt > 0.25 && hash2(cell.col + Math.floor(t * 3), cell.row) < rAmt * 0.08) {
+            glow = Math.max(glow, 0.35 + Math.random() * 0.45);
+          }
+        }
+
+        ctx.beginPath();
+        corners.forEach((pt, i) => { if (i === 0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]); });
+        ctx.closePath();
+
+        if (glow > 0.04) {
+          const ga = aBase * glow * (0.42 + intense * 0.38);
+          ctx.fillStyle = `rgba(${colors.r},${colors.g},${colors.b},${ga * 0.5})`;
+          ctx.fill();
+          ctx.shadowColor = `rgba(${colors.r},${colors.g},${colors.b},${ga * 0.85})`;
+          ctx.shadowBlur = 6 + glow * 18;
+          ctx.strokeStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${ga})`;
+        } else {
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = `rgba(${colors.r},${colors.g},${colors.b},${rowStroke})`;
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      });
+      ctx.restore();
+    };
+
+    const cursorStrength = () => {
+      const p = getProps();
+      const base = p.wp.cursorInteractNorm != null ? p.wp.cursorInteractNorm : 0.55;
+      return reducedMotion ? base * 0.35 : base;
+    };
+
+    const targetSnowCount = () => {
+      const p = getProps();
+      const density = ((p.wp.cursorParticleDensity != null ? p.wp.cursorParticleDensity : 40) / 100) * 0.55
+        + ((p.intensity == null ? 50 : p.intensity) / 100) * 0.45;
+      return Math.max(12, Math.round(24 + density * 196));
+    };
+
+    const spawnSnowFlake = (fromTop) => ({
+      x: Math.random() * w,
+      y: fromTop ? -4 - Math.random() * 36 : Math.random() * h,
+      r: 1 + Math.random() * 2.4,
+      vy: 0.35 + Math.random() * 0.85,
+      vx: (Math.random() - 0.5) * 0.35,
+      settled: false,
+      settleAge: 0,
+      life: 0.55 + Math.random() * 0.45,
+    });
+
+    const respawnSnowFlake = (flake) => {
+      flake.x = Math.random() * w;
+      flake.y = -4 - Math.random() * 28;
+      flake.settled = false;
+      flake.settleAge = 0;
+      flake.life = 0.55 + Math.random() * 0.45;
+      flake.vy = 0.35 + Math.random() * 0.85;
+      flake.vx = (Math.random() - 0.5) * 0.35;
+    };
+
+    const seedSnowInteractive = () => {
+      snowFlakes = [];
+      const n = targetSnowCount();
+      for (let i = 0; i < n; i++) snowFlakes.push(spawnSnowFlake(i < n * 0.35));
+    };
+
+    const seedRipplePool = () => {
+      ripples = [];
+      lastRippleSpawn = 0;
+    };
+
+    const seedFireflies = () => {
+      fireflies = [];
+      const p = getProps();
+      const density = ((p.wp.cursorParticleDensity != null ? p.wp.cursorParticleDensity : 40) / 100) * 0.5
+        + intenseNorm() * 0.5;
+      const n = Math.max(10, Math.round(16 + density * 64));
+      for (let i = 0; i < n; i++) {
+        fireflies.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.22,
+          vy: (Math.random() - 0.5) * 0.18,
+          r: 1.2 + Math.random() * 2.4,
+          tw: Math.random() * Math.PI * 2,
+          twSpd: 0.012 + Math.random() * 0.02,
+        });
+      }
+    };
+
+    const drawSnowInteractive = (colors, aBase, sm) => {
+      const p = getProps();
+      const floor = h - 8;
+      const strength = cursorStrength();
+      const sweepBase = p.wp.cursorSweepPx || 48;
+      const sweep = sweepBase * (0.65 + strength * 0.85 + Math.min(2.2, pointer.speed * 0.08));
+      const target = targetSnowCount();
+
+      snowFlakes.forEach((flake) => {
+        if (!flake.settled) {
+          flake.y += flake.vy * sm * (reducedMotion ? 0.35 : 1);
+          flake.x += flake.vx * sm;
+          if (flake.y >= floor - flake.r) {
+            flake.y = floor - flake.r;
+            flake.settled = true;
+            flake.settleAge = 0;
+          }
+        } else {
+          flake.settleAge = (flake.settleAge || 0) + sm;
+          if (flake.settleAge > 90 + Math.random() * 120) respawnSnowFlake(flake);
+        }
+        if (pointer.active) {
+          const dx = flake.x - pointer.x;
+          const dy = flake.y - pointer.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < sweep) {
+            const push = (1 - dist / sweep) * strength * (0.35 + pointer.speed * 0.04);
+            flake.x += (dx / (dist || 1)) * push * 12 * sm;
+            flake.y += (dy / (dist || 1)) * push * 8 * sm;
+            if (push > 0.25) {
+              flake.settled = false;
+              flake.settleAge = 0;
+              flake.life -= push * 0.08;
+            }
+          }
+        }
+        if (flake.life <= 0 || flake.y > h + 24 || flake.x < -40 || flake.x > w + 40) {
+          respawnSnowFlake(flake);
+        }
+        const a = aBase * flake.life * 0.85;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${colors.r},${colors.g},${colors.b},${a})`;
+        ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      while (snowFlakes.length < target) snowFlakes.push(spawnSnowFlake(true));
+      while (snowFlakes.length > target + 24) snowFlakes.shift();
+    };
+
+    const drawRipplePool = (colors, aBase, sm, now) => {
+      const strength = cursorStrength();
+      const gridA = aBase * (0.06 + intenseNorm() * 0.08);
+      ctx.save();
+      ctx.strokeStyle = `rgba(${colors.r},${colors.g},${colors.b},${gridA})`;
+      ctx.lineWidth = 0.6;
+      const step = 28 + intenseNorm() * 18;
+      for (let y = step * 0.5; y < h; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const ripplePoolMoving = pointer.active && !reducedMotion
+        && (now - (pointer.lastMoveAt || 0)) < RIPPLE_POOL_SETTLE_MS;
+      if (ripplePoolMoving && now - lastRippleSpawn > 120 - strength * 55) {
+        lastRippleSpawn = now;
+        ripples.push({
+          x: pointer.x,
+          y: pointer.y,
+          r: 4,
+          maxR: 48 + strength * 72 + pointer.speed * 0.35,
+          life: 1,
+        });
+      }
+
+      ripples = ripples.filter((rp) => {
+        rp.r += (1.8 + strength * 1.4) * sm;
+        rp.life -= 0.012 * sm;
+        if (rp.life <= 0 || rp.r > rp.maxR) return false;
+        const a = aBase * rp.life * (0.35 + strength * 0.35);
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${a})`;
+        ctx.lineWidth = 1.2 + (1 - rp.r / rp.maxR) * 1.6;
+        ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        ctx.stroke();
+        if (rp.r > 8) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(${colors.r},${colors.g},${colors.b},${a * 0.45})`;
+          ctx.lineWidth = 0.8;
+          ctx.arc(rp.x, rp.y, rp.r * 0.62, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        return true;
+      });
+    };
+
+    const drawFireflies = (colors, aBase, sm) => {
+      const strength = cursorStrength();
+      const fleeR = 72 + strength * 88;
+      fireflies.forEach((fly) => {
+        fly.tw += fly.twSpd * sm;
+        fly.x += fly.vx * sm;
+        fly.y += fly.vy * sm;
+        if (pointer.active) {
+          const dx = fly.x - pointer.x;
+          const dy = fly.y - pointer.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < fleeR) {
+            const push = (1 - dist / fleeR) * strength * 0.85;
+            fly.vx += (dx / (dist || 1)) * push * 0.55;
+            fly.vy += (dy / (dist || 1)) * push * 0.55;
+          }
+        }
+        fly.vx *= 0.992;
+        fly.vy *= 0.992;
+        if (fly.x < -12) fly.x = w + 8;
+        if (fly.x > w + 12) fly.x = -8;
+        if (fly.y < -12) fly.y = h + 8;
+        if (fly.y > h + 12) fly.y = -8;
+        const flick = 0.45 + Math.sin(fly.tw) * 0.55;
+        const a = aBase * flick * 0.8;
+        const grd = ctx.createRadialGradient(fly.x, fly.y, 0, fly.x, fly.y, fly.r * 3.2);
+        grd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${a})`);
+        grd.addColorStop(0.35, `rgba(${colors.r},${colors.g},${colors.b},${a * 0.55})`);
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(fly.x, fly.y, fly.r * (0.8 + flick * 0.35), 0, Math.PI * 2);
+        ctx.fill();
+      });
+    };
+
     const reseed = () => {
       const pat = getProps().pattern;
       if (pat === 'cosmos') seedStars();
@@ -1863,6 +2471,12 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
       else if (pat === 'binarystream') seedBinary();
       else if (pat === 'nebula') seedNebula();
       else if (pat === 'circuits') seedCircuits();
+      else if (pat === 'particles') seedFloatParticles();
+      else if (pat === 'morphgeo') seedMorphGeo();
+      else if (pat === 'honeycombGlow') seedHoneycombGlow();
+      else if (pat === 'snowinteractive') seedSnowInteractive();
+      else if (pat === 'ripplepool') seedRipplePool();
+      else if (pat === 'fireflies') seedFireflies();
     };
 
     let seedSignature = '';
@@ -1873,6 +2487,9 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
         p.wp.binaryRowCount, p.wp.numberFormat, p.wp.binaryFontPx, p.wp.nebulaBlobCount,
         p.wp.circuitPathCount, p.wp.circuitCellSize,
         p.wp.cometDirection, p.wp.cometDensity, p.wp.rainDirection,
+        p.wp.particleCount, p.wp.particleSize, p.wp.particleOpacity, p.wp.particleDrift,
+        p.wp.morphStyle, p.wp.morphBlobCount, p.wp.morphSmoothness, p.wp.morphMergeStrength,
+        p.wp.cursorSnowCount, p.wp.cursorParticleDensity, p.wp.cursorSweepPx,
       ].join('|');
       if (sig === seedSignature) return;
       seedSignature = sig;
@@ -1994,6 +2611,29 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
     };
 
     measure();
+    pointer.x = w * 0.5;
+    pointer.y = h * 0.35;
+    pointer.px = pointer.x;
+    pointer.py = pointer.y;
+    try {
+      reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) { reducedMotion = false; }
+    const onPtrMove = (e) => {
+      const speed = Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y);
+      pointer.speed = speed;
+      pointer.px = pointer.x;
+      pointer.py = pointer.y;
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.active = true;
+      if (speed > RIPPLE_POOL_MOVE_THRESHOLD) pointer.lastMoveAt = performance.now();
+    };
+    const onPtrDown = (e) => { pointer.down = true; onPtrMove(e); };
+    const onPtrUp = () => { pointer.down = false; };
+    window.addEventListener('pointermove', onPtrMove, { passive: true });
+    window.addEventListener('pointerdown', onPtrDown, { passive: true });
+    window.addEventListener('pointerup', onPtrUp, { passive: true });
+    window.addEventListener('pointercancel', onPtrUp, { passive: true });
     let nextCometGap = (getProps().wp.cometInterval || 8) * 1000;
     lastComet = performance.now() - nextCometGap * 0.7;
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
@@ -2299,12 +2939,30 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
         }
       } else if (activePattern === 'circuits') {
         drawCircuitLayer(colors, aBase);
+      } else if (activePattern === 'particles') {
+        drawFloatParticles(colors, aBase, sm);
+      } else if (activePattern === 'morphgeo') {
+        drawMorphGeo(colors, aBase, sm);
+      } else if (activePattern === 'honeycombGlow') {
+        drawHoneycombGlow(colors, aBase, sm, now);
+      } else if (activePattern === 'snowinteractive') {
+        drawSnowInteractive(colors, aBase, sm);
+      } else if (activePattern === 'ripplepool') {
+        drawRipplePool(colors, aBase, sm, now);
+      } else if (activePattern === 'fireflies') {
+        drawFireflies(colors, aBase, sm);
       }
-      animRef.current = requestAnimationFrame(frame);
+      if (!getProps().animPaused) {
+        animRef.current = requestAnimationFrame(frame);
+      }
     };
-    animRef.current = requestAnimationFrame(frame);
+    frame(0);
     teardown = () => {
       window.removeEventListener('resize', measure);
+      window.removeEventListener('pointermove', onPtrMove);
+      window.removeEventListener('pointerdown', onPtrDown);
+      window.removeEventListener('pointerup', onPtrUp);
+      window.removeEventListener('pointercancel', onPtrUp);
       if (ro) ro.disconnect();
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
@@ -2315,21 +2973,14 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
       cancelled = true;
       if (teardown) teardown();
     };
-  }, [pattern, isCanvas]);
+  }, [pattern, isCanvas, cos && cos.wallpaperAnimPaused]);
 
+  const animPaused = !!(cos && cos.wallpaperAnimPaused);
   const animLayerKey = isCssAnim
     ? pattern + '-d' + wp.animDur + '-s' + wp.speedSec + '-r' + (randomness == null ? 40 : randomness)
-      + (pattern === 'morphgeo'
-        ? '-v' + (wp.morphVariant == null ? 0 : wp.morphVariant)
-          + '-va' + (wp.morphVariantAfter == null ? 0 : wp.morphVariantAfter)
-          + '-m' + (wp.morphStyle || 'spin')
-        : '')
-      + (pattern === 'particles'
-        ? '-p' + wp.particleCount
-          + '-z' + (wp.particleSize == null ? 45 : wp.particleSize)
-          + '-o' + (wp.particleOpacity == null ? 70 : wp.particleOpacity)
-          + '-da' + wp.particleDriftAX + wp.particleDriftAY
-          + '-db' + wp.particleDriftBX + wp.particleDriftBY
+      + (animPaused ? '-paused' : '')
+      + (pattern === 'waves'
+        ? '-w' + (wp.waveDirection || 'up') + wp.waveDriftX + wp.waveDriftY + wp.waveTileX + wp.waveTileY
         : '')
     : pattern;
 
@@ -2357,21 +3008,10 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
           className={'wp-anim wp-anim--' + pattern}
           aria-hidden="true"
           data-theme={theme || 'dark'}
-          data-morph-variant={pattern === 'morphgeo' ? String(wp.morphVariant == null ? 0 : wp.morphVariant) : undefined}
-          data-morph-variant-after={pattern === 'morphgeo' ? String(wp.morphVariantAfter == null ? 0 : wp.morphVariantAfter) : undefined}
-          data-morph-style={pattern === 'morphgeo' ? (wp.morphStyle || 'spin') : undefined}
+          data-anim-paused={animPaused ? 'true' : undefined}
           style={{
             '--wp-opacity': String(alpha),
             '--wp-intense': String((intensity == null ? 50 : intensity) / 100),
-            '--wp-particle-count': wp.particleCount,
-            '--wp-particle-size': String(wp.particleSizeScale || 1),
-            '--wp-p-opacity': String(wp.particleOpacityNorm == null ? 0.7 : wp.particleOpacityNorm),
-            '--wp-p-drift-x': String(wp.particleDriftX == null ? 0 : wp.particleDriftX),
-            '--wp-p-drift-y': String(wp.particleDriftY == null ? -1 : wp.particleDriftY),
-            '--wp-p-drift-x-a': String(wp.particleDriftAX == null ? wp.particleDriftX : wp.particleDriftAX),
-            '--wp-p-drift-y-a': String(wp.particleDriftAY == null ? wp.particleDriftY : wp.particleDriftAY),
-            '--wp-p-drift-x-b': String(wp.particleDriftBX == null ? wp.particleDriftX : wp.particleDriftBX),
-            '--wp-p-drift-y-b': String(wp.particleDriftBY == null ? wp.particleDriftY : wp.particleDriftBY),
             '--wp-anim-dur': wp.animDur,
             '--wp-speed': String(wp.speedSec),
             '--wp-rand': String(wp.rand),
@@ -2381,7 +3021,11 @@ function AnimatedWallpaper({ pattern, color, brightness, intensity, animSpeed, r
             '--wp-rand-dur-b': wp.randDurB || wp.randDurScale,
             '--wp-rand-phase-a': (wp.randPhaseA || '0') + 'deg',
             '--wp-rand-phase-b': (wp.randPhaseB || '0') + 'deg',
-            '--wp-morph-phase': wp.morphPhase || '0deg',
+            '--wp-wave-dx': String(wp.waveDriftX == null ? 0 : wp.waveDriftX),
+            '--wp-wave-dy': String(wp.waveDriftY == null ? -1 : wp.waveDriftY),
+            '--wp-wave-tile-x': (wp.waveTileX || wp.size * 2.5) + 'px',
+            '--wp-wave-tile-y': (wp.waveTileY || wp.size * 1.25) + 'px',
+            animationPlayState: animPaused ? 'paused' : undefined,
           }}
         />
       )}
@@ -2406,8 +3050,10 @@ const TWEAK_DEFAULTS = (() => {
     wallpaperBrightness: typeof c.wallpaperBrightness === 'number' ? c.wallpaperBrightness : _COSMETICS_BASE.wallpaperBrightness,
     wallpaperIntensity: typeof c.wallpaperIntensity === 'number' ? c.wallpaperIntensity : _COSMETICS_BASE.wallpaperIntensity,
     wallpaperAnimSpeed: typeof c.wallpaperAnimSpeed === 'number' ? c.wallpaperAnimSpeed : _COSMETICS_BASE.wallpaperAnimSpeed,
+    wallpaperAnimPaused: c.wallpaperAnimPaused == null ? _COSMETICS_BASE.wallpaperAnimPaused : !!c.wallpaperAnimPaused,
     wallpaperRandomness: typeof c.wallpaperRandomness === 'number' ? c.wallpaperRandomness : _COSMETICS_BASE.wallpaperRandomness,
     rainDirection: typeof c.rainDirection === 'string' ? c.rainDirection : _COSMETICS_BASE.rainDirection,
+    waveDirection: typeof c.waveDirection === 'string' ? c.waveDirection : _COSMETICS_BASE.waveDirection,
     starSize: typeof c.starSize === 'number' ? c.starSize : _COSMETICS_BASE.starSize,
     cometDensity: typeof c.cometDensity === 'number' ? c.cometDensity : _COSMETICS_BASE.cometDensity,
     cometDirection: typeof c.cometDirection === 'string' ? c.cometDirection : _COSMETICS_BASE.cometDirection,
@@ -2416,8 +3062,25 @@ const TWEAK_DEFAULTS = (() => {
     particleOpacity: typeof c.particleOpacity === 'number' ? c.particleOpacity : _COSMETICS_BASE.particleOpacity,
     particleDrift: typeof c.particleDrift === 'string' ? c.particleDrift : _COSMETICS_BASE.particleDrift,
     morphStyle: typeof c.morphStyle === 'string' ? c.morphStyle : _COSMETICS_BASE.morphStyle,
+    morphBlobCount: typeof c.morphBlobCount === 'number' ? c.morphBlobCount : _COSMETICS_BASE.morphBlobCount,
+    morphSmoothness: typeof c.morphSmoothness === 'number' ? c.morphSmoothness : _COSMETICS_BASE.morphSmoothness,
+    morphMergeStrength: typeof c.morphMergeStrength === 'number' ? c.morphMergeStrength : _COSMETICS_BASE.morphMergeStrength,
     numberFormat: typeof c.numberFormat === 'string' ? c.numberFormat : _COSMETICS_BASE.numberFormat,
     binaryFontSize: typeof c.binaryFontSize === 'number' ? c.binaryFontSize : _COSMETICS_BASE.binaryFontSize,
+    honeycombStyle: typeof c.honeycombStyle === 'string' ? c.honeycombStyle : _COSMETICS_BASE.honeycombStyle,
+    cursorInteractStrength: typeof c.cursorInteractStrength === 'number' ? c.cursorInteractStrength : _COSMETICS_BASE.cursorInteractStrength,
+    cursorTrailLength: typeof c.cursorTrailLength === 'number' ? c.cursorTrailLength : _COSMETICS_BASE.cursorTrailLength,
+    cursorParticleDensity: typeof c.cursorParticleDensity === 'number' ? c.cursorParticleDensity : _COSMETICS_BASE.cursorParticleDensity,
+    cursorSweepRadius: typeof c.cursorSweepRadius === 'number' ? c.cursorSweepRadius : _COSMETICS_BASE.cursorSweepRadius,
+    cursorEffect: typeof c.cursorEffect === 'string' ? c.cursorEffect : _COSMETICS_BASE.cursorEffect,
+    cursorEffectTrailStyle: typeof c.cursorEffectTrailStyle === 'string' ? c.cursorEffectTrailStyle : _COSMETICS_BASE.cursorEffectTrailStyle,
+    cursorEffectTrailLength: typeof c.cursorEffectTrailLength === 'number' ? c.cursorEffectTrailLength : _COSMETICS_BASE.cursorEffectTrailLength,
+    cursorEffectIntensity: typeof c.cursorEffectIntensity === 'number' ? c.cursorEffectIntensity : _COSMETICS_BASE.cursorEffectIntensity,
+    cursorEffectRippleCount: typeof c.cursorEffectRippleCount === 'number' ? c.cursorEffectRippleCount : _COSMETICS_BASE.cursorEffectRippleCount,
+    cursorEffectRippleSpeed: typeof c.cursorEffectRippleSpeed === 'number' ? c.cursorEffectRippleSpeed : _COSMETICS_BASE.cursorEffectRippleSpeed,
+    cursorEffectCometDirection: typeof c.cursorEffectCometDirection === 'string' ? c.cursorEffectCometDirection : _COSMETICS_BASE.cursorEffectCometDirection,
+    cursorEffectCometIntensity: typeof c.cursorEffectCometIntensity === 'number' ? c.cursorEffectCometIntensity : _COSMETICS_BASE.cursorEffectCometIntensity,
+    cursorEffectCometSpeed: typeof c.cursorEffectCometSpeed === 'number' ? c.cursorEffectCometSpeed : _COSMETICS_BASE.cursorEffectCometSpeed,
     wallpaperUseAccent: c.wallpaperUseAccent == null ? _COSMETICS_BASE.wallpaperUseAccent : !!c.wallpaperUseAccent,
     wallpaperColor: typeof c.wallpaperColor === 'string' ? c.wallpaperColor : _COSMETICS_BASE.wallpaperColor,
     vignetteIntensity: typeof c.vignetteIntensity === 'number' ? c.vignetteIntensity : _COSMETICS_BASE.vignetteIntensity,
@@ -2433,9 +3096,10 @@ const CURSOR_COLOR_OPTIONS = ["#ffffff", "#c8e856", "#33ff66", "#ff7a3d", "#7a9e
 const TYPE_OPTIONS = _SCHEMA.FONT_TYPES || ['default', 'editorial', 'pixel', 'modern', 'mono', 'slab', 'rounded', 'retro'];
 const HEADING_FONT_OPTIONS = _SCHEMA.HEADING_FONTS || ['match', 'serif', 'editorial', 'grotesk', 'mono', 'pixel', 'slab', 'rounded', 'retro', 'display'];
 const TRACKING_OPTIONS = ['tight', 'normal', 'wide'];
-const BG_PATTERN_OPTIONS = (_SCHEMA.BG_PATTERNS || ['grid', 'dots', 'scan', 'starfield', 'crosshatch', 'hex', 'circuits', 'waves', 'diagonal', 'brick', 'noise', 'aurora', 'cosmos', 'matrixrain', 'particles', 'pulse', 'none']).map((v) => {
+const BG_PATTERN_OPTIONS = (_SCHEMA.BG_PATTERNS || ['grid', 'dots', 'diagonal', 'crosshatch', '3dgrid', 'honeycomb', 'padgrid', 'circuits', 'waves', 'brick', 'noise', 'aurora', 'cosmos', 'matrixrain', 'particles', 'none']).map((v) => {
   const meta = (_SCHEMA.BG_PATTERN_META || {})[v];
-  const label = meta ? meta.label + (meta.animated ? ' ✦' : '') : v;
+  const tag = meta && meta.cursorReactive ? ' ✦ interactive' : (meta && meta.animated ? ' ✦' : '');
+  const label = meta ? meta.label + tag : v;
   return { value: v, label };
 });
 const VIGNETTE_DIRECTION_OPTIONS = (_SCHEMA.VIGNETTE_DIRECTIONS || ['none', 'center', 'all', 'top', 'bottom', 'left', 'right', 'horizontal', 'vertical', 'top-left', 'top-right', 'bottom-left', 'bottom-right']).map((v) => ({ value: v, label: v === 'none' ? 'None' : v.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }));
@@ -2501,9 +3165,13 @@ function App() {
     const merged = resolveLiveCos(liveCos);
     const next = {};
     ['accent', 'accentTone', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale',
-      'headingFont', 'tracking', 'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperRandomness',
-      'rainDirection', 'starSize', 'cometDensity', 'cometDirection',
-      'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'morphStyle', 'numberFormat', 'binaryFontSize',
+      'headingFont', 'tracking', 'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperAnimPaused', 'wallpaperRandomness',
+      'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
+      'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'morphStyle', 'morphBlobCount', 'morphSmoothness', 'morphMergeStrength', 'numberFormat', 'binaryFontSize',
+      'honeycombStyle', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
+      'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
+      'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
+      'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
       'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection', 'glow', 'radius'].forEach((k) => {
         if (merged[k] !== undefined) next[k] = merged[k];
       });
@@ -2570,8 +3238,9 @@ function App() {
   const { TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio, TweakSelect, TweakSlider } = window;
 
   const wpCos = uiCos;
+  const tonedAccent = window.toneAccent ? window.toneAccent(wpCos.accent, wpCos.accentTone) : wpCos.accent;
   const wpTint = wpCos.wallpaperUseAccent !== false
-    ? (window.toneAccent ? window.toneAccent(wpCos.accent, wpCos.accentTone) : wpCos.accent)
+    ? tonedAccent
     : (wpCos.wallpaperColor || wpCos.accent);
 
   return (
@@ -2580,6 +3249,7 @@ function App() {
       <AnimatedWallpaper
         pattern={wpCos.bgPattern || 'grid'}
         color={wpTint}
+        accentColor={tonedAccent}
         brightness={wpCos.wallpaperBrightness == null ? 50 : wpCos.wallpaperBrightness}
         intensity={wpCos.wallpaperIntensity == null ? 50 : wpCos.wallpaperIntensity}
         animSpeed={wpCos.wallpaperAnimSpeed == null ? 50 : wpCos.wallpaperAnimSpeed}
@@ -2635,6 +3305,8 @@ function App() {
             <>
               <TweakSlider label="Animation speed" value={t.wallpaperAnimSpeed == null ? 50 : t.wallpaperAnimSpeed} min={0} max={100} step={5} unit=""
                 onChange={(v) => setTweak('wallpaperAnimSpeed', v)} />
+              <TweakToggle label="Freeze animation" value={!!t.wallpaperAnimPaused}
+                onChange={(v) => setTweak('wallpaperAnimPaused', v)} />
               <TweakSlider label="Randomness" value={t.wallpaperRandomness == null ? 40 : t.wallpaperRandomness} min={0} max={100} step={5} unit=""
                 onChange={(v) => setTweak('wallpaperRandomness', v)} />
             </>
@@ -2665,8 +3337,394 @@ function App() {
             onChange={(v) => setTweak('cursorColor', v)} />
         </TweaksPanel>
       }
-      {booted && <CustomCursor cursorStyle={uiCos.cursorStyle || 'ring'} />}
+      {booted && (
+        <>
+          <CursorEffects
+            cos={uiCos}
+            theme={theme}
+            accentColor={tonedAccent}
+            cursorColor={uiCos.cursorColor || tonedAccent}
+            paused={!!uiCos.wallpaperAnimPaused}
+          />
+          <CustomCursor cursorStyle={uiCos.cursorStyle || 'ring'} />
+        </>
+      )}
     </ContentCtx.Provider>);
+}
+
+/* =====================================================
+   CURSOR EFFECTS (global overlay — independent of wallpaper)
+   ===================================================== */
+
+function CursorEffects({ cos, theme, accentColor, cursorColor, paused }) {
+  const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const propsRef = useRef({});
+  const effect = (cos && cos.cursorEffect) || 'none';
+
+  const rgb = hexToRgb(cursorColor || accentColor || '#c8e856');
+  const accentRgb = hexToRgb(accentColor || cursorColor || '#c8e856');
+  propsRef.current = {
+    effect,
+    trailStyle: cos.cursorEffectTrailStyle || 'glow',
+    trailLength: cos.cursorEffectTrailLength == null ? 50 : cos.cursorEffectTrailLength,
+    intensity: cos.cursorEffectIntensity == null ? 55 : cos.cursorEffectIntensity,
+    rippleCount: cos.cursorEffectRippleCount == null ? 50 : cos.cursorEffectRippleCount,
+    rippleSpeed: cos.cursorEffectRippleSpeed == null ? 50 : cos.cursorEffectRippleSpeed,
+    cometDir: cos.cursorEffectCometDirection || 'cursor',
+    cometIntensity: cos.cursorEffectCometIntensity == null ? 50 : cos.cursorEffectCometIntensity,
+    cometSpeed: cos.cursorEffectCometSpeed == null ? 50 : cos.cursorEffectCometSpeed,
+    theme,
+    rgb,
+    accentRgb,
+    paused: !!paused,
+  };
+
+  useEffect(() => {
+    if (effect === 'none') return undefined;
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return undefined;
+
+    let w = 0;
+    let h = 0;
+    let cancelled = false;
+    let reducedMotion = false;
+    let pointer = { x: 0, y: 0, px: 0, py: 0, down: false, speed: 0, active: false, lastMoveAt: 0 };
+    let trailPts = [];
+    let comets = [];
+    let ripples = [];
+    let sparks = [];
+    let lastSpark = 0;
+
+    const getProps = () => propsRef.current;
+    const intense = () => (getProps().intensity != null ? getProps().intensity : 55) / 100;
+    const rippleBurstCount = () => {
+      const raw = getProps().rippleCount != null ? getProps().rippleCount : 50;
+      return Math.max(1, Math.min(8, Math.round(1 + (raw / 100) * 7)));
+    };
+    const rippleExpandRate = () => {
+      const raw = getProps().rippleSpeed != null ? getProps().rippleSpeed : 50;
+      return 0.35 + (raw / 100) * 3.65;
+    };
+    const spawnRippleBurst = () => {
+      const int = intense();
+      const count = rippleBurstCount();
+      const now = performance.now();
+      const baseSpeed = rippleExpandRate();
+      const staggerMs = count > 1 ? 48 + (100 - (getProps().rippleSpeed != null ? getProps().rippleSpeed : 50)) * 0.55 : 0;
+      for (let i = 0; i < count; i++) {
+        const mix = count > 1 ? i / (count - 1) : 0.5;
+        const sizeScale = 0.42 + Math.random() * 0.38 + mix * 0.45 * int;
+        const maxR = (16 + int * 78) * sizeScale;
+        const speedVar = baseSpeed * (0.62 + Math.random() * 0.48 + mix * 0.22);
+        ripples.push({
+          x: pointer.x + (Math.random() - 0.5) * 6,
+          y: pointer.y + (Math.random() - 0.5) * 6,
+          r: 1,
+          maxR,
+          opacity: 0.32 + int * 0.52 + Math.random() * 0.14,
+          born: now + i * staggerMs,
+          speed: speedVar,
+          sizeScale,
+        });
+      }
+    };
+    const ink = () => {
+      const p = getProps();
+      return {
+        r: p.rgb.r, g: p.rgb.g, b: p.rgb.b,
+        hi: [
+          Math.min(255, Math.round((p.accentRgb.r + 255) * 0.55)),
+          Math.min(255, Math.round((p.accentRgb.g + 255) * 0.52)),
+          Math.min(255, Math.round((p.accentRgb.b + 255) * 0.58)),
+        ],
+      };
+    };
+
+    const measure = () => {
+      w = window.innerWidth || 800;
+      h = window.innerHeight || 600;
+      canvas.width = w;
+      canvas.height = h;
+    };
+
+    const cometVelocity = (dir) => {
+      const p = getProps();
+      const spd = 2 + (p.cometSpeed / 100) * 5 + (p.cometIntensity / 100) * 2;
+      switch (dir) {
+        case 'up': return { vx: (Math.random() - 0.5) * 0.4, vy: -spd };
+        case 'down': return { vx: (Math.random() - 0.5) * 0.4, vy: spd };
+        case 'random': {
+          const a = Math.random() * Math.PI * 2;
+          return { vx: Math.cos(a) * spd, vy: Math.sin(a) * spd };
+        }
+        case 'cursor':
+        default: {
+          const vx = pointer.x - pointer.px;
+          const vy = pointer.y - pointer.py;
+          const len = Math.hypot(vx, vy) || 1;
+          return { vx: (vx / len) * spd, vy: (vy / len) * spd };
+        }
+      }
+    };
+
+    const spawnComet = () => {
+      const p = getProps();
+      const vel = cometVelocity(p.cometDir);
+      const tail = 28 + (p.cometIntensity / 100) * 72 + (p.trailLength / 100) * 24;
+      comets.push({
+        x: pointer.x,
+        y: pointer.y,
+        vx: vel.vx,
+        vy: vel.vy,
+        life: 1,
+        len: tail,
+      });
+    };
+
+    const onPtrMove = (e) => {
+      pointer.speed = Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y);
+      pointer.px = pointer.x;
+      pointer.py = pointer.y;
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.active = true;
+    };
+    const onPtrDown = (e) => {
+      pointer.down = true;
+      onPtrMove(e);
+      const eff = getProps().effect;
+      if (!reducedMotion && !getProps().paused) {
+        if (eff === 'comet') spawnComet();
+        if (eff === 'ripple') spawnRippleBurst();
+        if (eff === 'spark') {
+          for (let i = 0; i < 6 + Math.floor(intense() * 8); i++) {
+            const a = Math.random() * Math.PI * 2;
+            const spd = 1.5 + Math.random() * 3.5;
+            sparks.push({
+              x: pointer.x, y: pointer.y,
+              vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+              life: 1, r: 1 + Math.random() * 2,
+            });
+          }
+        }
+      }
+    };
+    const onPtrUp = () => { pointer.down = false; };
+
+    try {
+      reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) { reducedMotion = false; }
+
+    const isTouch = window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (isTouch) return undefined;
+
+    measure();
+    pointer.x = w * 0.5;
+    pointer.y = h * 0.35;
+    pointer.px = pointer.x;
+    pointer.py = pointer.y;
+    window.addEventListener('pointermove', onPtrMove, { passive: true });
+    window.addEventListener('pointerdown', onPtrDown, { passive: true });
+    window.addEventListener('pointerup', onPtrUp, { passive: true });
+    window.addEventListener('pointercancel', onPtrUp, { passive: true });
+    window.addEventListener('resize', measure);
+
+    const frame = () => {
+      if (cancelled) return;
+      const p = getProps();
+      if (p.paused || reducedMotion) {
+        ctx.clearRect(0, 0, w, h);
+        animRef.current = requestAnimationFrame(frame);
+        return;
+      }
+      const colors = ink();
+      const sm = 1;
+      const aBase = 0.55 + (p.intensity / 100) * 0.4;
+      ctx.clearRect(0, 0, w, h);
+
+      if (p.effect === 'trail' && pointer.active) {
+        const maxPts = Math.round(6 + (p.trailLength / 100) * 42);
+        const dist = Math.hypot(pointer.x - pointer.px, pointer.y - pointer.py);
+        if (dist > 1.2 || pointer.down) {
+          trailPts.push({ x: pointer.x, y: pointer.y, life: 1 });
+        }
+        while (trailPts.length > maxPts) trailPts.shift();
+        trailPts.forEach((pt) => { pt.life -= 0.016 * sm * (1.05 - (p.intensity / 100) * 0.2); });
+        trailPts = trailPts.filter((pt) => pt.life > 0);
+
+        if (p.trailStyle === 'line' || p.trailStyle === 'dotted') {
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          for (let i = 1; i < trailPts.length; i++) {
+            const pt = trailPts[i];
+            const prev = trailPts[i - 1];
+            const t = pt.life * i / trailPts.length;
+            const a = aBase * t * 0.75;
+            if (p.trailStyle === 'dotted') {
+              ctx.fillStyle = `rgba(${colors.r},${colors.g},${colors.b},${a})`;
+              ctx.beginPath();
+              ctx.arc(pt.x, pt.y, 1.8 + (p.intensity / 100) * 2.2, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              ctx.strokeStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${a})`;
+              ctx.lineWidth = 1.5 + (p.intensity / 100) * 2.5;
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(pt.x, pt.y);
+              ctx.stroke();
+            }
+          }
+          ctx.restore();
+        } else if (p.trailStyle === 'particles') {
+          trailPts.forEach((pt, i) => {
+            const t = pt.life * (i + 1) / trailPts.length;
+            const a = aBase * t * 0.7;
+            const drift = (i % 3 - 1) * 0.4;
+            ctx.fillStyle = `rgba(${colors.r},${colors.g},${colors.b},${a})`;
+            ctx.beginPath();
+            ctx.arc(pt.x + drift, pt.y - drift * 0.6, 1.2 + t * 2, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        } else {
+          ctx.save();
+          ctx.globalCompositeOperation = p.theme === 'light' ? 'multiply' : 'screen';
+          trailPts.forEach((pt, i) => {
+            const t = pt.life * (i + 1) / trailPts.length;
+            const a = aBase * t * 0.75;
+            const rad = 4 + (p.intensity / 100) * 12;
+            const grd = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, rad * 1.6);
+            grd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${a * 0.85})`);
+            grd.addColorStop(0.5, `rgba(${colors.r},${colors.g},${colors.b},${a * 0.5})`);
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, rad * (0.5 + t * 0.5), 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.restore();
+        }
+      }
+
+      if (p.effect === 'comet') {
+        if (pointer.down && pointer.active && !reducedMotion && pointer.speed > 0.5) {
+          if (Math.random() < 0.08 + (p.cometIntensity / 100) * 0.18) spawnComet();
+        }
+        comets = comets.filter((c) => {
+          c.x += c.vx * sm * (0.8 + p.cometSpeed / 100);
+          c.y += c.vy * sm * (0.8 + p.cometSpeed / 100);
+          c.life -= 0.014 * sm;
+          if (c.life <= 0 || c.x < -80 || c.x > w + 80 || c.y < -80 || c.y > h + 80) return false;
+          const spd = Math.hypot(c.vx, c.vy) || 1;
+          const tailX = c.x - (c.vx / spd) * c.len;
+          const tailY = c.y - (c.vy / spd) * c.len;
+          const grd = ctx.createLinearGradient(c.x, c.y, tailX, tailY);
+          grd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase * c.life * 0.95})`);
+          grd.addColorStop(0.4, `rgba(${colors.r},${colors.g},${colors.b},${aBase * c.life * 0.5})`);
+          grd.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.strokeStyle = grd;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(c.x, c.y);
+          ctx.lineTo(tailX, tailY);
+          ctx.stroke();
+          return true;
+        });
+      }
+
+      if (p.effect === 'ripple') {
+        const now = performance.now();
+        ripples = ripples.filter((rp) => {
+          if (now < rp.born) return true;
+          rp.r += (rp.speed || 1) * sm;
+          const progress = rp.r / rp.maxR;
+          if (progress >= 1) return false;
+          const fadeCurve = 1 - progress * progress;
+          const vis = (rp.opacity != null ? rp.opacity : 0.55) * fadeCurve;
+          if (vis < 0.015) return false;
+          const a = aBase * vis;
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${a})`;
+          ctx.lineWidth = (0.75 + intense() * 0.65) * (rp.sizeScale || 1);
+          ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+          ctx.stroke();
+          return true;
+        });
+      }
+
+      if (p.effect === 'spark') {
+        const now = performance.now();
+        if (pointer.down && now - lastSpark > 90) {
+          lastSpark = now;
+          for (let i = 0; i < 4; i++) {
+            const a = Math.random() * Math.PI * 2;
+            sparks.push({
+              x: pointer.x, y: pointer.y,
+              vx: Math.cos(a) * (1.5 + Math.random() * 2),
+              vy: Math.sin(a) * (1.5 + Math.random() * 2),
+              life: 1, r: 1 + Math.random() * 1.5,
+            });
+          }
+        }
+        sparks = sparks.filter((s) => {
+          s.x += s.vx * sm;
+          s.y += s.vy * sm;
+          s.life -= 0.028 * sm;
+          if (s.life <= 0) return false;
+          ctx.fillStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase * s.life})`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fill();
+          return true;
+        });
+      }
+
+      if (p.effect === 'glow' && pointer.active) {
+        const rad = 18 + (p.intensity / 100) * 42;
+        const grd = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, rad);
+        grd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase * 0.35})`);
+        grd.addColorStop(0.45, `rgba(${colors.r},${colors.g},${colors.b},${aBase * 0.18})`);
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animRef.current = requestAnimationFrame(frame);
+    };
+
+    frame();
+    return () => {
+      cancelled = true;
+      window.removeEventListener('pointermove', onPtrMove);
+      window.removeEventListener('pointerdown', onPtrDown);
+      window.removeEventListener('pointerup', onPtrUp);
+      window.removeEventListener('pointercancel', onPtrUp);
+      window.removeEventListener('resize', measure);
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [effect, cos && cos.cursorEffectTrailStyle, cos && cos.cursorEffectTrailLength, cos && cos.cursorEffectIntensity,
+    cos && cos.cursorEffectRippleCount, cos && cos.cursorEffectRippleSpeed,
+    cos && cos.cursorEffectCometDirection, cos && cos.cursorEffectCometIntensity, cos && cos.cursorEffectCometSpeed,
+    theme, cursorColor, accentColor, paused]);
+
+  if (effect === 'none') return null;
+  const isTouch = typeof window !== 'undefined' && window.matchMedia &&
+    window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  if (isTouch) return null;
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="cursor-fx-canvas"
+      aria-hidden="true"
+      data-cursor-effect={effect}
+    />
+  );
 }
 
 /* =====================================================
