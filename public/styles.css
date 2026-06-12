@@ -2318,6 +2318,7 @@ html[data-bg="starfield"] body::before {
 /* Canvas + CSS-animated wallpapers — body::before stays for vignette mask only */
 html[data-bg="cosmos"] body::before,
 html[data-bg="matrixrain"] body::before,
+html[data-bg="circuits"] body::before,
 html[data-bg="aurora"] body::before,
 html[data-bg="particles"] body::before,
 html[data-bg="pulse"] body::before,
@@ -2326,14 +2327,9 @@ html[data-bg="rain"] body::before,
 html[data-bg="smoke"] body::before,
 html[data-bg="binarystream"] body::before,
 html[data-bg="nebula"] body::before,
-html[data-bg="morphgeo"] body::before,
-html[data-bg="radar"] body::before {
+html[data-bg="morphgeo"] body::before {
   background-image: none;
   background-color: transparent;
-}
-html[data-bg="halftone"] body::before {
-  background-image: radial-gradient(circle at 50% 50%, var(--grid) 0.9px, transparent 1.1px);
-  background-size: calc(var(--wp-size, 36px) * 0.42) calc(var(--wp-size, 36px) * 0.42);
 }
 html[data-bg="crosshatch"] body::before {
   background-image:
@@ -2347,13 +2343,6 @@ html[data-bg="hex"] body::before {
     radial-gradient(circle at 6% 75%, var(--grid) 1.2px, transparent 1.4px),
     radial-gradient(circle at 94% 75%, var(--grid) 1.2px, transparent 1.4px);
   background-size: calc(var(--wp-size, 36px) * 1.15) calc(var(--wp-size, 36px) * 1);
-}
-html[data-bg="circuits"] body::before {
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
-    radial-gradient(circle at calc(var(--wp-size, 36px) * 0.5) calc(var(--wp-size, 36px) * 0.5), var(--grid) 2px, transparent 2.5px);
-  background-size: var(--wp-size, 36px) var(--wp-size, 36px);
 }
 html[data-bg="waves"] body::before {
   background-image: repeating-radial-gradient(ellipse 120% 40% at 50% 100%, var(--grid) 0 1px, transparent 1px calc(var(--wp-size, 36px) * 0.55));
@@ -2429,8 +2418,8 @@ html[data-bg="aurora"] body::before {
     color-mix(in oklab, var(--wallpaper-color) 35%, transparent) 52%,
     transparent 78%
   );
-  animation: auroraWave1 calc(var(--wp-anim-dur, 22s) * var(--wp-rand-dur, 1)) ease-in-out infinite alternate;
-  animation-delay: calc(var(--wp-rand, 0) * -6s);
+  animation: auroraWave1 calc(var(--wp-anim-dur, 22s) * var(--wp-rand-dur-a, var(--wp-rand-dur, 1))) ease-in-out infinite alternate;
+  animation-delay: calc(var(--wp-rand-phase-a, 0deg) * -0.04 - var(--wp-rand, 0) * 6s);
 }
 .wp-anim--aurora::after {
   background: linear-gradient(
@@ -2440,8 +2429,8 @@ html[data-bg="aurora"] body::before {
     color-mix(in oklab, var(--wallpaper-color) 25%, transparent) 60%,
     transparent 85%
   );
-  animation: auroraWave2 calc(var(--wp-speed, 20) * 1.3s * var(--wp-rand-dur, 1)) ease-in-out infinite alternate-reverse;
-  animation-delay: calc(var(--wp-rand-delay, 0s) * -0.65);
+  animation: auroraWave2 calc(var(--wp-speed, 20) * 1.3s * var(--wp-rand-dur-b, var(--wp-rand-dur, 1))) ease-in-out infinite alternate-reverse;
+  animation-delay: calc(var(--wp-rand-phase-b, 0deg) * -0.03 - var(--wp-rand-delay, 0s) * 0.65);
   mix-blend-mode: screen;
 }
 @keyframes auroraWave1 {
@@ -2503,20 +2492,20 @@ html[data-bg="aurora"] body::before {
 @keyframes particlesDriftA {
   0%   { transform: translate3d(0, 0, 0); }
   100% { transform: translate3d(
-    calc(var(--wp-p-drift-x, 0) * var(--wp-p-tile)),
-    calc(var(--wp-p-drift-y, -1) * var(--wp-p-tile)),
+    calc(var(--wp-p-drift-x-a, var(--wp-p-drift-x, 0)) * var(--wp-p-tile)),
+    calc(var(--wp-p-drift-y-a, var(--wp-p-drift-y, -1)) * var(--wp-p-tile)),
     0
   ); }
 }
 @keyframes particlesDriftB {
   0%   { transform: translate3d(
-    calc(var(--wp-p-drift-x, 0) * var(--wp-p-tile) * 0.5),
-    calc(var(--wp-p-drift-y, -1) * var(--wp-p-tile) * 0.35),
+    calc(var(--wp-p-drift-x-b, var(--wp-p-drift-x, 0)) * var(--wp-p-tile) * 0.5),
+    calc(var(--wp-p-drift-y-b, var(--wp-p-drift-y, -1)) * var(--wp-p-tile) * 0.35),
     0
   ); }
   100% { transform: translate3d(
-    calc(var(--wp-p-drift-x, 0) * var(--wp-p-tile) * 1.5),
-    calc(var(--wp-p-drift-y, -1) * var(--wp-p-tile) * 1.35),
+    calc(var(--wp-p-drift-x-b, var(--wp-p-drift-x, 0)) * var(--wp-p-tile) * 1.5),
+    calc(var(--wp-p-drift-y-b, var(--wp-p-drift-y, -1)) * var(--wp-p-tile) * 1.35),
     0
   ); }
 }
@@ -2536,8 +2525,8 @@ html[data-bg="aurora"] body::before {
     color-mix(in oklab, var(--wallpaper-color) calc(22% + var(--wp-intense, 0.5) * 40%), transparent),
     transparent 74%
   );
-  animation: gradientPulse1 calc(var(--wp-speed, 18) * 0.75s * var(--wp-rand-dur, 1)) ease-in-out infinite;
-  animation-delay: calc(var(--wp-rand, 0) * -5s);
+  animation: gradientPulse1 calc(var(--wp-speed, 18) * 0.75s * var(--wp-rand-dur-a, var(--wp-rand-dur, 1))) ease-in-out infinite;
+  animation-delay: calc(var(--wp-rand-phase-a, 0deg) * -0.035 - var(--wp-rand, 0) * 5s);
 }
 .wp-anim--pulse::after {
   inset: 12% 18% 0 18%;
@@ -2546,8 +2535,8 @@ html[data-bg="aurora"] body::before {
     color-mix(in oklab, var(--wallpaper-color) calc(16% + var(--wp-intense, 0.5) * 32%), transparent),
     transparent 70%
   );
-  animation: gradientPulse2 calc(var(--wp-speed, 18) * 1.05s * var(--wp-rand-dur, 1)) ease-in-out infinite alternate-reverse;
-  animation-delay: calc(var(--wp-rand, 0) * -9s);
+  animation: gradientPulse2 calc(var(--wp-speed, 18) * 1.05s * var(--wp-rand-dur-b, var(--wp-rand-dur, 1))) ease-in-out infinite alternate-reverse;
+  animation-delay: calc(var(--wp-rand-phase-b, 0deg) * -0.04 - var(--wp-rand, 0) * 9s);
   mix-blend-mode: screen;
 }
 @keyframes gradientPulse1 {
@@ -2599,13 +2588,13 @@ html[data-bg="aurora"] body::before {
 }
 .wp-anim--smoke::before {
   background: radial-gradient(circle at 35% 55%, color-mix(in oklab, var(--wallpaper-color) 55%, transparent), transparent 62%);
-  animation: smokeDrift1 calc(var(--wp-anim-dur, 28s) * var(--wp-rand-dur, 1)) ease-in-out infinite alternate;
-  animation-delay: calc(var(--wp-rand, 0) * -8s);
+  animation: smokeDrift1 calc(var(--wp-anim-dur, 28s) * var(--wp-rand-dur-a, var(--wp-rand-dur, 1))) ease-in-out infinite alternate;
+  animation-delay: calc(var(--wp-rand-phase-a, 0deg) * -0.055 - var(--wp-rand, 0) * 8s);
 }
 .wp-anim--smoke::after {
   background: radial-gradient(circle at 65% 40%, color-mix(in oklab, var(--wallpaper-color) 38%, transparent), transparent 58%);
-  animation: smokeDrift2 calc(var(--wp-speed, 20) * 1.6s * (1 + var(--wp-rand, 0) * 0.4)) ease-in-out infinite alternate-reverse;
-  animation-delay: calc(var(--wp-rand, 0) * -12s);
+  animation: smokeDrift2 calc(var(--wp-speed, 20) * 1.6s * var(--wp-rand-dur-b, calc(1 + var(--wp-rand, 0) * 0.4))) ease-in-out infinite alternate-reverse;
+  animation-delay: calc(var(--wp-rand-phase-b, 0deg) * -0.05 - var(--wp-rand, 0) * 12s);
 }
 @keyframes smokeDrift1 {
   0%   { transform: translate(-6%, 4%) scale(1); opacity: 0.45; }
@@ -2616,12 +2605,12 @@ html[data-bg="aurora"] body::before {
   100% { transform: translate(-7%, 6%) scale(1.15); opacity: 0.7; }
 }
 
-/* Geometric morph — rotating soft polygons (variant picked by randomness slider) */
+/* Geometric morph — rotating soft polygons (morphStyle sets variant; randomness splits layer variants at 100%) */
 .wp-anim--morphgeo {
   background:
     conic-gradient(from var(--wp-morph-phase, 0deg) at 50% 50%, transparent 0 22%, color-mix(in oklab, var(--wallpaper-color) 22%, transparent) 22% 48%, transparent 48% 100%);
   animation: morphGeoSpin calc(var(--wp-anim-dur, 26s) * (0.65 + var(--wp-rand, 0) * 0.55)) linear infinite;
-  animation-delay: calc(var(--wp-rand-delay, 0s) * -0.35);
+  animation-delay: calc(var(--wp-rand-phase-a, 0deg) * -0.025 - var(--wp-rand-delay, 0s) * 0.35);
 }
 .wp-anim--morphgeo::before,
 .wp-anim--morphgeo::after {
@@ -2661,6 +2650,10 @@ html[data-bg="aurora"] body::before {
 .wp-anim--morphgeo[data-morph-variant="2"]::after  { animation-name: morphGeoBlob2c; }
 .wp-anim--morphgeo[data-morph-variant="3"]::before { animation-name: morphGeoBlob1d; }
 .wp-anim--morphgeo[data-morph-variant="3"]::after  { animation-name: morphGeoBlob2d; }
+.wp-anim--morphgeo[data-morph-variant-after="0"]::after { animation-name: morphGeoBlob2a; }
+.wp-anim--morphgeo[data-morph-variant-after="1"]::after { animation-name: morphGeoBlob2b; }
+.wp-anim--morphgeo[data-morph-variant-after="2"]::after { animation-name: morphGeoBlob2c; }
+.wp-anim--morphgeo[data-morph-variant-after="3"]::after { animation-name: morphGeoBlob2d; }
 .wp-anim--morphgeo[data-morph-style="pulse"] { animation-name: morphGeoPulse; }
 .wp-anim--morphgeo[data-morph-style="warp"] { animation-name: morphGeoWarp; }
 .wp-anim--morphgeo[data-morph-style="orbit"] { animation-name: morphGeoOrbit; }
@@ -2670,39 +2663,6 @@ html[data-bg="aurora"] body::before {
 .wp-anim--morphgeo[data-morph-style="warp"]::after { animation-name: morphGeoWarpB; }
 .wp-anim--morphgeo[data-morph-style="orbit"]::before { animation-name: morphGeoOrbitA; }
 .wp-anim--morphgeo[data-morph-style="orbit"]::after { animation-name: morphGeoOrbitB; }
-
-/* Radar sweep — retro CRT targeting overlay */
-.wp-anim--radar {
-  background:
-    radial-gradient(circle at 50% 50%, transparent 0 38%, color-mix(in oklab, var(--wallpaper-color) 18%, transparent) 38% 39%, transparent 39% 100%),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 calc(var(--wp-size, 36px) * 0.9), color-mix(in oklab, var(--wallpaper-color) 14%, transparent) calc(var(--wp-size, 36px) * 0.9) calc(var(--wp-size, 36px) * 0.92), transparent calc(var(--wp-size, 36px) * 0.92) calc(var(--wp-size, 36px) * 1.8));
-}
-.wp-anim--radar::before {
-  content: '';
-  position: absolute;
-  inset: -5%;
-  background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, color-mix(in oklab, var(--wallpaper-color) 55%, transparent) 18deg, transparent 42deg);
-  filter: blur(2px);
-  opacity: 0.75;
-  animation: radarSweep calc(var(--wp-anim-dur, 18s) * 0.55) linear infinite;
-  animation-delay: calc(var(--wp-rand, 0) * -4s);
-}
-.wp-anim--radar::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  border-radius: 50%;
-  background: color-mix(in oklab, var(--wallpaper-color) 80%, transparent);
-  box-shadow: 0 0 12px color-mix(in oklab, var(--wallpaper-color) 60%, transparent);
-}
-@keyframes radarSweep {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
 
 @keyframes morphGeoPulse {
   0%, 100% { transform: scale(1); opacity: 0.55; }

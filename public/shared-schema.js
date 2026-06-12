@@ -15,7 +15,7 @@
 
   /* Appearance cosmetics — enums consumed by admin, portfolio, and agent tools. */
   const CURSOR_STYLES = ['ring', 'pixel', 'dot', 'cross', 'halo', 'outline', 'bold', 'diamond', 'trail', 'square', 'beam'];
-  const BG_PATTERNS = ['grid', 'dots', 'scan', 'starfield', 'crosshatch', 'hex', 'circuits', 'waves', 'diagonal', 'brick', 'noise', 'halftone', 'aurora', 'cosmos', 'matrixrain', 'particles', 'pulse', 'lightning', 'rain', 'smoke', 'binarystream', 'nebula', 'morphgeo', 'radar', 'none'];
+  const BG_PATTERNS = ['grid', 'dots', 'scan', 'starfield', 'crosshatch', 'hex', 'circuits', 'waves', 'diagonal', 'brick', 'noise', 'aurora', 'cosmos', 'matrixrain', 'particles', 'pulse', 'lightning', 'rain', 'smoke', 'binarystream', 'nebula', 'morphgeo', 'none'];
   const RAIN_DIRECTIONS = ['down', 'diagonal-left', 'diagonal-right', 'left', 'right'];
   const COMET_DIRECTIONS = ['right-down', 'left-down', 'right', 'left', 'up-right'];
   const PARTICLE_DRIFT_DIRECTIONS = ['up', 'down', 'diagonal-up', 'diagonal-down', 'left', 'right'];
@@ -29,28 +29,26 @@
     starfield: { label: 'Starfield', animated: false },
     crosshatch: { label: 'Crosshatch', animated: false },
     hex: { label: 'Hex mesh', animated: false },
-    circuits: { label: 'Circuits', animated: false },
+    circuits: { label: 'Circuit pulse', animated: true, supportsRandomness: true },
     waves: { label: 'Waves', animated: false },
     diagonal: { label: 'Diagonal', animated: false },
     brick: { label: 'Brick', animated: false },
     noise: { label: 'Noise grain', animated: false },
-    halftone: { label: 'Halftone', animated: false },
-    aurora: { label: 'Aurora', animated: true },
-    cosmos: { label: 'Cosmos', animated: true },
-    matrixrain: { label: 'Matrix rain', animated: true },
-    particles: { label: 'Floating particles', animated: true },
-    pulse: { label: 'Gradient pulse', animated: true },
-    lightning: { label: 'Lightning', animated: true },
-    rain: { label: 'Rain', animated: true },
-    smoke: { label: 'Smoke drift', animated: true },
-    binarystream: { label: 'Binary stream', animated: true },
-    nebula: { label: 'Nebula', animated: true },
-    morphgeo: { label: 'Geometric morph', animated: true },
-    radar: { label: 'Radar sweep', animated: true },
+    aurora: { label: 'Aurora', animated: true, supportsRandomness: true },
+    cosmos: { label: 'Cosmos', animated: true, supportsRandomness: true },
+    matrixrain: { label: 'Matrix rain', animated: true, supportsRandomness: true },
+    particles: { label: 'Floating particles', animated: true, supportsRandomness: true },
+    pulse: { label: 'Gradient pulse', animated: true, supportsRandomness: true },
+    lightning: { label: 'Lightning', animated: true, supportsRandomness: true },
+    rain: { label: 'Rain', animated: true, supportsRandomness: true },
+    smoke: { label: 'Smoke drift', animated: true, supportsRandomness: true },
+    binarystream: { label: 'Binary stream', animated: true, supportsRandomness: true },
+    nebula: { label: 'Nebula', animated: true, supportsRandomness: true },
+    morphgeo: { label: 'Geometric morph', animated: true, supportsRandomness: true },
     none: { label: 'None', animated: false },
   };
-  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'binarystream', 'nebula'];
-  const CSS_ANIM_WALLPAPERS = ['aurora', 'particles', 'pulse', 'smoke', 'morphgeo', 'radar'];
+  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'binarystream', 'nebula', 'circuits'];
+  const CSS_ANIM_WALLPAPERS = ['aurora', 'particles', 'pulse', 'smoke', 'morphgeo'];
   const FONT_TYPES = ['default', 'editorial', 'pixel', 'modern', 'mono', 'slab', 'rounded', 'retro'];
   const HEADING_FONTS = ['match', 'serif', 'editorial', 'grotesk', 'mono', 'pixel', 'slab', 'rounded', 'retro', 'display'];
   const RADIUS_VALUES = ['sharp', 'soft', 'round'];
@@ -81,7 +79,7 @@
     { id: 'midnight', label: 'Midnight', desc: 'Dark · deep blue night', category: 'dark',
       cos: { theme: 'dark', accent: '#4a9eff', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#4a9eff', scanlines: false, bgPattern: 'cosmos', wallpaperBrightness: 38, wallpaperIntensity: 42, wallpaperAnimSpeed: 42, wallpaperUseAccent: true, vignetteIntensity: 50, vignetteDirection: 'center', glow: 110, radius: 'soft', vibe: 'midnight' } },
     { id: 'neon', label: 'Neon', desc: 'Dark · cyan circuits', category: 'dark',
-      cos: { theme: 'dark', accent: '#00e5ff', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#00e5ff', scanlines: false, bgPattern: 'circuits', wallpaperBrightness: 52, wallpaperIntensity: 78, wallpaperUseAccent: true, glow: 150, radius: 'sharp', vibe: 'neon' } },
+      cos: { theme: 'dark', accent: '#00e5ff', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#00e5ff', scanlines: false, bgPattern: 'circuits', wallpaperBrightness: 52, wallpaperIntensity: 78, wallpaperAnimSpeed: 62, wallpaperUseAccent: true, glow: 150, radius: 'sharp', vibe: 'neon' } },
     { id: 'obsidian', label: 'Obsidian', desc: 'Dark · steel crosshatch', category: 'dark',
       cos: { theme: 'dark', accent: '#8b9cb3', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#8b9cb3', scanlines: false, bgPattern: 'crosshatch', wallpaperBrightness: 28, wallpaperIntensity: 40, wallpaperUseAccent: true, glow: 70, radius: 'sharp', vibe: 'obsidian' } },
     { id: 'terminal', label: 'Terminal', desc: 'Dark · amber scanlines', category: 'dark',
@@ -155,7 +153,7 @@
     'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor',
     'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperRandomness',
     'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection',
-    'rainDirection', 'starSize', 'cometDensity', 'nightSkyBrightness', 'cometDirection',
+    'rainDirection', 'starSize', 'cometDensity', 'cometDirection',
     'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'morphStyle', 'numberFormat', 'binaryFontSize',
     'glow', 'radius',
   ];
@@ -650,6 +648,36 @@
     if (!Number.isFinite(x)) return fallback;
     return Math.max(min, Math.min(max, Math.round(x)));
   }
+
+  /** 0–100 randomness → 0–1 blend factor for chaos mixer. */
+  function wallpaperRandFactor(randomness) {
+    return clampCosmeticNumber(randomness, 0, 100, 0) / 100;
+  }
+
+  /** Blend deterministic slider value toward a chaotic target. At 0: deterministic; at 100: chaotic. */
+  function chaosLerp(deterministic, chaotic, randomness) {
+    const t = wallpaperRandFactor(randomness);
+    return deterministic + (chaotic - deterministic) * t;
+  }
+
+  /** Jitter baseValue by ±randomRange scaled by randomness (for per-element spawn). */
+  function mixRandomness(baseValue, randomRange, randomness) {
+    const t = wallpaperRandFactor(randomness);
+    return baseValue + (Math.random() - 0.5) * 2 * randomRange * t;
+  }
+
+  /** Particle layer drift: at 0 both layers match settings; at 100 layers split directions. */
+  function resolveParticleDriftLayers(detX, detY, randomness) {
+    const t = wallpaperRandFactor(randomness);
+    const chaosA = { x: 0.85, y: -0.9 };
+    const chaosB = { x: -0.95, y: 0.75 };
+    return {
+      driftAX: chaosLerp(detX, chaosA.x, t * 100),
+      driftAY: chaosLerp(detY, chaosA.y, t * 100),
+      driftBX: chaosLerp(detX, chaosB.x, t * 100),
+      driftBY: chaosLerp(detY, chaosB.y, t * 100),
+    };
+  }
   function validateVignetteDirection(v) { return VIGNETTE_DIRECTIONS.includes(v); }
   function validateRadius(v) { return RADIUS_VALUES.includes(v); }
   const TRACKING_VALUES = ['tight', 'normal', 'wide'];
@@ -743,7 +771,6 @@
       case 'wallpaperRandomness':
       case 'starSize':
       case 'cometDensity':
-      case 'nightSkyBrightness':
       case 'particleSize':
       case 'particleDensity':
       case 'particleOpacity':
@@ -753,7 +780,7 @@
         const ranges = {
           accentTone: [0, 100], fontScale: [85, 120], wallpaperBrightness: [0, 100], wallpaperIntensity: [0, 100],
           wallpaperAnimSpeed: [0, 100], wallpaperRandomness: [0, 100], starSize: [0, 100], cometDensity: [0, 100],
-          nightSkyBrightness: [0, 100], particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], binaryFontSize: [0, 100],
+          particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], binaryFontSize: [0, 100],
           vignetteIntensity: [0, 100], glow: [0, 160],
         };
         const bounds = ranges[field];
@@ -827,12 +854,12 @@
   function cosmeticsFieldHint() {
     return [
       'Appearance (cosmetics.*): theme · accent · accentTone · type · headingFont · tracking · fontScale',
-      'bgPattern (grid|dots|scan|starfield|crosshatch|hex|circuits|waves|diagonal|brick|noise|halftone|aurora|cosmos|matrixrain|particles|pulse|lightning|rain|smoke|binarystream|nebula|morphgeo|radar|none)',
-      'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperRandomness · wallpaperUseAccent · wallpaperColor',
-      'Per-pattern: rainDirection (down|diagonal-left|diagonal-right|left|right) · starSize · cometDensity · nightSkyBrightness · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift (up|down|diagonal-up|diagonal-down|left|right) · morphStyle (spin|pulse|warp|orbit) · numberFormat (binary|octal|decimal|hex) · binaryFontSize',
+      'bgPattern (grid|dots|scan|starfield|crosshatch|hex|circuits|waves|diagonal|brick|noise|aurora|cosmos|matrixrain|particles|pulse|lightning|rain|smoke|binarystream|nebula|morphgeo|none)',
+      'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperRandomness (0=deterministic/uniform sliders · 100=chaos overrides direction/speed/phase per element) · wallpaperUseAccent · wallpaperColor',
+      'Per-pattern: rainDirection (down|diagonal-left|diagonal-right|left|right) · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift (up|down|diagonal-up|diagonal-down|left|right) · morphStyle (spin|pulse|warp|orbit) · numberFormat (binary|octal|decimal|hex) · binaryFontSize',
       'vignetteIntensity (0=off) · vignetteDirection · glow · radius · scanlines · cursorStyle · cursorColor',
       'botIcon · botIconColor · vibe (built-in preset id or custom-1..custom-6) · customVibes (6 saved slots). Prefer applyVibePreset / applyCustomVibe / saveCustomVibe.',
-      'Animated patterns: aurora · cosmos · matrixrain · particles · pulse · lightning · rain · smoke · binarystream · nebula · morphgeo · radar.',
+      'Animated patterns: circuits · aurora · cosmos · matrixrain · particles · pulse · lightning · rain · smoke · binarystream · nebula · morphgeo.',
     ].join(' ');
   }
   function resolveWallpaperCosmetics(cos) {
@@ -844,7 +871,6 @@
     const randomness = clampCosmeticNumber(c.wallpaperRandomness, 0, 100, 40);
     const starSize = clampCosmeticNumber(c.starSize, 0, 100, 50);
     const cometDensity = clampCosmeticNumber(c.cometDensity, 0, 100, 40);
-    const nightSkyBrightness = clampCosmeticNumber(c.nightSkyBrightness, 0, 100, 50);
     const particleSize = clampCosmeticNumber(c.particleSize, 0, 100, 45);
     const particleDensity = clampCosmeticNumber(c.particleDensity, 0, 100, 35);
     const particleOpacity = clampCosmeticNumber(c.particleOpacity, 0, 100, 70);
@@ -868,8 +894,12 @@
     const speedMult = 20 / speedSec;
     const starScale = 0.55 + (starSize / 100) * 1.45;
     const cometFreq = 0.35 + (cometDensity / 100) * 0.85;
-    const skyBright = nightSkyBrightness / 100;
     const morphVariant = morphStyle === 'spin' ? 0 : morphStyle === 'pulse' ? 1 : morphStyle === 'warp' ? 2 : 3;
+    const morphVariantAfter = Math.round(chaosLerp(morphVariant, (morphVariant + 2) % 4, randomness));
+    const randDurA = (0.55 + rand * 0.35 + (1 - rand) * 0.2).toFixed(3);
+    const randDurB = (0.7 + rand * 1.05).toFixed(3);
+    const randPhaseA = (rand * 137.5).toFixed(1);
+    const randPhaseB = (rand * 241.3 + 42).toFixed(1);
     const numberGlyphs = {
       binary: '01',
       octal: '01234567',
@@ -900,6 +930,11 @@
       right: { x: 1, y: 0 },
     };
     const particleDriftNorm = particleDriftVec[particleDrift] || particleDriftVec.up;
+    const particleDrifts = resolveParticleDriftLayers(
+      particleDriftNorm.x,
+      particleDriftNorm.y,
+      randomness,
+    );
     return {
       pattern,
       opacity,
@@ -912,9 +947,14 @@
       rand,
       randDelay: (rand * 18).toFixed(2) + 's',
       randDurScale: (0.55 + rand * 1.15).toFixed(3),
+      randDurA,
+      randDurB,
+      randPhaseA,
+      randPhaseB,
       morphVariant,
+      morphVariantAfter,
       morphStyle,
-      morphPhase: (rand * 137.5).toFixed(1),
+      morphPhase: randPhaseA + 'deg',
       starCount: Math.round(24 + i * 72),
       starScale,
       cometInterval: Math.max(2.5, Math.round(16 - cometFreq * 12)),
@@ -922,8 +962,6 @@
       cometDirection,
       cometVecX: cometVecNorm.vx,
       cometVecY: cometVecNorm.vy,
-      nightSkyBrightness,
-      skyBright,
       particleCount: Math.min(20, Math.round(6 + pDensity * 14)),
       particleSize,
       particleSizeScale: 0.65 + (particleSize / 100) * 1.1,
@@ -932,6 +970,10 @@
       particleDrift,
       particleDriftX: particleDriftNorm.x,
       particleDriftY: particleDriftNorm.y,
+      particleDriftAX: particleDrifts.driftAX,
+      particleDriftAY: particleDrifts.driftAY,
+      particleDriftBX: particleDrifts.driftBX,
+      particleDriftBY: particleDrifts.driftBY,
       columnCount: Math.round(22 + i * 58),
       rainDropCount: Math.round(90 + i * 260),
       rainDirection,
@@ -941,6 +983,8 @@
       numberGlyphs: numberGlyphs[numberFormat] || numberGlyphs.binary,
       binaryFontPx: Math.round(9 + (binaryFontSize / 100) * 9),
       nebulaBlobCount: Math.round(4 + i * 10),
+      circuitPathCount: Math.round(10 + i * 32),
+      circuitCellSize: Math.max(28, Math.round(52 - i * 22)),
       lightningInterval: Math.max(0.8, 14 - liCurve * 12),
       lightningStrikeCount: Math.min(3, 1 + Math.round(liCurve * 2)),
       lightningBranchDepth: Math.min(2, 1 + Math.round(liCurve * 1.2)),
@@ -1053,6 +1097,30 @@
         alphaBoost: 0.95 + i * 0.4,
       };
     }
+    if (pattern === 'circuits') {
+      if (light) {
+        return {
+          r: Math.round(base.r * 0.32 + 28),
+          g: Math.round(base.g * 0.42 + 36),
+          b: Math.round(base.b * 0.28 + 32),
+          hi: [
+            Math.min(255, Math.round(base.r * 0.5 + 48)),
+            Math.min(255, Math.round(base.g * 0.62 + 72)),
+            Math.min(255, Math.round(base.b * 0.45 + 40)),
+          ],
+          flash: 0,
+          alphaBoost: 1.45 + i * 0.55,
+        };
+      }
+      return {
+        r: base.r,
+        g: base.g,
+        b: base.b,
+        hi: [255, 255, 255],
+        flash: 0,
+        alphaBoost: 1.05 + i * 0.45,
+      };
+    }
     if (light) {
       return {
         r: Math.round(base.r * 0.22 + 42),
@@ -1094,6 +1162,14 @@
     root.style.setProperty('--wp-p-opacity', (wp.particleOpacityNorm == null ? 0.7 : wp.particleOpacityNorm).toString());
     root.style.setProperty('--wp-p-drift-x', (wp.particleDriftX == null ? 0 : wp.particleDriftX).toString());
     root.style.setProperty('--wp-p-drift-y', (wp.particleDriftY == null ? -1 : wp.particleDriftY).toString());
+    root.style.setProperty('--wp-p-drift-x-a', (wp.particleDriftAX == null ? wp.particleDriftX : wp.particleDriftAX).toString());
+    root.style.setProperty('--wp-p-drift-y-a', (wp.particleDriftAY == null ? wp.particleDriftY : wp.particleDriftAY).toString());
+    root.style.setProperty('--wp-p-drift-x-b', (wp.particleDriftBX == null ? wp.particleDriftX : wp.particleDriftBX).toString());
+    root.style.setProperty('--wp-p-drift-y-b', (wp.particleDriftBY == null ? wp.particleDriftY : wp.particleDriftBY).toString());
+    root.style.setProperty('--wp-rand-dur-a', wp.randDurA || wp.randDurScale);
+    root.style.setProperty('--wp-rand-dur-b', wp.randDurB || wp.randDurScale);
+    root.style.setProperty('--wp-rand-phase-a', (wp.randPhaseA || '0') + 'deg');
+    root.style.setProperty('--wp-rand-phase-b', (wp.randPhaseB || '0') + 'deg');
     root.style.setProperty('--wp-column-count', wp.columnCount.toString());
     if (wp.morphStyle) root.dataset.morphStyle = wp.morphStyle;
     else delete root.dataset.morphStyle;
@@ -1355,6 +1431,10 @@
     COSMETICS_ALL_KEYS,
     BOT_ICON_IDS,
     clampCosmeticNumber,
+    wallpaperRandFactor,
+    chaosLerp,
+    mixRandomness,
+    resolveParticleDriftLayers,
     validateVignetteDirection,
     validateRadius,
     validateCosmeticsWrite,
