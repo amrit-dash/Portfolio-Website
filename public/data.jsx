@@ -456,10 +456,40 @@ const DEFAULT_COSMETICS = {
   cursorColor: '#c8e856',
   botIcon: 'brain-computer',
   botIconColor: 'accent',
-  bgPattern: 'grid',      // wallpaper: grid | dots | scan | starfield | none
+  bgPattern: 'grid',      // wallpaper pattern (see SHARED_SCHEMA.BG_PATTERNS)
+  wallpaperBrightness: 50, // pattern visibility: 0 faint · 50 default · 100 bright
+  wallpaperIntensity: 50,  // pattern density: 0 sparse · 50 default · 100 dense
+  wallpaperAnimSpeed: 50, // animated pattern motion: 0 slow · 50 default · 100 fast
+  wallpaperRandomness: 40, // animated pattern variance: 0 uniform · 40 default · 100 chaotic
+  rainDirection: 'down',
+  starSize: 50,
+  cometDensity: 40,
+  nightSkyBrightness: 50,
+  cometDirection: 'right-down',
+  particleSize: 45,
+  particleDensity: 35,
+  particleOpacity: 70,
+  particleDrift: 'up',
+  morphStyle: 'spin',
+  numberFormat: 'binary',
+  binaryFontSize: 50,
+  wallpaperUseAccent: true, // wallpaper tint follows accent when true
+  wallpaperColor: '',     // custom wallpaper tint when wallpaperUseAccent is false
+  vignetteIntensity: 45,  // wallpaper edge fade: 0 off · 45 legacy center · 100 strong
+  vignetteDirection: 'center', // see SHARED_SCHEMA.VIGNETTE_DIRECTIONS
   glow: 100,              // accent glow/bloom intensity (0–160, 100 = default)
   radius: 'soft',         // UI corner style: sharp | soft | round
   vibe: 'classic',        // last-applied preset (admin convenience; front-end ignores)
+  customVibes: (window.SHARED_SCHEMA && window.SHARED_SCHEMA.createDefaultCustomVibes)
+    ? window.SHARED_SCHEMA.createDefaultCustomVibes()
+    : [
+      { id: 'custom-1', name: '', label: 'Custom vibe 1', cos: null },
+      { id: 'custom-2', name: '', label: 'Custom vibe 2', cos: null },
+      { id: 'custom-3', name: '', label: 'Custom vibe 3', cos: null },
+      { id: 'custom-4', name: '', label: 'Custom vibe 4', cos: null },
+      { id: 'custom-5', name: '', label: 'Custom vibe 5', cos: null },
+      { id: 'custom-6', name: '', label: 'Custom vibe 6', cos: null },
+    ],
 };
 
 const LLM_PROVIDERS = [
@@ -606,7 +636,12 @@ function _coerceExperience(arr) {
   return fn ? fn(arr) : arr;
 }
 function _withExperienceNorm(content) {
-  if (content && Array.isArray(content.experience)) content.experience = _coerceExperience(content.experience);
+  if (!content) return content;
+  if (Array.isArray(content.experience)) content.experience = _coerceExperience(content.experience);
+  const normCos = window.SHARED_SCHEMA && window.SHARED_SCHEMA.normalizeCosmetics;
+  if (normCos && content.cosmetics) {
+    content.cosmetics = normCos(content.cosmetics, DEFAULT_COSMETICS);
+  }
   return content;
 }
 
@@ -709,33 +744,56 @@ window.applyFavicon = function (accent, kind, theme) {
   } catch (e) { /* non-fatal */ }
 };
 
-/* Apply core cosmetics to the document root synchronously, before React (and
-   the boot splash) first paints — so the splash and first frame already use the
-   published accent/theme instead of flashing the hardcoded default. The App
-   re-applies these reactively as the live snapshot streams in. */
-try {
-  const _cos = (PORTFOLIO_CONTENT && PORTFOLIO_CONTENT.cosmetics) || {};
+/* Apply cosmetics to :root synchronously — boot splash, admin preview postMessage,
+   and React both call this so accent/wallpaper/vignette/fonts update without reload. */
+window.applyCosmeticsToRoot = function applyCosmeticsToRoot(cos, opts) {
+  opts = opts || {};
+  const _schema = window.SHARED_SCHEMA || {};
+  const _raw = (cos && typeof cos === 'object') ? cos : {};
+  const _cos = _schema.resolveEffectiveCosmetics ? _schema.resolveEffectiveCosmetics(_raw) : _raw;
   const _root = document.documentElement;
   const _toned = window.toneAccent(_cos.accent || '#c8e856', typeof _cos.accentTone === 'number' ? _cos.accentTone : 50);
   _root.style.setProperty('--accent-raw', _toned);
-  if (_cos.cursorColor || _cos.accent) _root.style.setProperty('--cursor-color', _cos.cursorColor || _toned);
+  _root.style.setProperty('--cursor-color', _cos.cursorColor || _toned);
   if (typeof _cos.fontScale === 'number') _root.style.setProperty('--font-scale', (_cos.fontScale / 100).toString());
-  if (typeof _cos.glow === 'number') _root.style.setProperty('--glow', (_cos.glow / 100).toString());
+  _root.style.setProperty('--glow', ((typeof _cos.glow === 'number' ? _cos.glow : 100) / 100).toString());
   _root.dataset.scanlines = _cos.scanlines === false ? 'off' : 'on';
-  if (_cos.type && _cos.type !== 'default') _root.dataset.type = _cos.type;
-  if (_cos.headingFont && _cos.headingFont !== 'match') _root.dataset.heading = _cos.headingFont;
-  if (_cos.tracking && _cos.tracking !== 'normal') _root.dataset.tracking = _cos.tracking;
-  if (_cos.bgPattern) _root.dataset.bg = _cos.bgPattern;
-  if (_cos.radius && _cos.radius !== 'soft') _root.dataset.radius = _cos.radius;
-  // In the admin preview iframe the published default mode should always show;
-  // otherwise honour an explicit visitor choice, else fall back to the default.
+  if (_cos.type && _cos.type !== 'default') _root.dataset.type = _cos.type; else delete _root.dataset.type;
+  if (_cos.headingFont && _cos.headingFont !== 'match') _root.dataset.heading = _cos.headingFont; else delete _root.dataset.heading;
+  if (_cos.tracking && _cos.tracking !== 'normal') _root.dataset.tracking = _cos.tracking; else delete _root.dataset.tracking;
+  _root.dataset.bg = _cos.bgPattern || 'grid';
+  if (_cos.radius && _cos.radius !== 'soft') _root.dataset.radius = _cos.radius; else delete _root.dataset.radius;
+  if (typeof window.applyWallpaperCosmetics === 'function') {
+    window.applyWallpaperCosmetics(_root, _cos, _toned);
+  } else if (_schema.applyWallpaperVarsToRoot) {
+    _schema.applyWallpaperVarsToRoot(_root, _cos, _toned);
+  } else {
+    const _bright = typeof _cos.wallpaperBrightness === 'number' ? _cos.wallpaperBrightness : 50;
+    const _intense = typeof _cos.wallpaperIntensity === 'number' ? _cos.wallpaperIntensity : 50;
+    const _useAccent = _cos.wallpaperUseAccent !== false;
+    const _wpColor = _useAccent ? _toned : (_cos.wallpaperColor || _toned);
+    _root.style.setProperty('--wallpaper-color', _wpColor);
+    _root.style.setProperty('--wp-opacity', (0.15 + (_bright / 100) * 0.85).toString());
+    _root.style.setProperty('--wp-size', Math.round(56 - (_intense / 100) * 44) + 'px');
+    _root.style.setProperty('--wp-field-size', Math.round(480 - (_intense / 100) * 360) + 'px');
+  }
   let _isPreview = false;
   try { _isPreview = new URLSearchParams(location.search).has('adminpreview'); } catch (e) {}
+  const themeMode = opts.theme || (_cos.theme === 'light' ? 'light' : 'dark');
   const _explicit = localStorage.getItem('amritos.theme.explicit') === '1';
-  if (_cos.theme && (_isPreview || !_explicit)) {
-    _root.dataset.theme = _cos.theme === 'light' ? 'light' : 'dark';
+  if (_cos.theme && (_isPreview || !_explicit || opts.forceTheme)) {
+    _root.dataset.theme = themeMode === 'light' ? 'light' : 'dark';
   }
-  window.applyFavicon(_toned, null, _root.dataset.theme === 'light' ? 'light' : 'dark');
+  if (window.applyFavicon) window.applyFavicon(_toned, null, _root.dataset.theme === 'light' ? 'light' : 'dark');
+  // Vignette overlay ink is theme-dependent — apply after dataset.theme is settled.
+  const _vigFinal = _schema.resolveVignetteCosmetics ? _schema.resolveVignetteCosmetics(_cos) : null;
+  if (_vigFinal && _schema.applyWallpaperVignetteStyle) {
+    const _resolvedTheme = _root.dataset.theme === 'light' ? 'light' : 'dark';
+    _schema.applyWallpaperVignetteStyle(_root, _vigFinal.direction, _vigFinal.intensity, _resolvedTheme);
+  }
+};
+try {
+  window.applyCosmeticsToRoot((PORTFOLIO_CONTENT && PORTFOLIO_CONTENT.cosmetics) || {});
 } catch (e) { /* non-fatal */ }
 window.mergeContent = (over) => _withExperienceNorm(over ? _deepMerge(PORTFOLIO_DEFAULTS, over) : JSON.parse(JSON.stringify(PORTFOLIO_DEFAULTS)));
 
@@ -754,7 +812,18 @@ window.subscribeContent = function (cb) {
       // reverting to the last published copy.
       const handler = (ev) => {
         const d = ev && ev.data;
-        if (d && d.type === 'amritos:preview' && d.content) cb(window.mergeContent(d.content));
+        if (d && d.type === 'amritos:preview' && d.content) {
+          const merged = window.mergeContent(d.content);
+          // Cache on the portfolio origin so <head> first-paint can read vignette/wallpaper on reload.
+          try { localStorage.setItem('amritos.preview', JSON.stringify(d.content)); } catch (e) { /* quota */ }
+          // Paint cosmetics immediately — don't wait for React commit (appearance sliders).
+          try {
+            if (window.applyCosmeticsToRoot && merged.cosmetics) {
+              window.applyCosmeticsToRoot(merged.cosmetics, { forceTheme: true });
+            }
+          } catch (e) { /* non-fatal */ }
+          cb(merged);
+        }
       };
       window.addEventListener('message', handler);
       // Tell the parent we're ready so it pushes the first snapshot immediately.
@@ -767,7 +836,14 @@ window.subscribeContent = function (cb) {
       const data = snap.data() || {};
       const payload = data.content || data;           // tolerate {content:{...}} or flat
       try { localStorage.setItem(LIVE_CACHE, JSON.stringify(payload)); } catch (e) {}
-      cb(window.mergeContent(payload));
+      const merged = window.mergeContent(payload);
+      // Paint cosmetics immediately on publish — same as admin preview postMessage.
+      try {
+        if (window.applyCosmeticsToRoot && merged.cosmetics) {
+          window.applyCosmeticsToRoot(merged.cosmetics);
+        }
+      } catch (e) { /* non-fatal */ }
+      cb(merged);
     }, (err) => console.warn('[content] live subscribe failed', err && err.message));
   } catch (e) { return null; }
 };

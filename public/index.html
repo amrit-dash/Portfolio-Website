@@ -9,36 +9,63 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=VT323&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=VT323&family=Roboto+Slab:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Press+Start+2P&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- Theme init: apply before first paint so the boot splash never flashes.
-       Mirrors the logic in data.jsx but runs synchronously in <head> — before
-       Babel compiles the JSX and before any stylesheet renders. -->
+  <!-- First-paint cosmetics: theme + wallpaper + vignette before boot splash paints.
+       Mirrors data.jsx applyCosmeticsToRoot but runs synchronously in <head>. -->
+  <script src="shared-schema.js"></script>
   <script>
     (function () {
       var root = document.documentElement;
       var isPreview = location.search.indexOf('adminpreview') !== -1;
 
-      // 1. User's explicit toggle wins (not applicable in admin preview)
+      function toneAccent(hex, tone) {
+        try {
+          if (typeof tone !== 'number') tone = 50;
+          hex = (hex || '#c8e856').trim();
+          var m = hex.replace('#', '');
+          var f = m.length === 3 ? m.split('').map(function (c) { return c + c; }).join('') : m;
+          var r = parseInt(f.slice(0, 2), 16), g = parseInt(f.slice(2, 4), 16), b = parseInt(f.slice(4, 6), 16);
+          if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+          var amt = Math.min(1, Math.abs(tone - 50) / 50) * 0.6;
+          var t = tone < 50 ? 0 : 255;
+          var h = function (n) { return Math.round(n + (t - n) * amt).toString(16).padStart(2, '0'); };
+          return '#' + h(r) + h(g) + h(b);
+        } catch (e) { return hex || '#c8e856'; }
+      }
+
+      var schema = window.SHARED_SCHEMA || {};
+      var cos = {};
+      try {
+        var raw = localStorage.getItem('amritos.preview') ||
+                  localStorage.getItem('amritos.published.cache') ||
+                  localStorage.getItem('amritos.published');
+        if (raw) cos = (JSON.parse(raw) || {}).cosmetics || {};
+      } catch (e) {}
+      if (schema.resolveEffectiveCosmetics) cos = schema.resolveEffectiveCosmetics(cos);
+
+      // Theme: explicit visitor toggle wins (not in admin preview)
       try {
         var explicit = localStorage.getItem('amritos.theme.explicit') === '1';
         var stored = localStorage.getItem('amritos.theme');
         if (!isPreview && explicit && (stored === 'light' || stored === 'dark')) {
           root.dataset.theme = stored;
-          return;
+        } else if (cos.theme === 'light' || cos.theme === 'dark') {
+          root.dataset.theme = cos.theme;
         }
       } catch (e) {}
 
-      // 2. Fall back to admin's Firestore-published theme (cached in localStorage)
+      // Wallpaper pattern + vignette vars (boot splash inherits body wallpaper beneath)
       try {
-        var raw = localStorage.getItem('amritos.published.cache') ||
-                  localStorage.getItem('amritos.published');
-        if (raw) {
-          var cos = (JSON.parse(raw) || {}).cosmetics || {};
-          if (cos.theme === 'light' || cos.theme === 'dark') {
-            root.dataset.theme = cos.theme;
-          }
+        var toned = toneAccent(cos.accent || '#c8e856', typeof cos.accentTone === 'number' ? cos.accentTone : 50);
+        root.style.setProperty('--accent-raw', toned);
+        root.dataset.bg = cos.bgPattern || 'grid';
+        if (schema.applyWallpaperVarsToRoot) {
+          schema.applyWallpaperVarsToRoot(root, cos, toned);
         }
+        var vig = schema.resolveVignetteCosmetics ? schema.resolveVignetteCosmetics(cos) : { intensity: 45, direction: 'center' };
+        var resolvedTheme = root.dataset.theme === 'light' ? 'light' : 'dark';
+        if (schema.applyWallpaperVignetteStyle) schema.applyWallpaperVignetteStyle(root, vig.direction, vig.intensity, resolvedTheme);
       } catch (e) {}
     })();
   </script>
@@ -66,8 +93,8 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-  <!-- App scripts (Babel JSX). Order matters: shared-schema → data → md → tweaks shell → app. -->
-  <script src="shared-schema.js"></script>
+  <!-- App scripts (Babel JSX). Order matters: data → md → tweaks shell → app.
+       shared-schema.js already loaded in <head> for first-paint cosmetics. -->
   <script type="text/babel" data-presets="env,react" src="data.jsx"></script>
   <script src="md.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="tweaks-panel.jsx"></script>
