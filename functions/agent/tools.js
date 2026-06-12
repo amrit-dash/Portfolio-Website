@@ -7,7 +7,16 @@ const {
   normalizeImpactEntry,
   validateImpactWrite,
   normalizeProjectItem,
+  validateCosmeticsWrite,
+  cosmeticsFieldHint,
+  VIBES,
+  CUSTOM_VIBE_IDS,
+  isCustomVibeId,
+  getCustomVibe,
+  snapshotCosmetics,
+  createDefaultCustomVibes,
 } = schema;
+const VIBE_IDS = VIBES.map((v) => v.id);
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
@@ -42,7 +51,8 @@ const GENERIC_TOOLS = [
       'Use the Content outline (index/id/label) to pick the right path, then readContent for the full slice.',
       'Examples: hero · about.intro · about.impact · about.impact.1 · about.meta.0.value',
       'projects · projects.3 · projects.3.title · experience.0 · experience.1.roles.0.bullets',
-      'expertise.2.icon · cards.1.body · bot.qa · cosmetics.theme',
+      'expertise.2.icon · cards.1.body · bot.qa · cosmetics (read cosmetics for full object)',
+      cosmeticsFieldHint(),
     ].join(' '),
     parameters: {
       type: 'object',
@@ -66,6 +76,7 @@ const GENERIC_TOOLS = [
       'Partial object at an index merges into that row (preserves siblings): about.impact.1 with {"html":"<p>…</p>"}',
       'projects.2 with {"title":"New name"} · experience.0 with {"desc":"…"} · experience.1.roles.0 with {"name":"BeGig"}',
       'about.impact root merge-by-label: path about.impact, value {"label":"Then","html":"<p>…</p>"} (matches label/id).',
+      cosmeticsFieldHint(),
       'Avoid replacing a collection root with a full array unless the user explicitly asked to rewrite the whole list.',
     ].join(' '),
     parameters: {
@@ -101,8 +112,38 @@ const STRUCTURED_TOOLS = [
     parameters: { type: 'object', properties: { collection: { type: 'string' }, index: { type: 'number' }, id: { type: 'string' } }, required: ['collection'] }, mutates: true },
   { name: 'reorder', description: 'Reorder a collection to match the given order of ids or indices.',
     parameters: { type: 'object', properties: { collection: { type: 'string' }, order: { type: 'array', items: { type: 'string' } } }, required: ['collection', 'order'] }, mutates: true },
-  { name: 'applyVibePreset', description: 'Apply a cosmetic vibe preset (classic, matrix, royal, crimson, lilac, sunset, solar, mono) to cosmetics.',
-    parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }, mutates: true },
+  { name: 'applyVibePreset', description: 'Apply a built-in cosmetic vibe preset to cosmetics. 36 presets: dark (+storm, abyss, void), light (+drizzle, cream), retro (+phosphor, tube), bold (+volta, helix, cipher), plus classic/matrix/royal/etc. Sets theme, accent, fonts, cursor, wallpaper (static: halftone · animated: aurora, cosmos, matrixrain, particles, pulse, lightning, rain, smoke, binarystream, nebula, morphgeo, radar), brightness/density/animSpeed/randomness/tint/vignette, per-pattern params (rainDirection, starSize, cometDensity, particleSize/Density, morphStyle, numberFormat, binaryFontSize), glow, radius, scanlines. Does not apply custom-1..custom-6 slots — use applyCustomVibe.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          enum: VIBE_IDS,
+          description: 'Built-in vibe preset id — 36 presets across dark, light, retro, bold categories.',
+        },
+      },
+      required: ['id'],
+    },
+    mutates: true },
+  { name: 'applyCustomVibe', description: 'Apply a saved custom vibe slot (custom-1..custom-6) from cosmetics.customVibes. Merges the slot snapshot into active cosmetics.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', enum: CUSTOM_VIBE_IDS, description: 'Custom slot id custom-1 through custom-6' },
+      },
+      required: ['id'],
+    },
+    mutates: true },
+  { name: 'saveCustomVibe', description: 'Save current cosmetics snapshot to a custom vibe slot (custom-1..custom-6). Persists in draft cosmetics.customVibes.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', enum: CUSTOM_VIBE_IDS, description: 'Custom slot id to save into' },
+        name: { type: 'string', description: 'Optional display name for the slot' },
+      },
+      required: ['id'],
+    },
+    mutates: true },
   { name: 'setProjectImage', description: 'Set a project thumbnail or gallery image URL (place-only — no generation).',
     parameters: { type: 'object', properties: { id: { type: 'string' }, slot: { type: 'string', enum: ['thumb', 'gallery'] }, source: { type: 'string' } }, required: ['id', 'slot', 'source'] }, mutates: true },
   { name: 'generateImage', description: 'Generate a raster image from a text prompt (Gemini or OpenAI DALL·E), upload to Storage, attach to project thumb/gallery. Use only when owner explicitly asks to generate.',
@@ -434,7 +475,34 @@ function execApplyVibe(a, session) {
   const vibe = schema.getVibe(a.id);
   if (!vibe) return { ok: false, error: 'unknown-vibe', id: a.id };
   const cur = getAtPath(session.content, 'cosmetics') || {};
-  return session.setPath('cosmetics', { ...cur, ...deepClone(vibe.cos) });
+  return session.setPath('cosmetics', { ...cur, ...deepClone(vibe.cos), customVibes: cur.customVibes || createDefaultCustomVibes() });
+}
+
+function execApplyCustomVibe(a, session) {
+  if (!isCustomVibeId(a.id)) return { ok: false, error: 'unknown-vibe', id: a.id };
+  const cur = getAtPath(session.content, 'cosmetics') || {};
+  const slots = Array.isArray(cur.customVibes) ? cur.customVibes : createDefaultCustomVibes();
+  const slot = getCustomVibe(a.id, slots);
+  if (!slot || !slot.cos) return { ok: false, error: 'empty-custom-slot', id: a.id };
+  return session.setPath('cosmetics', { ...cur, ...deepClone(slot.cos), vibe: a.id, customVibes: slots });
+}
+
+function execSaveCustomVibe(a, session) {
+  if (!isCustomVibeId(a.id)) return { ok: false, error: 'invalid-slot', id: a.id };
+  const cur = getAtPath(session.content, 'cosmetics') || {};
+  const defaults = createDefaultCustomVibes();
+  const slots = defaults.map((def, i) => ({ ...def, ...((Array.isArray(cur.customVibes) && cur.customVibes[i]) || {}) }));
+  const idx = CUSTOM_VIBE_IDS.indexOf(a.id);
+  if (idx < 0) return { ok: false, error: 'invalid-slot', id: a.id };
+  const snap = snapshotCosmetics(cur);
+  slots[idx] = {
+    ...slots[idx],
+    id: a.id,
+    name: typeof a.name === 'string' ? a.name : (slots[idx].name || ''),
+    label: slots[idx].label || defaults[idx].label,
+    cos: snap,
+  };
+  return session.setPath('cosmetics', { ...cur, vibe: a.id, customVibes: slots });
 }
 
 function execSetProjectImage(a, session) {
@@ -1081,6 +1149,8 @@ async function executeTool(name, args, ctx) {
         if (path === 'about.impact') val = coerceImpactArray(val, session.readPath('about.impact'));
       }
     }
+    const cosErr = validateCosmeticsWrite(path, val);
+    if (cosErr) return { ok: false, ...cosErr };
     const result = session.setPath(path, val);
     return result.ok ? { ok: true, path: result.path } : result;
   }
@@ -1090,6 +1160,8 @@ async function executeTool(name, args, ctx) {
     removeItem: () => execRemoveItem(a, session),
     reorder: () => execReorder(a, session),
     applyVibePreset: () => execApplyVibe(a, session),
+    applyCustomVibe: () => execApplyCustomVibe(a, session),
+    saveCustomVibe: () => execSaveCustomVibe(a, session),
     setProjectImage: () => execSetProjectImage(a, session),
     generateImage: () => execGenerateImage(a, session, ctx),
     setCv: () => execSetCv(a, session),
