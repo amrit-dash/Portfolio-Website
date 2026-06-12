@@ -445,13 +445,17 @@ function SyncPage({
    iframe announces 'amritos:preview-ready', we reply with the draft (or the
    published snapshot), and we re-push on every edit — so theme/accent/font/copy
    changes show live and never revert to the last published copy. */
-function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent, showSyncFromLive, onSyncFromPublished, canDiscard, onDiscard }) {
-  const { AdminIcon, Btn } = window.ADMIN_UI;
+function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent, showSyncFromLive, onSyncFromPublished, canDiscard, onDiscard, showBoot, onShowBoot }) {
+  const { AdminIcon, Btn, Toggle } = window.ADMIN_UI;
   const [device, setDevice] = useAState('desktop');
   const [narrow, setNarrow] = useAState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 820px)').matches);
-  const [nonce, setNonce] = useAState(0);
+  const [previewKey, setPreviewKey] = useAState(0);
   const frameRef = useARef(null);
-  useAEffect(() => { if (open) setNonce((n) => n + 1); }, [open, mode]);
+  useAEffect(() => { if (open) setPreviewKey((n) => n + 1); }, [open, mode]);
+  useAEffect(() => {
+    if (!open) return;
+    setPreviewKey((n) => n + 1);
+  }, [showBoot]);
   useAEffect(() => {
     const mq = window.matchMedia('(max-width: 820px)');
     const onChange = () => setNarrow(mq.matches);
@@ -464,10 +468,14 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
     try {
       const win = frameRef.current && frameRef.current.contentWindow;
       if (!win) return;
-      const snap = mode === 'published' ? (publishedContent || content) : content;
+      const raw = mode === 'published' ? (publishedContent || content) : content;
+      // Merge defaults so cosmetics/wallpaper/vignette fields always reach the iframe.
+      const snap = (typeof window.mergeContent === 'function') ? window.mergeContent(raw) : raw;
       win.postMessage({ type: 'amritos:preview', content: snap }, '*');
     } catch (e) { /* cross-origin guard */ }
   }, [mode, content, publishedContent]);
+
+  const refreshPreview = React.useCallback(() => setPreviewKey((n) => n + 1), []);
 
   // Reply to the iframe's ready handshake (covers initial load + every reload).
   useAEffect(() => {
@@ -476,7 +484,7 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
     return () => window.removeEventListener('message', onMsg);
   }, [post]);
   // Re-push whenever the draft, mode, or drawer state changes (no reload needed).
-  useAEffect(() => { if (open) post(); }, [open, content, mode, nonce, post]);
+  useAEffect(() => { if (open) post(); }, [open, content, mode, previewKey, post]);
 
   // Target the site ROOT (not index.html): hosts redirect /index.html → /
   // (Firebase, and `serve` locally) and that 301 *drops the query string*, so
@@ -484,9 +492,18 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
   // mode (no postMessage handshake → shows published, never the draft).
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   const portfolioBase = isLocal ? '/' : ((window.PORTFOLIO_URL || '').replace(/\/$/, '') + '/');
-  const previewSrc = portfolioBase + '?adminpreview=' + nonce;
+  const previewParams = new URLSearchParams({ adminpreview: '1', _: String(previewKey) });
+  if (showBoot) previewParams.set('showboot', '1');
+  const previewSrc = portfolioBase + '?' + previewParams.toString();
   const openHref = portfolioBase;
   const phoneChrome = device === 'mobile' && !narrow;
+  const frameProps = {
+    ref: frameRef,
+    key: previewKey,
+    title: 'preview',
+    src: previewSrc,
+    onLoad: post,
+  };
   return (
     <>
       <div className="preview-scrim" data-open={open} onClick={onClose} />
@@ -513,19 +530,26 @@ function PreviewDrawer({ open, mode, onClose, onMode, content, publishedContent,
             {canDiscard && (
               <Btn sm kind="ghost" icon="reset" onClick={onDiscard} title="Discard unpublished edits and revert draft to last published snapshot">Discard draft</Btn>
             )}
+            <label className="preview-drawer__boot" title="Show boot splash on preview load">
+              <span>Boot splash</span>
+              <Toggle value={!!showBoot} onChange={onShowBoot} />
+            </label>
             {showSyncFromLive && (
               <button type="button" className="btn btn--sm btn--danger" onClick={onSyncFromPublished} title="Replace draft with the live published snapshot"><AdminIcon name="sync" size={13} />Sync from live</button>
             )}
             <a className="btn btn--sm" href={openHref} target="_blank" rel="noreferrer"><AdminIcon name="link" size={13} />Open</a>
-            <button type="button" className="iconbtn preview-drawer__close" onClick={onClose} aria-label="Close preview"><AdminIcon name="x" size={15} /></button>
+            <div className="preview-drawer__actions">
+              <button type="button" className="iconbtn preview-drawer__refresh" onClick={refreshPreview} title="Reload preview" aria-label="Reload preview"><AdminIcon name="reset" size={15} /></button>
+              <button type="button" className="iconbtn preview-drawer__close" onClick={onClose} aria-label="Close preview"><AdminIcon name="x" size={15} /></button>
+            </div>
           </div>
         </div>
         {open && (
           phoneChrome
             ? <div className="preview-drawer__phone">
-              <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} className="preview-drawer__frame preview-drawer__frame--phone" />
+              <iframe {...frameProps} className="preview-drawer__frame preview-drawer__frame--phone" />
             </div>
-            : <iframe ref={frameRef} key={nonce} title="preview" src={previewSrc} className="preview-drawer__frame" />
+            : <iframe {...frameProps} className="preview-drawer__frame" />
         )}
       </div>
     </>
@@ -727,6 +751,7 @@ function AdminApp() {
   const [route, setRoute] = useAState(() => (location.hash || '').replace('#', '') || 'overview');
   const [preview, setPreview] = useAState(false);
   const [previewMode, setPreviewMode] = useAState('draft');
+  const [previewShowBoot, setPreviewShowBoot] = useAState(false);
   const [flash, setFlash] = useAState(null);
   const [revertingVersionId, setRevertingVersionId] = useAState(null);
   const [revertingDraft, setRevertingDraft] = useAState(false);
@@ -891,7 +916,8 @@ function AdminApp() {
       </div>
       <PreviewDrawer open={preview} mode={previewMode} onClose={() => { setPreview(false); window.ADMIN_STORE.Store.clearPreview(); }} onMode={changePreviewMode}
         content={content} publishedContent={publishedSnapshot || window.ADMIN_STORE.Store.loadPublished()} showSyncFromLive={showSyncFromLive} onSyncFromPublished={doSyncFromPublished}
-        canDiscard={hasUnpublishedEdits && !!publishedSnapshot} onDiscard={doDiscard} />
+        canDiscard={hasUnpublishedEdits && !!publishedSnapshot} onDiscard={doDiscard}
+        showBoot={previewShowBoot} onShowBoot={setPreviewShowBoot} />
       <window.ADMIN_AGENT.AgentDock route={route} go={go} openPreview={openPreview} setAgentBusy={setAgentBusy} publish={publish} canPublish={canPublish} publishing={publishing} />
     </div>
   );
