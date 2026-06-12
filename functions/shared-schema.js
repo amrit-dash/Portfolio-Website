@@ -247,7 +247,7 @@
     'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
     'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'numberFormat', 'binaryFontSize',
     'fluidSize', 'fluidMorphSpeed',
-    'honeycombStyle', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
+    'honeycombStyle', 'honeycombGlowDensity', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
     'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
     'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
     'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
@@ -356,7 +356,12 @@
     if (!isCustomVibeId(c.vibe)) return c;
     const slot = getCustomVibe(c.vibe, c.customVibes);
     if (!slot || !slot.cos || typeof slot.cos !== 'object') return c;
-    return { ...c, ...slot.cos, vibe: c.vibe, customVibes: c.customVibes };
+    // Saved slot fills gaps; inline draft fields (including unsaved tweaks) win.
+    const merged = { ...slot.cos };
+    COSMETIC_SNAPSHOT_KEYS.forEach((k) => {
+      if (c[k] !== undefined) merged[k] = c[k];
+    });
+    return { ...c, ...merged, vibe: c.vibe, customVibes: c.customVibes };
   }
 
   /* Agent-editable array collections (path → metadata). */
@@ -921,6 +926,7 @@
       case 'binaryFontSize':
       case 'fluidSize':
       case 'fluidMorphSpeed':
+      case 'honeycombGlowDensity':
       case 'cursorInteractStrength':
       case 'cursorTrailLength':
       case 'cursorParticleDensity':
@@ -937,7 +943,7 @@
           accentTone: [0, 100], fontScale: [85, 120], wallpaperBrightness: [0, 100], wallpaperIntensity: [0, 100],
           wallpaperAnimSpeed: [0, 100], wallpaperRandomness: [0, 100], starSize: [0, 100], cometDensity: [0, 100],
           particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], binaryFontSize: [0, 100],
-          fluidSize: [0, 100], fluidMorphSpeed: [0, 100],
+          fluidSize: [0, 100], fluidMorphSpeed: [0, 100], honeycombGlowDensity: [0, 100],
           cursorInteractStrength: [0, 100], cursorTrailLength: [0, 100], cursorParticleDensity: [0, 100], cursorSweepRadius: [0, 100],
           cursorEffectTrailLength: [0, 100], cursorEffectIntensity: [0, 100], cursorEffectRippleCount: [0, 100], cursorEffectRippleSpeed: [0, 100], cursorEffectCometIntensity: [0, 100], cursorEffectCometSpeed: [0, 100],
           vignetteIntensity: [0, 100], glow: [0, 160],
@@ -1021,12 +1027,12 @@
       'Appearance (cosmetics.*): theme · accent · accentTone · type · headingFont · tracking · fontScale',
       'bgPattern (grid|dots|diagonal|crosshatch|3dgrid|honeycomb|honeycombGlow|padgrid|circuits|waves|brick|noise|aurora|cosmos|matrixrain|particles|lightning|rain|binarystream|nebula|morphgeo|fluidcore|snowinteractive|ripplepool|fireflies|none)',
       'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperAnimPaused (freeze animated motion) · wallpaperRandomness (0=deterministic/uniform sliders · 100=chaos overrides direction/speed/phase per element) · wallpaperUseAccent (pattern ink follows accent when true) · wallpaperColor (custom pattern tint when wallpaperUseAccent is false; accent color always used for glow/hi on canvas patterns)',
-      'Per-pattern: honeycombStyle (outline|fill) · rainDirection · waveDirection · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · numberFormat · binaryFontSize · fluidSize · fluidMorphSpeed (fluidcore blob scale + morph/flow rate; wallpaperAnimSpeed controls rotation) · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
+      'Per-pattern: honeycombStyle (outline|fill) · honeycombGlowDensity (0–100 max % of hex cells glowing at once on honeycombGlow) · rainDirection · waveDirection · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · numberFormat · binaryFontSize · fluidSize · fluidMorphSpeed (fluidcore blob scale + morph/flow rate; wallpaperAnimSpeed controls rotation) · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
       'cursorEffect (none|trail|comet|ripple|spark|glow) — global overlay independent of wallpaper · cursorEffectTrailStyle (glow|line|dotted|particles) · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount (ripple burst: 0=1 ring · 100=8 varied) · cursorEffectRippleSpeed (0=slow expansion · 100=fast) · cursorEffectCometDirection (cursor|up|down|random) · cursorEffectCometIntensity · cursorEffectCometSpeed',
       'vignetteIntensity (0=off) · vignetteDirection · glow · radius · scanlines · cursorStyle · cursorColor',
       'botIcon · botIconColor · vibe (built-in preset id or custom-* slot id; segments: dark, light, retro, bold, multi-tone; admin shows 20 core presets — 28 extended tier hidden by default; agent applyVibePreset accepts any id) · customVibes (unlimited saved slots). Read: readAppearanceConfig. Write: setContentPath (cosmetics.*), updateAppearance (batch fields), applyVibePreset / applyCustomVibe, saveCustomVibe.',
       'Multi-tone presets: wallpaperUseAccent false + explicit wallpaperColor for pattern ink; cursorColor often differs from accent and wallpaper tint.',
-      'Static honeycomb: honeycombStyle outline (grid lines) · fill (sparse filled cells via wallpaperIntensity). Animated: honeycombGlow (random accent hex pulses).',
+      'Static honeycomb: honeycombStyle outline (grid lines) · fill (sparse filled cells via wallpaperIntensity). Animated: honeycombGlow (staggered accent hex pulses · honeycombGlowDensity caps simultaneous glow count).',
       'Interactive wallpapers: snowinteractive (continuous snowfall swept by cursor) · ripplepool (cursor disturbs water ripples) · fireflies (motes scatter from cursor).',
       'Animated patterns: circuits · waves · aurora · cosmos · matrixrain · particles · lightning · rain · binarystream · nebula · morphgeo (soft drifting blobs — uses global brightness/intensity/animSpeed/randomness) · fluidcore (centered water blob — fluidSize · fluidMorphSpeed · wallpaperAnimSpeed=rotation) · honeycombGlow.',
     ].join(' ');
@@ -1166,6 +1172,7 @@
     const binaryFontSize = clampCosmeticNumber(c.binaryFontSize, 0, 100, 50);
     const fluidSize = clampCosmeticNumber(c.fluidSize, 0, 100, 50);
     const fluidMorphSpeed = clampCosmeticNumber(c.fluidMorphSpeed, 0, 100, 45);
+    const honeycombGlowDensity = clampCosmeticNumber(c.honeycombGlowDensity, 0, 100, 50);
     const rainDirection = RAIN_DIRECTIONS.includes(c.rainDirection) ? c.rainDirection : 'down';
     const waveDirection = WAVE_DIRECTIONS.includes(c.waveDirection) ? c.waveDirection : 'up';
     const cometDirection = COMET_DIRECTIONS.includes(c.cometDirection) ? c.cometDirection : 'right-down';
@@ -1254,6 +1261,7 @@
       randPhaseA,
       randPhaseB,
       honeycombStyle,
+      honeycombGlowDensity,
       cursorInteractStrength,
       cursorTrailLength,
       cursorTrailPoints: Math.round(8 + (cursorTrailLength / 100) * 36),

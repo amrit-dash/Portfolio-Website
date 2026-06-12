@@ -41,6 +41,7 @@ const DEFAULT_COSMETICS = {
   fluidSize: 50,
   fluidMorphSpeed: 45,
   honeycombStyle: 'outline',
+  honeycombGlowDensity: 50,
   cursorInteractStrength: 55,
   cursorTrailLength: 50,
   cursorParticleDensity: 40,
