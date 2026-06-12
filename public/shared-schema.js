@@ -15,8 +15,14 @@
 
   /* Appearance cosmetics — enums consumed by admin, portfolio, and agent tools. */
   const CURSOR_STYLES = ['ring', 'pixel', 'dot', 'cross', 'halo', 'outline', 'bold', 'diamond', 'trail', 'square', 'beam'];
-  const BG_PATTERNS = ['grid', 'dots', 'scan', 'starfield', 'crosshatch', 'hex', 'circuits', 'waves', 'diagonal', 'brick', 'noise', 'aurora', 'cosmos', 'matrixrain', 'particles', 'pulse', 'lightning', 'rain', 'smoke', 'binarystream', 'nebula', 'morphgeo', 'none'];
+  const CURSOR_EFFECTS = ['none', 'trail', 'comet', 'ripple', 'spark', 'glow'];
+  const CURSOR_EFFECT_TRAIL_STYLES = ['glow', 'line', 'dotted', 'particles'];
+  const CURSOR_EFFECT_COMET_DIRECTIONS = ['cursor', 'up', 'down', 'random'];
+  const BG_PATTERNS = ['grid', 'dots', 'diagonal', 'crosshatch', '3dgrid', 'honeycomb', 'honeycombGlow', 'padgrid', 'waves', 'brick', 'noise', 'circuits', 'aurora', 'cosmos', 'matrixrain', 'particles', 'lightning', 'rain', 'binarystream', 'nebula', 'morphgeo', 'snowinteractive', 'ripplepool', 'fireflies', 'none'];
+  const HONEYCOMB_STYLES = ['outline', 'fill'];
+  const CURSOR_WALLPAPERS = ['snowinteractive', 'ripplepool', 'fireflies'];
   const RAIN_DIRECTIONS = ['down', 'diagonal-left', 'diagonal-right', 'left', 'right'];
+  const WAVE_DIRECTIONS = ['up', 'down', 'left', 'right', 'diagonal-up', 'diagonal-down'];
   const COMET_DIRECTIONS = ['right-down', 'left-down', 'right', 'left', 'up-right'];
   const PARTICLE_DRIFT_DIRECTIONS = ['up', 'down', 'diagonal-up', 'diagonal-down', 'left', 'right'];
   const MORPH_STYLES = ['spin', 'pulse', 'warp', 'orbit'];
@@ -25,30 +31,49 @@
   const BG_PATTERN_META = {
     grid: { label: 'Grid', animated: false },
     dots: { label: 'Dots', animated: false },
-    scan: { label: 'Scan lines', animated: false },
-    starfield: { label: 'Starfield', animated: false },
-    crosshatch: { label: 'Crosshatch', animated: false },
-    hex: { label: 'Hex mesh', animated: false },
-    circuits: { label: 'Circuit pulse', animated: true, supportsRandomness: true },
-    waves: { label: 'Waves', animated: false },
     diagonal: { label: 'Diagonal', animated: false },
+    crosshatch: { label: 'Crosshatch', animated: false },
+    '3dgrid': { label: '3D grid', animated: false },
+    honeycomb: { label: 'Honeycomb', animated: false },
+    honeycombGlow: { label: 'Honeycomb glow', animated: true, supportsRandomness: true },
+    padgrid: { label: 'Pad grid', animated: false },
+    circuits: { label: 'Circuit pulse', animated: true, supportsRandomness: true },
+    waves: { label: 'Waves', animated: true, supportsRandomness: true },
     brick: { label: 'Brick', animated: false },
     noise: { label: 'Noise grain', animated: false },
     aurora: { label: 'Aurora', animated: true, supportsRandomness: true },
     cosmos: { label: 'Cosmos', animated: true, supportsRandomness: true },
     matrixrain: { label: 'Matrix rain', animated: true, supportsRandomness: true },
     particles: { label: 'Floating particles', animated: true, supportsRandomness: true },
-    pulse: { label: 'Gradient pulse', animated: true, supportsRandomness: true },
     lightning: { label: 'Lightning', animated: true, supportsRandomness: true },
     rain: { label: 'Rain', animated: true, supportsRandomness: true },
-    smoke: { label: 'Smoke drift', animated: true, supportsRandomness: true },
     binarystream: { label: 'Binary stream', animated: true, supportsRandomness: true },
     nebula: { label: 'Nebula', animated: true, supportsRandomness: true },
-    morphgeo: { label: 'Geometric morph', animated: true, supportsRandomness: true },
+    morphgeo: { label: 'Fluid morph', animated: true, supportsRandomness: true },
+    snowinteractive: { label: 'Snow interactive', animated: true, cursorReactive: true },
+    ripplepool: { label: 'Ripple pool', animated: true, cursorReactive: true },
+    fireflies: { label: 'Fireflies', animated: true, cursorReactive: true },
     none: { label: 'None', animated: false },
   };
-  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'binarystream', 'nebula', 'circuits'];
-  const CSS_ANIM_WALLPAPERS = ['aurora', 'particles', 'pulse', 'smoke', 'morphgeo'];
+  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'binarystream', 'nebula', 'circuits', 'particles', 'morphgeo', 'honeycombGlow', 'snowinteractive', 'ripplepool', 'fireflies'];
+  const CSS_ANIM_WALLPAPERS = ['aurora', 'waves'];
+  const LEGACY_BG_PATTERNS = {
+    scan: 'grid',
+    starfield: 'cosmos',
+    halftone: 'dots',
+    radar: 'circuits',
+    pulse: 'aurora',
+    smoke: 'nebula',
+    hex: 'honeycomb',
+    hexagons: 'honeycomb',
+    hexgrid: '3dgrid',
+    honeycombgrid: 'honeycomb',
+    hexglow: 'honeycombGlow',
+    honeycombglow: 'honeycombGlow',
+    cursorsnow: 'snowinteractive',
+    cursornight: 'ripplepool',
+    cursortrail: 'fireflies',
+  };
   const FONT_TYPES = ['default', 'editorial', 'pixel', 'modern', 'mono', 'slab', 'rounded', 'retro'];
   const HEADING_FONTS = ['match', 'serif', 'editorial', 'grotesk', 'mono', 'pixel', 'slab', 'rounded', 'retro', 'display'];
   const RADIUS_VALUES = ['sharp', 'soft', 'round'];
@@ -64,110 +89,195 @@
     { id: 'light', label: 'Light mode' },
     { id: 'retro', label: 'Retro & CRT' },
     { id: 'bold', label: 'Bold & experimental' },
+    { id: 'multi-tone', label: 'Multi-tone' },
   ];
 
   const VIBES = [
     /* —— Dark mode —— */
     { id: 'classic', label: 'Classic', desc: 'Dark · lime CRT grid', category: 'dark',
-      cos: { theme: 'dark', accent: '#c8e856', type: 'default', headingFont: 'match', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#c8e856', scanlines: true, bgPattern: 'grid', wallpaperBrightness: 55, wallpaperIntensity: 50, wallpaperUseAccent: true, glow: 100, radius: 'soft', vibe: 'classic' } },
+      cos: { theme: 'dark', accent: '#c8e856', type: 'default', headingFont: 'match', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#c8e856', scanlines: true, bgPattern: 'grid', wallpaperBrightness: 55, wallpaperIntensity: 50, wallpaperUseAccent: true, cursorEffect: 'glow', cursorEffectIntensity: 45, glow: 100, radius: 'soft', vibe: 'classic' } },
     { id: 'matrix', label: 'Matrix', desc: 'Dark · green rain', category: 'dark',
-      cos: { theme: 'dark', accent: '#33ff66', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#33ff66', scanlines: true, bgPattern: 'matrixrain', wallpaperBrightness: 50, wallpaperIntensity: 70, wallpaperAnimSpeed: 72, wallpaperUseAccent: true, glow: 140, radius: 'sharp', vibe: 'matrix' } },
+      cos: { theme: 'dark', accent: '#33ff66', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#33ff66', scanlines: true, bgPattern: 'matrixrain', wallpaperBrightness: 50, wallpaperIntensity: 70, wallpaperAnimSpeed: 72, wallpaperUseAccent: true, cursorEffect: 'glow', cursorEffectIntensity: 72, glow: 140, radius: 'sharp', vibe: 'matrix' } },
     { id: 'royal', label: 'Royal', desc: 'Dark · violet cosmos', category: 'dark',
-      cos: { theme: 'dark', accent: '#9d7cff', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'cosmos', wallpaperBrightness: 45, wallpaperIntensity: 35, wallpaperAnimSpeed: 38, wallpaperUseAccent: true, vignetteIntensity: 35, vignetteDirection: 'center', glow: 120, radius: 'soft', vibe: 'royal' } },
-    { id: 'crimson', label: 'Crimson', desc: 'Dark · rose stars', category: 'dark',
-      cos: { theme: 'dark', accent: '#e85c89', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#e85c89', scanlines: false, bgPattern: 'starfield', wallpaperBrightness: 48, wallpaperIntensity: 28, wallpaperUseAccent: true, glow: 120, radius: 'soft', vibe: 'crimson' } },
-    { id: 'midnight', label: 'Midnight', desc: 'Dark · deep blue night', category: 'dark',
-      cos: { theme: 'dark', accent: '#4a9eff', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#4a9eff', scanlines: false, bgPattern: 'cosmos', wallpaperBrightness: 38, wallpaperIntensity: 42, wallpaperAnimSpeed: 42, wallpaperUseAccent: true, vignetteIntensity: 50, vignetteDirection: 'center', glow: 110, radius: 'soft', vibe: 'midnight' } },
-    { id: 'neon', label: 'Neon', desc: 'Dark · cyan circuits', category: 'dark',
-      cos: { theme: 'dark', accent: '#00e5ff', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#00e5ff', scanlines: false, bgPattern: 'circuits', wallpaperBrightness: 52, wallpaperIntensity: 78, wallpaperAnimSpeed: 62, wallpaperUseAccent: true, glow: 150, radius: 'sharp', vibe: 'neon' } },
-    { id: 'obsidian', label: 'Obsidian', desc: 'Dark · steel crosshatch', category: 'dark',
-      cos: { theme: 'dark', accent: '#8b9cb3', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#8b9cb3', scanlines: false, bgPattern: 'crosshatch', wallpaperBrightness: 28, wallpaperIntensity: 40, wallpaperUseAccent: true, glow: 70, radius: 'sharp', vibe: 'obsidian' } },
-    { id: 'terminal', label: 'Terminal', desc: 'Dark · amber scanlines', category: 'dark',
-      cos: { theme: 'dark', accent: '#ffb000', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'square', cursorColor: '#ffb000', scanlines: true, bgPattern: 'scan', wallpaperBrightness: 46, wallpaperIntensity: 82, wallpaperUseAccent: true, glow: 90, radius: 'sharp', vibe: 'terminal' } },
+      cos: { theme: 'dark', accent: '#9d7cff', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'cosmos', wallpaperBrightness: 45, wallpaperIntensity: 35, wallpaperAnimSpeed: 38, starSize: 58, cometDensity: 42, wallpaperUseAccent: true, cursorEffect: 'glow', cursorEffectIntensity: 50, vignetteIntensity: 35, vignetteDirection: 'center', glow: 120, radius: 'soft', vibe: 'royal' } },
+    { id: 'crimson', label: 'Crimson', desc: 'Dark · morphing rose geometry', category: 'dark',
+      cos: { theme: 'dark', accent: '#e85c89', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#fda4af', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'warp', wallpaperBrightness: 56, wallpaperIntensity: 46, wallpaperAnimSpeed: 42, wallpaperUseAccent: false, wallpaperColor: '#be185d', cursorEffect: 'glow', cursorEffectIntensity: 55, glow: 120, radius: 'soft', vibe: 'crimson' } },
+    /* extended: blue waves overlap deepsea / sky — user-requested hide */
+    { id: 'midnight', label: 'Midnight', desc: 'Dark · deep blue waves', category: 'dark', hidden: true,
+      cos: { theme: 'dark', accent: '#4a9eff', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#60a5fa', scanlines: false, bgPattern: 'waves', wallpaperBrightness: 44, wallpaperIntensity: 48, wallpaperAnimSpeed: 42, waveDirection: 'up', wallpaperUseAccent: false, wallpaperColor: '#1d4ed8', cursorEffect: 'glow', cursorEffectIntensity: 48, vignetteIntensity: 50, vignetteDirection: 'center', glow: 110, radius: 'soft', vibe: 'midnight' } },
+    { id: 'neon', label: 'Neon', desc: 'Dark · cyan circuits + sparks', category: 'dark',
+      cos: { theme: 'dark', accent: '#00e5ff', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#00e5ff', scanlines: false, bgPattern: 'circuits', wallpaperBrightness: 52, wallpaperIntensity: 78, wallpaperAnimSpeed: 62, wallpaperUseAccent: true, cursorEffect: 'spark', cursorEffectIntensity: 72, glow: 150, radius: 'sharp', vibe: 'neon' } },
+    { id: 'obsidian', label: 'Obsidian', desc: 'Dark · 3D grid + ripples', category: 'dark',
+      cos: { theme: 'dark', accent: '#8b9cb3', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#cbd5e1', scanlines: false, bgPattern: '3dgrid', wallpaperBrightness: 42, wallpaperIntensity: 52, wallpaperUseAccent: true, cursorEffect: 'ripple', cursorEffectIntensity: 60, cursorEffectRippleCount: 55, glow: 70, radius: 'sharp', vibe: 'obsidian' } },
+    /* extended: padgrid+comet overlaps classic grid / retro CRT family */
+    { id: 'terminal', label: 'Terminal', desc: 'Dark · amber pad grid + comets', category: 'dark', hidden: true,
+      cos: { theme: 'dark', accent: '#ffb000', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'square', cursorColor: '#ffb000', scanlines: true, bgPattern: 'padgrid', wallpaperBrightness: 46, wallpaperIntensity: 82, wallpaperUseAccent: true, cursorEffect: 'comet', cursorEffectCometDirection: 'down', cursorEffectCometIntensity: 65, cursorEffectCometSpeed: 58, glow: 90, radius: 'sharp', vibe: 'terminal' } },
     /* —— Light mode —— */
-    { id: 'lilac', label: 'Lilac', desc: 'Light · violet drift', category: 'light',
-      cos: { theme: 'light', accent: '#9d7cff', type: 'default', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#9d7cff', scanlines: false, bgPattern: 'particles', wallpaperBrightness: 55, wallpaperIntensity: 30, wallpaperAnimSpeed: 48, particleDensity: 32, particleSize: 42, wallpaperUseAccent: true, glow: 90, radius: 'soft', vibe: 'lilac' } },
-    { id: 'sunset', label: 'Sunset', desc: 'Light · amber pulse', category: 'light',
-      cos: { theme: 'light', accent: '#ff7a3d', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ff7a3d', scanlines: false, bgPattern: 'pulse', wallpaperBrightness: 52, wallpaperIntensity: 48, wallpaperAnimSpeed: 55, wallpaperUseAccent: true, glow: 110, radius: 'round', vibe: 'sunset' } },
-    { id: 'solar', label: 'Solar', desc: 'Light · gold diagonal', category: 'light',
-      cos: { theme: 'light', accent: '#ffd25a', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ffd25a', scanlines: false, bgPattern: 'diagonal', wallpaperBrightness: 50, wallpaperIntensity: 38, wallpaperUseAccent: true, glow: 90, radius: 'soft', vibe: 'solar' } },
+    /* extended: violet particles overlap drift */
+    { id: 'lilac', label: 'Lilac', desc: 'Light · violet drift', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#7c3aed', type: 'default', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#6d28d9', scanlines: false, bgPattern: 'particles', wallpaperBrightness: 58, wallpaperIntensity: 36, wallpaperAnimSpeed: 48, particleDensity: 38, particleSize: 42, wallpaperUseAccent: false, wallpaperColor: '#8b5cf6', glow: 90, radius: 'soft', vibe: 'lilac' } },
+    { id: 'sunset', label: 'Sunset', desc: 'Light · amber glow + aurora', category: 'light',
+      cos: { theme: 'light', accent: '#c2410c', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#ea580c', scanlines: false, bgPattern: 'aurora', wallpaperBrightness: 56, wallpaperIntensity: 52, wallpaperAnimSpeed: 55, wallpaperUseAccent: false, wallpaperColor: '#ea580c', cursorEffect: 'glow', cursorEffectIntensity: 65, glow: 110, radius: 'round', vibe: 'sunset' } },
+    /* extended: honeycombGlow overlaps blush / digital — user-requested hide */
+    { id: 'solar', label: 'Solar', desc: 'Light · gold honeycomb glow', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#b45309', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#d97706', scanlines: false, bgPattern: 'honeycombGlow', honeycombStyle: 'outline', wallpaperBrightness: 54, wallpaperIntensity: 48, wallpaperAnimSpeed: 48, wallpaperUseAccent: false, wallpaperColor: '#ca8a04', cursorEffect: 'trail', cursorEffectTrailStyle: 'line', cursorEffectTrailLength: 45, cursorEffectIntensity: 58, glow: 90, radius: 'soft', vibe: 'solar' } },
     { id: 'mono', label: 'Mono', desc: 'Light · slate flat', category: 'light',
-      cos: { theme: 'light', accent: '#7a9eff', type: 'default', headingFont: 'mono', tracking: 'normal', cursorStyle: 'cross', cursorColor: '#7a9eff', scanlines: false, bgPattern: 'none', wallpaperBrightness: 50, wallpaperIntensity: 50, wallpaperUseAccent: true, glow: 60, radius: 'sharp', vibe: 'mono' } },
-    { id: 'parchment', label: 'Parchment', desc: 'Light · warm brick', category: 'light',
-      cos: { theme: 'light', accent: '#c4a574', type: 'default', headingFont: 'serif', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#c4a574', scanlines: false, bgPattern: 'brick', wallpaperBrightness: 32, wallpaperIntensity: 42, wallpaperUseAccent: true, glow: 75, radius: 'soft', vibe: 'parchment' } },
-    { id: 'mint', label: 'Mint', desc: 'Light · fresh waves', category: 'light',
-      cos: { theme: 'light', accent: '#3dd68c', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#3dd68c', scanlines: false, bgPattern: 'waves', wallpaperBrightness: 48, wallpaperIntensity: 44, wallpaperUseAccent: true, glow: 95, radius: 'round', vibe: 'mint' } },
-    { id: 'blush', label: 'Blush', desc: 'Light · soft pink dots', category: 'light',
-      cos: { theme: 'light', accent: '#f472b6', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'outline', cursorColor: '#f472b6', scanlines: false, bgPattern: 'dots', wallpaperBrightness: 52, wallpaperIntensity: 36, wallpaperUseAccent: true, glow: 100, radius: 'round', vibe: 'blush' } },
-    { id: 'sky', label: 'Sky', desc: 'Light · airy pulse', category: 'light',
-      cos: { theme: 'light', accent: '#38bdf8', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#38bdf8', scanlines: false, bgPattern: 'pulse', wallpaperBrightness: 42, wallpaperIntensity: 35, wallpaperAnimSpeed: 45, wallpaperUseAccent: true, glow: 85, radius: 'soft', vibe: 'sky' } },
+      cos: { theme: 'light', accent: '#3b5bdb', type: 'default', headingFont: 'mono', tracking: 'normal', cursorStyle: 'cross', cursorColor: '#364fc7', scanlines: false, bgPattern: 'none', wallpaperBrightness: 50, wallpaperIntensity: 50, wallpaperUseAccent: true, glow: 60, radius: 'sharp', vibe: 'mono' } },
+    /* extended: warm brick niche — parchment overlaps mono flat light looks */
+    { id: 'parchment', label: 'Parchment', desc: 'Light · warm brick', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#92703a', type: 'default', headingFont: 'serif', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#78572f', scanlines: false, bgPattern: 'brick', wallpaperBrightness: 42, wallpaperIntensity: 46, wallpaperUseAccent: false, wallpaperColor: '#a67c3d', glow: 75, radius: 'soft', vibe: 'parchment' } },
+    { id: 'mint', label: 'Mint', desc: 'Light · ripple pool', category: 'light',
+      cos: { theme: 'light', accent: '#059669', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#047857', scanlines: false, bgPattern: 'ripplepool', wallpaperBrightness: 56, wallpaperIntensity: 48, wallpaperAnimSpeed: 44, cursorInteractStrength: 68, cursorTrailLength: 55, cursorEffect: 'ripple', cursorEffectIntensity: 52, cursorEffectRippleCount: 48, wallpaperUseAccent: false, wallpaperColor: '#047857', glow: 95, radius: 'round', vibe: 'mint' } },
+    /* extended: filled honeycomb incremental vs solar honeycombGlow */
+    { id: 'blush', label: 'Blush', desc: 'Light · filled honeycomb', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#db2777', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'outline', cursorColor: '#be185d', scanlines: false, bgPattern: 'honeycomb', honeycombStyle: 'fill', wallpaperBrightness: 54, wallpaperIntensity: 42, wallpaperUseAccent: false, wallpaperColor: '#ec4899', cursorEffect: 'spark', cursorEffectIntensity: 48, glow: 100, radius: 'round', vibe: 'blush' } },
+    /* extended: airy waves overlap sunset aurora / inkwave multi-tone */
+    { id: 'sky', label: 'Sky', desc: 'Light · airy waves', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#0284c7', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#0369a1', scanlines: false, bgPattern: 'waves', wallpaperBrightness: 48, wallpaperIntensity: 40, wallpaperAnimSpeed: 45, waveDirection: 'up', wallpaperUseAccent: false, wallpaperColor: '#0ea5e9', glow: 85, radius: 'soft', vibe: 'sky' } },
     /* —— Retro & CRT —— */
-    { id: 'arcade', label: 'Arcade', desc: 'Retro · neon hex', category: 'retro',
-      cos: { theme: 'dark', accent: '#ff6b9d', type: 'retro', headingFont: 'retro', tracking: 'wide', cursorStyle: 'pixel', cursorColor: '#ff6b9d', scanlines: true, bgPattern: 'hex', wallpaperBrightness: 58, wallpaperIntensity: 68, wallpaperUseAccent: true, glow: 130, radius: 'sharp', vibe: 'arcade' } },
-    { id: 'vhs', label: 'VHS', desc: 'Retro · magenta noise', category: 'retro',
-      cos: { theme: 'dark', accent: '#d946ef', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'beam', cursorColor: '#d946ef', scanlines: true, bgPattern: 'noise', wallpaperBrightness: 40, wallpaperIntensity: 62, wallpaperUseAccent: true, vignetteIntensity: 45, vignetteDirection: 'all', glow: 115, radius: 'soft', vibe: 'vhs' } },
+    { id: 'arcade', label: 'Arcade', desc: 'Retro · neon honeycomb trail', category: 'retro',
+      cos: { theme: 'dark', accent: '#ff6b9d', type: 'retro', headingFont: 'retro', tracking: 'wide', cursorStyle: 'pixel', cursorColor: '#ff6b9d', scanlines: true, bgPattern: 'honeycomb', honeycombStyle: 'fill', wallpaperBrightness: 58, wallpaperIntensity: 68, wallpaperUseAccent: true, cursorEffect: 'trail', cursorEffectTrailStyle: 'particles', cursorEffectTrailLength: 55, cursorEffectIntensity: 62, glow: 130, radius: 'sharp', vibe: 'arcade' } },
+    { id: 'vhs', label: 'VHS', desc: 'Retro · magenta noise + sparks', category: 'retro',
+      cos: { theme: 'dark', accent: '#d946ef', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'beam', cursorColor: '#d946ef', scanlines: true, bgPattern: 'noise', wallpaperBrightness: 40, wallpaperIntensity: 62, wallpaperUseAccent: false, wallpaperColor: '#d946ef', cursorEffect: 'spark', cursorEffectIntensity: 70, vignetteIntensity: 45, vignetteDirection: 'all', glow: 115, radius: 'soft', vibe: 'vhs' } },
     /* —— Bold & experimental —— */
-    { id: 'synthwave', label: 'Synthwave', desc: 'Bold · aurora waves', category: 'bold',
-      cos: { theme: 'dark', accent: '#b967ff', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#ff71ce', scanlines: false, bgPattern: 'aurora', wallpaperBrightness: 58, wallpaperIntensity: 50, wallpaperAnimSpeed: 50, wallpaperUseAccent: false, wallpaperColor: '#ff71ce', vignetteIntensity: 40, vignetteDirection: 'center', glow: 160, radius: 'round', vibe: 'synthwave' } },
+    { id: 'synthwave', label: 'Synthwave', desc: 'Bold · rolling waves', category: 'bold',
+      cos: { theme: 'dark', accent: '#9333ea', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#f472b6', scanlines: false, bgPattern: 'waves', wallpaperBrightness: 62, wallpaperIntensity: 54, wallpaperAnimSpeed: 50, waveDirection: 'diagonal-up', wallpaperUseAccent: false, wallpaperColor: '#ec4899', cursorEffect: 'trail', cursorEffectTrailStyle: 'glow', cursorEffectTrailLength: 58, cursorEffectIntensity: 65, vignetteIntensity: 40, vignetteDirection: 'center', glow: 160, radius: 'round', vibe: 'synthwave' } },
     { id: 'ink', label: 'Ink', desc: 'Bold · high contrast', category: 'bold',
-      cos: { theme: 'light', accent: '#1a1c14', type: 'slab', headingFont: 'slab', tracking: 'tight', cursorStyle: 'bold', cursorColor: '#1a1c14', scanlines: false, bgPattern: 'crosshatch', wallpaperBrightness: 22, wallpaperIntensity: 48, wallpaperUseAccent: true, glow: 50, radius: 'sharp', vibe: 'ink' } },
+      cos: { theme: 'light', accent: '#1a1c14', type: 'slab', headingFont: 'slab', tracking: 'tight', cursorStyle: 'bold', cursorColor: '#1a1c14', scanlines: false, bgPattern: 'crosshatch', wallpaperBrightness: 38, wallpaperIntensity: 55, wallpaperUseAccent: true, glow: 50, radius: 'sharp', vibe: 'ink' } },
     /* —— Animated wallpaper presets —— */
-    { id: 'northern', label: 'Northern', desc: 'Dark · aurora lights', category: 'bold',
-      cos: { theme: 'dark', accent: '#34d399', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'halo', cursorColor: '#6ee7b7', scanlines: false, bgPattern: 'aurora', wallpaperBrightness: 55, wallpaperIntensity: 45, wallpaperAnimSpeed: 38, wallpaperUseAccent: false, wallpaperColor: '#34d399', vignetteIntensity: 30, vignetteDirection: 'bottom', glow: 130, radius: 'round', vibe: 'northern' } },
-    { id: 'eclipse', label: 'Eclipse', desc: 'Dark · moon & comets', category: 'bold',
-      cos: { theme: 'dark', accent: '#fbbf24', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#fde68a', scanlines: false, bgPattern: 'cosmos', wallpaperBrightness: 42, wallpaperIntensity: 38, wallpaperAnimSpeed: 35, wallpaperUseAccent: true, vignetteIntensity: 55, vignetteDirection: 'center', glow: 105, radius: 'soft', vibe: 'eclipse' } },
-    { id: 'digital', label: 'Digital', desc: 'Dark · code rain', category: 'bold',
-      cos: { theme: 'dark', accent: '#22c55e', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'beam', cursorColor: '#4ade80', scanlines: true, bgPattern: 'matrixrain', wallpaperBrightness: 48, wallpaperIntensity: 65, wallpaperAnimSpeed: 78, wallpaperUseAccent: true, glow: 95, radius: 'sharp', vibe: 'digital' } },
-    { id: 'drift', label: 'Drift', desc: 'Light · floating motes', category: 'light',
-      cos: { theme: 'light', accent: '#a78bfa', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#8b5cf6', scanlines: false, bgPattern: 'particles', wallpaperBrightness: 50, wallpaperIntensity: 28, wallpaperAnimSpeed: 42, particleDensity: 30, particleSize: 40, wallpaperUseAccent: true, glow: 88, radius: 'round', vibe: 'drift' } },
-    { id: 'breathe', label: 'Breathe', desc: 'Light · soft pulse', category: 'light',
-      cos: { theme: 'light', accent: '#fb7185', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'dot', cursorColor: '#fda4af', scanlines: false, bgPattern: 'pulse', wallpaperBrightness: 46, wallpaperIntensity: 32, wallpaperAnimSpeed: 28, wallpaperUseAccent: true, glow: 92, radius: 'round', vibe: 'breathe' } },
-    { id: 'deepsea', label: 'Deep sea', desc: 'Dark · bioluminescent', category: 'dark',
-      cos: { theme: 'dark', accent: '#06b6d4', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'trail', cursorColor: '#67e8f9', scanlines: false, bgPattern: 'particles', wallpaperBrightness: 44, wallpaperIntensity: 32, wallpaperAnimSpeed: 52, particleDensity: 38, particleSize: 48, wallpaperUseAccent: true, vignetteIntensity: 38, vignetteDirection: 'bottom', glow: 125, radius: 'soft', vibe: 'deepsea' } },
-    { id: 'storm', label: 'Storm', desc: 'Dark · electric sky', category: 'dark',
-      cos: { theme: 'dark', accent: '#60a5fa', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#93c5fd', scanlines: false, bgPattern: 'lightning', wallpaperBrightness: 52, wallpaperIntensity: 55, wallpaperAnimSpeed: 62, wallpaperUseAccent: true, vignetteIntensity: 48, vignetteDirection: 'top', glow: 135, radius: 'soft', vibe: 'storm' } },
-    { id: 'abyss', label: 'Abyss', desc: 'Dark · cosmic nebula', category: 'dark',
-      cos: { theme: 'dark', accent: '#818cf8', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#a5b4fc', scanlines: false, bgPattern: 'nebula', wallpaperBrightness: 46, wallpaperIntensity: 42, wallpaperAnimSpeed: 32, wallpaperUseAccent: false, wallpaperColor: '#6366f1', vignetteIntensity: 52, vignetteDirection: 'center', glow: 118, radius: 'round', vibe: 'abyss' } },
-    { id: 'void', label: 'Void', desc: 'Dark · drifting smoke', category: 'dark',
-      cos: { theme: 'dark', accent: '#94a3b8', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#cbd5e1', scanlines: false, bgPattern: 'smoke', wallpaperBrightness: 38, wallpaperIntensity: 48, wallpaperAnimSpeed: 28, wallpaperUseAccent: true, vignetteIntensity: 42, vignetteDirection: 'all', glow: 72, radius: 'sharp', vibe: 'void' } },
-    { id: 'drizzle', label: 'Drizzle', desc: 'Light · soft rainfall', category: 'light',
-      cos: { theme: 'light', accent: '#64748b', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#94a3b8', scanlines: false, bgPattern: 'rain', wallpaperBrightness: 36, wallpaperIntensity: 44, wallpaperAnimSpeed: 48, wallpaperUseAccent: true, glow: 78, radius: 'soft', vibe: 'drizzle' } },
-    { id: 'cream', label: 'Cream', desc: 'Light · morphing shapes', category: 'light',
-      cos: { theme: 'light', accent: '#d97706', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#f59e0b', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 44, wallpaperIntensity: 38, wallpaperAnimSpeed: 40, wallpaperUseAccent: true, glow: 86, radius: 'round', vibe: 'cream' } },
-    { id: 'phosphor', label: 'Phosphor', desc: 'Retro · green data stream', category: 'retro',
-      cos: { theme: 'dark', accent: '#39ff14', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'beam', cursorColor: '#39ff14', scanlines: true, bgPattern: 'binarystream', wallpaperBrightness: 50, wallpaperIntensity: 62, wallpaperAnimSpeed: 68, wallpaperUseAccent: true, glow: 125, radius: 'sharp', vibe: 'phosphor' } },
-    { id: 'tube', label: 'Tube', desc: 'Retro · CRT amber haze', category: 'retro',
-      cos: { theme: 'dark', accent: '#f59e0b', type: 'retro', headingFont: 'retro', tracking: 'wide', cursorStyle: 'square', cursorColor: '#fbbf24', scanlines: true, bgPattern: 'smoke', wallpaperBrightness: 42, wallpaperIntensity: 52, wallpaperAnimSpeed: 35, wallpaperUseAccent: false, wallpaperColor: '#f59e0b', vignetteIntensity: 38, vignetteDirection: 'horizontal', glow: 105, radius: 'sharp', vibe: 'tube' } },
-    { id: 'volta', label: 'Volta', desc: 'Bold · crackling energy', category: 'bold',
-      cos: { theme: 'dark', accent: '#facc15', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#fef08a', scanlines: false, bgPattern: 'lightning', wallpaperBrightness: 58, wallpaperIntensity: 72, wallpaperAnimSpeed: 78, wallpaperUseAccent: false, wallpaperColor: '#eab308', vignetteIntensity: 35, vignetteDirection: 'center', glow: 155, radius: 'round', vibe: 'volta' } },
-    { id: 'helix', label: 'Helix', desc: 'Bold · morphing geometry', category: 'bold',
-      cos: { theme: 'dark', accent: '#ec4899', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#f472b6', scanlines: false, bgPattern: 'morphgeo', wallpaperBrightness: 54, wallpaperIntensity: 58, wallpaperAnimSpeed: 55, wallpaperUseAccent: false, wallpaperColor: '#a855f7', vignetteIntensity: 32, vignetteDirection: 'center', glow: 148, radius: 'round', vibe: 'helix' } },
-    { id: 'cipher', label: 'Cipher', desc: 'Bold · scrolling binary', category: 'bold',
+    /* extended: aurora overlaps sunset / northern */
+    { id: 'northern', label: 'Northern', desc: 'Dark · aurora lights', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#34d399', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'halo', cursorColor: '#6ee7b7', scanlines: false, bgPattern: 'aurora', wallpaperBrightness: 58, wallpaperIntensity: 48, wallpaperAnimSpeed: 38, wallpaperUseAccent: false, wallpaperColor: '#10b981', vignetteIntensity: 30, vignetteDirection: 'bottom', glow: 130, radius: 'round', vibe: 'northern' } },
+    { id: 'eclipse', label: 'Eclipse', desc: 'Dark · ripple pool + comets', category: 'bold',
+      cos: { theme: 'dark', accent: '#fbbf24', type: 'editorial', headingFont: 'editorial', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#fde68a', scanlines: false, bgPattern: 'ripplepool', wallpaperBrightness: 42, wallpaperIntensity: 38, wallpaperAnimSpeed: 35, cursorInteractStrength: 62, cursorParticleDensity: 40, cursorEffect: 'comet', cursorEffectCometDirection: 'cursor', cursorEffectCometIntensity: 58, cursorEffectCometSpeed: 52, wallpaperUseAccent: true, vignetteIntensity: 55, vignetteDirection: 'center', glow: 105, radius: 'soft', vibe: 'eclipse' } },
+    /* extended: green honeycombGlow overlaps neon circuits / solar light */
+    { id: 'digital', label: 'Digital', desc: 'Dark · honeycomb glow', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#22c55e', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'beam', cursorColor: '#4ade80', scanlines: true, bgPattern: 'honeycombGlow', honeycombStyle: 'outline', wallpaperBrightness: 52, wallpaperIntensity: 65, wallpaperAnimSpeed: 55, wallpaperUseAccent: false, wallpaperColor: '#16a34a', glow: 95, radius: 'sharp', vibe: 'digital' } },
+    /* extended: violet particles overlap lilac */
+    { id: 'drift', label: 'Drift', desc: 'Light · floating motes', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#7c3aed', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#6d28d9', scanlines: false, bgPattern: 'particles', wallpaperBrightness: 54, wallpaperIntensity: 34, wallpaperAnimSpeed: 42, particleDensity: 34, particleSize: 40, wallpaperUseAccent: false, wallpaperColor: '#8b5cf6', glow: 88, radius: 'round', vibe: 'drift' } },
+    /* extended: soft pink aurora overlaps sunset */
+    { id: 'breathe', label: 'Breathe', desc: 'Light · soft glow', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#e11d48', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'dot', cursorColor: '#be123c', scanlines: false, bgPattern: 'aurora', wallpaperBrightness: 50, wallpaperIntensity: 36, wallpaperAnimSpeed: 28, wallpaperUseAccent: false, wallpaperColor: '#f43f5e', glow: 92, radius: 'round', vibe: 'breathe' } },
+    { id: 'deepsea', label: 'Deep sea', desc: 'Dark · fireflies + trail', category: 'dark',
+      cos: { theme: 'dark', accent: '#06b6d4', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'trail', cursorColor: '#67e8f9', scanlines: false, bgPattern: 'fireflies', wallpaperBrightness: 44, wallpaperIntensity: 32, wallpaperAnimSpeed: 52, cursorInteractStrength: 70, cursorParticleDensity: 28, cursorSweepRadius: 52, cursorEffect: 'trail', cursorEffectTrailStyle: 'glow', cursorEffectTrailLength: 62, cursorEffectIntensity: 70, wallpaperUseAccent: true, vignetteIntensity: 38, vignetteDirection: 'bottom', glow: 125, radius: 'soft', vibe: 'deepsea' } },
+    /* extended: lightning overlaps static / deepsea weather — user-requested hide */
+    { id: 'storm', label: 'Storm', desc: 'Dark · electric sky', category: 'dark', hidden: true,
+      cos: { theme: 'dark', accent: '#60a5fa', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#93c5fd', scanlines: false, bgPattern: 'lightning', wallpaperBrightness: 52, wallpaperIntensity: 55, wallpaperAnimSpeed: 62, wallpaperUseAccent: true, cursorEffect: 'spark', cursorEffectIntensity: 68, vignetteIntensity: 48, vignetteDirection: 'top', glow: 135, radius: 'soft', vibe: 'storm' } },
+    /* extended: violet nebula overlaps void / royal — user-requested hide */
+    { id: 'abyss', label: 'Abyss', desc: 'Dark · cosmic nebula', category: 'dark', hidden: true,
+      cos: { theme: 'dark', accent: '#818cf8', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'ring', cursorColor: '#a5b4fc', scanlines: false, bgPattern: 'nebula', wallpaperBrightness: 52, wallpaperIntensity: 46, wallpaperAnimSpeed: 32, wallpaperUseAccent: false, wallpaperColor: '#4338ca', cursorEffect: 'glow', cursorEffectIntensity: 52, vignetteIntensity: 52, vignetteDirection: 'center', glow: 118, radius: 'round', vibe: 'abyss' } },
+    /* extended: grey nebula near-duplicate of abyss */
+    { id: 'void', label: 'Void', desc: 'Dark · soft nebula', category: 'dark', hidden: true,
+      cos: { theme: 'dark', accent: '#94a3b8', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#e2e8f0', scanlines: false, bgPattern: 'nebula', wallpaperBrightness: 44, wallpaperIntensity: 50, wallpaperAnimSpeed: 28, wallpaperUseAccent: false, wallpaperColor: '#64748b', vignetteIntensity: 42, vignetteDirection: 'all', glow: 72, radius: 'sharp', vibe: 'void' } },
+    { id: 'drizzle', label: 'Drizzle', desc: 'Light · interactive snow', category: 'light',
+      cos: { theme: 'light', accent: '#475569', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#334155', scanlines: false, bgPattern: 'snowinteractive', wallpaperBrightness: 44, wallpaperIntensity: 48, wallpaperAnimSpeed: 48, cursorInteractStrength: 55, cursorSweepRadius: 58, cursorParticleDensity: 48, wallpaperUseAccent: false, wallpaperColor: '#64748b', glow: 78, radius: 'soft', vibe: 'drizzle' } },
+    /* extended: amber morphgeo light overlaps citrus multi-tone */
+    { id: 'cream', label: 'Cream', desc: 'Light · morphing shapes', category: 'light', hidden: true,
+      cos: { theme: 'light', accent: '#b45309', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#92400e', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'spin', wallpaperBrightness: 50, wallpaperIntensity: 42, wallpaperAnimSpeed: 40, wallpaperUseAccent: false, wallpaperColor: '#d97706', glow: 86, radius: 'round', vibe: 'cream' } },
+    /* extended: green binarystream overlaps matrix / glitch */
+    { id: 'phosphor', label: 'Phosphor', desc: 'Retro · green data stream', category: 'retro', hidden: true,
+      cos: { theme: 'dark', accent: '#39ff14', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'beam', cursorColor: '#39ff14', scanlines: true, bgPattern: 'binarystream', wallpaperBrightness: 50, wallpaperIntensity: 62, wallpaperAnimSpeed: 68, binaryFontSize: 72, wallpaperUseAccent: true, cursorEffect: 'glow', cursorEffectIntensity: 80, glow: 125, radius: 'sharp', vibe: 'phosphor' } },
+    /* extended: amber nebula CRT overlaps terminal / void */
+    { id: 'tube', label: 'Tube', desc: 'Retro · CRT amber comets', category: 'retro', hidden: true,
+      cos: { theme: 'dark', accent: '#f59e0b', type: 'retro', headingFont: 'retro', tracking: 'wide', cursorStyle: 'square', cursorColor: '#fbbf24', scanlines: true, bgPattern: 'nebula', wallpaperBrightness: 42, wallpaperIntensity: 52, wallpaperAnimSpeed: 35, wallpaperUseAccent: false, wallpaperColor: '#f59e0b', cursorEffect: 'comet', cursorEffectCometDirection: 'random', cursorEffectCometIntensity: 45, vignetteIntensity: 38, vignetteDirection: 'horizontal', glow: 105, radius: 'sharp', vibe: 'tube' } },
+    /* extended: yellow circuits overlap neon */
+    { id: 'volta', label: 'Volta', desc: 'Bold · crackling circuits', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#facc15', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'trail', cursorColor: '#fef08a', scanlines: false, bgPattern: 'circuits', wallpaperBrightness: 60, wallpaperIntensity: 72, wallpaperAnimSpeed: 78, wallpaperUseAccent: false, wallpaperColor: '#ca8a04', vignetteIntensity: 35, vignetteDirection: 'center', glow: 155, radius: 'round', vibe: 'volta' } },
+    /* extended: pink morphgeo overlaps crimson / prism */
+    { id: 'helix', label: 'Helix', desc: 'Bold · morphing geometry', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#ec4899', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#f472b6', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'orbit', wallpaperBrightness: 56, wallpaperIntensity: 58, wallpaperAnimSpeed: 55, wallpaperUseAccent: false, wallpaperColor: '#7c3aed', vignetteIntensity: 32, vignetteDirection: 'center', glow: 148, radius: 'round', vibe: 'helix' } },
+    /* extended: teal binary overlaps matrix / phosphor */
+    { id: 'cipher', label: 'Cipher', desc: 'Bold · scrolling binary', category: 'bold', hidden: true,
       cos: { theme: 'dark', accent: '#14b8a6', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'beam', cursorColor: '#2dd4bf', scanlines: true, bgPattern: 'binarystream', wallpaperBrightness: 46, wallpaperIntensity: 70, wallpaperAnimSpeed: 82, wallpaperUseAccent: true, glow: 112, radius: 'sharp', vibe: 'cipher' } },
+    /* extended: indigo morphgeo spark overlaps crimson */
+    { id: 'prism', label: 'Prism', desc: 'Bold · pulsing geometry + sparks', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#818cf8', type: 'modern', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#c4b5fd', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'pulse', wallpaperBrightness: 54, wallpaperIntensity: 55, wallpaperAnimSpeed: 48, wallpaperUseAccent: false, wallpaperColor: '#4338ca', cursorEffect: 'spark', cursorEffectIntensity: 68, vignetteIntensity: 38, vignetteDirection: 'center', glow: 142, radius: 'round', vibe: 'prism' } },
+    /* extended: grey rain+ripple overlaps storm / drizzle weather family */
+    { id: 'static', label: 'Static', desc: 'Bold · storm rain + ripples', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#94a3b8', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#cbd5e1', scanlines: false, bgPattern: 'rain', rainDirection: 'diagonal-right', wallpaperBrightness: 44, wallpaperIntensity: 58, wallpaperAnimSpeed: 65, wallpaperUseAccent: true, cursorEffect: 'ripple', cursorEffectIntensity: 62, cursorEffectRippleCount: 60, vignetteIntensity: 42, vignetteDirection: 'top', glow: 88, radius: 'sharp', vibe: 'static' } },
+    /* extended: matrix rain variant overlaps matrix preset */
+    { id: 'glitch', label: 'Glitch', desc: 'Bold · matrix rain + dotted trail', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#a3e635', type: 'pixel', headingFont: 'pixel', tracking: 'normal', cursorStyle: 'pixel', cursorColor: '#bef264', scanlines: true, bgPattern: 'matrixrain', wallpaperBrightness: 48, wallpaperIntensity: 72, wallpaperAnimSpeed: 78, wallpaperUseAccent: true, cursorEffect: 'trail', cursorEffectTrailStyle: 'dotted', cursorEffectTrailLength: 70, cursorEffectIntensity: 75, glow: 118, radius: 'sharp', vibe: 'glitch' } },
+    /* extended: pink cosmos overlaps royal */
+    { id: 'supernova', label: 'Supernova', desc: 'Bold · cosmos + upward comets', category: 'bold', hidden: true,
+      cos: { theme: 'dark', accent: '#f472b6', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'halo', cursorColor: '#fbcfe8', scanlines: false, bgPattern: 'cosmos', wallpaperBrightness: 54, wallpaperIntensity: 44, wallpaperAnimSpeed: 42, starSize: 72, cometDensity: 58, wallpaperUseAccent: false, wallpaperColor: '#db2777', cursorEffect: 'comet', cursorEffectCometDirection: 'up', cursorEffectCometIntensity: 72, cursorEffectCometSpeed: 60, vignetteIntensity: 45, vignetteDirection: 'center', glow: 148, radius: 'round', vibe: 'supernova' } },
+    /* —— Multi-tone —— */
+    { id: 'split', label: 'Split', desc: 'Multi · coral ink + gold cursor', category: 'multi-tone',
+      cos: { theme: 'dark', accent: '#ff6b6b', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'ring', cursorColor: '#fde047', scanlines: false, bgPattern: 'honeycomb', honeycombStyle: 'outline', wallpaperBrightness: 58, wallpaperIntensity: 60, wallpaperUseAccent: false, wallpaperColor: '#5eead4', cursorEffect: 'spark', cursorEffectIntensity: 55, glow: 110, radius: 'soft', vibe: 'split' } },
+    { id: 'duotone', label: 'Duotone', desc: 'Multi · violet sky + pink cursor', category: 'multi-tone',
+      cos: { theme: 'dark', accent: '#c084fc', type: 'editorial', headingFont: 'editorial', tracking: 'wide', cursorStyle: 'halo', cursorColor: '#fb7185', scanlines: false, bgPattern: 'fireflies', wallpaperBrightness: 56, wallpaperIntensity: 48, wallpaperAnimSpeed: 50, cursorInteractStrength: 72, cursorParticleDensity: 42, cursorSweepRadius: 48, wallpaperUseAccent: false, wallpaperColor: '#67e8f9', cursorEffect: 'trail', cursorEffectTrailStyle: 'particles', cursorEffectTrailLength: 50, cursorEffectIntensity: 58, vignetteIntensity: 40, vignetteDirection: 'bottom', glow: 125, radius: 'round', vibe: 'duotone' } },
+    /* extended: slate waves overlap sky / sunset — user-requested hide */
+    { id: 'inkwave', label: 'Ink wave', desc: 'Multi · slate waves + crimson cursor', category: 'multi-tone', hidden: true,
+      cos: { theme: 'light', accent: '#0f172a', type: 'slab', headingFont: 'slab', tracking: 'tight', cursorStyle: 'bold', cursorColor: '#e11d48', scanlines: false, bgPattern: 'waves', waveDirection: 'left', wallpaperBrightness: 52, wallpaperIntensity: 50, wallpaperAnimSpeed: 46, wallpaperUseAccent: false, wallpaperColor: '#475569', cursorEffect: 'ripple', cursorEffectIntensity: 48, cursorEffectRippleCount: 42, glow: 72, radius: 'sharp', vibe: 'inkwave' } },
+    /* extended: lime morph overlaps crimson / cream */
+    { id: 'citrus', label: 'Citrus', desc: 'Multi · lime morph + red cursor', category: 'multi-tone', hidden: true,
+      cos: { theme: 'light', accent: '#4d7c0f', type: 'rounded', headingFont: 'rounded', tracking: 'normal', cursorStyle: 'outline', cursorColor: '#dc2626', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'orbit', wallpaperBrightness: 58, wallpaperIntensity: 48, wallpaperAnimSpeed: 44, wallpaperUseAccent: false, wallpaperColor: '#92400e', glow: 92, radius: 'round', vibe: 'citrus' } },
+    /* extended: silver honeycombGlow overlaps digital / noir */
+    { id: 'noir', label: 'Noir', desc: 'Multi · silver glow + amber cursor', category: 'multi-tone', hidden: true,
+      cos: { theme: 'dark', accent: '#e2e8f0', type: 'mono', headingFont: 'mono', tracking: 'tight', cursorStyle: 'cross', cursorColor: '#fbbf24', scanlines: false, bgPattern: 'honeycombGlow', honeycombStyle: 'outline', wallpaperBrightness: 55, wallpaperIntensity: 62, wallpaperAnimSpeed: 52, wallpaperUseAccent: false, wallpaperColor: '#94a3b8', glow: 95, radius: 'sharp', vibe: 'noir' } },
+    { id: 'coralpool', label: 'Coral pool', desc: 'Multi · teal ripples + lime cursor', category: 'multi-tone',
+      cos: { theme: 'dark', accent: '#f97316', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'dot', cursorColor: '#a3e635', scanlines: false, bgPattern: 'ripplepool', wallpaperBrightness: 54, wallpaperIntensity: 50, wallpaperAnimSpeed: 38, cursorInteractStrength: 75, cursorTrailLength: 62, wallpaperUseAccent: false, wallpaperColor: '#22d3ee', cursorEffect: 'ripple', cursorEffectIntensity: 54, cursorEffectRippleCount: 62, vignetteIntensity: 48, vignetteDirection: 'center', glow: 115, radius: 'soft', vibe: 'coralpool' } },
+    { id: 'polar', label: 'Polar', desc: 'Multi · ice aurora + ember cursor', category: 'multi-tone',
+      cos: { theme: 'dark', accent: '#0ea5e9', type: 'modern', headingFont: 'grotesk', tracking: 'normal', cursorStyle: 'halo', cursorColor: '#fb923c', scanlines: false, bgPattern: 'aurora', wallpaperBrightness: 58, wallpaperIntensity: 48, wallpaperAnimSpeed: 34, wallpaperUseAccent: false, wallpaperColor: '#7dd3fc', cursorEffect: 'glow', cursorEffectIntensity: 58, vignetteIntensity: 42, vignetteDirection: 'bottom', glow: 118, radius: 'round', vibe: 'polar' } },
+    /* extended: violet morph overlaps crimson / prism — user-requested hide */
+    { id: 'gilded', label: 'Gilded', desc: 'Multi · violet morph + gold cursor', category: 'multi-tone', hidden: true,
+      cos: { theme: 'dark', accent: '#c084fc', type: 'editorial', headingFont: 'display', tracking: 'wide', cursorStyle: 'diamond', cursorColor: '#fcd34d', scanlines: false, bgPattern: 'morphgeo', morphStyle: 'pulse', wallpaperBrightness: 58, wallpaperIntensity: 54, wallpaperAnimSpeed: 46, wallpaperUseAccent: false, wallpaperColor: '#8b5cf6', cursorEffect: 'comet', cursorEffectCometDirection: 'cursor', cursorEffectCometIntensity: 55, cursorEffectCometSpeed: 48, vignetteIntensity: 36, vignetteDirection: 'center', glow: 132, radius: 'round', vibe: 'gilded' } },
   ];
 
-  const CUSTOM_VIBE_IDS = ['custom-1', 'custom-2', 'custom-3', 'custom-4', 'custom-5', 'custom-6'];
-  const CUSTOM_VIBE_SLOT_COUNT = CUSTOM_VIBE_IDS.length;
+  function isVibeHidden(vibe) {
+    if (!vibe || typeof vibe !== 'object') return false;
+    return vibe.hidden === true || vibe.tier === 'extended';
+  }
+
+  function getVisibleVibes() {
+    return VIBES.filter((v) => !isVibeHidden(v));
+  }
+
+  function getExtendedVibes() {
+    return VIBES.filter((v) => isVibeHidden(v));
+  }
+
+  const CUSTOM_VIBE_ID_PREFIX = 'custom-';
   const COSMETIC_SNAPSHOT_KEYS = [
     'theme', 'accent', 'accentTone', 'type', 'fontScale', 'headingFont', 'tracking',
     'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor',
-    'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperRandomness',
+    'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperAnimPaused', 'wallpaperRandomness',
     'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection',
-    'rainDirection', 'starSize', 'cometDensity', 'cometDirection',
-    'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'morphStyle', 'numberFormat', 'binaryFontSize',
+    'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
+    'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'morphStyle', 'morphBlobCount', 'morphSmoothness', 'morphMergeStrength', 'numberFormat', 'binaryFontSize',
+    'honeycombStyle', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
+    'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
+    'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
+    'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
     'glow', 'radius',
   ];
 
   function createDefaultCustomVibes() {
-    return CUSTOM_VIBE_IDS.map((id, i) => ({
-      id,
-      name: '',
-      label: 'Custom vibe ' + (i + 1),
-      cos: null,
-    }));
+    return [];
   }
 
-  /* Heal cosmetics.customVibes on load — legacy drafts, sparse arrays, null slots. */
+  function isCustomVibeId(id) {
+    return typeof id === 'string' && id.startsWith(CUSTOM_VIBE_ID_PREFIX) && id.length > CUSTOM_VIBE_ID_PREFIX.length;
+  }
+
+  function customVibeNum(id) {
+    const n = parseInt(String(id || '').slice(CUSTOM_VIBE_ID_PREFIX.length), 10);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function nextCustomVibeId(customVibes) {
+    const slots = Array.isArray(customVibes) ? customVibes : [];
+    let max = 0;
+    for (const s of slots) {
+      if (!s || !isCustomVibeId(s.id)) continue;
+      const n = customVibeNum(s.id);
+      if (n > max) max = n;
+    }
+    return CUSTOM_VIBE_ID_PREFIX + (max + 1);
+  }
+
+  /* Heal cosmetics.customVibes on load — legacy fixed slots, sparse arrays, empty slots. */
   function normalizeCustomVibeSlot(slot, id, labelDefault) {
     const row = slot && typeof slot === 'object' && !Array.isArray(slot) ? slot : {};
     const cos = row.cos;
@@ -179,12 +289,29 @@
     };
   }
 
+  function healBgPattern(raw) {
+    if (typeof raw !== 'string') return 'grid';
+    if (BG_PATTERNS.includes(raw)) return raw;
+    return LEGACY_BG_PATTERNS[raw] || 'grid';
+  }
+
   function coerceCustomVibes(value) {
-    return CUSTOM_VIBE_IDS.map((id, i) => normalizeCustomVibeSlot(
-      Array.isArray(value) ? value[i] : undefined,
-      id,
-      'Custom vibe ' + (i + 1),
-    ));
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    const out = [];
+    for (const raw of value) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+      const id = isCustomVibeId(raw.id) ? raw.id : null;
+      if (!id || seen.has(id)) continue;
+      const num = customVibeNum(id);
+      const slot = normalizeCustomVibeSlot(raw, id, num > 0 ? 'Custom vibe ' + num : id);
+      if (!slot.cos || typeof slot.cos !== 'object') continue;
+      if (slot.cos.bgPattern) slot.cos = { ...slot.cos, bgPattern: healBgPattern(slot.cos.bgPattern) };
+      seen.add(id);
+      out.push(slot);
+    }
+    out.sort((a, b) => customVibeNum(a.id) - customVibeNum(b.id));
+    return out;
   }
 
   /* Merge missing cosmetics scalars + heal custom vibe slots (admin draft load). */
@@ -192,6 +319,12 @@
     const def = defaultCos && typeof defaultCos === 'object' ? defaultCos : {};
     const c = cos && typeof cos === 'object' && !Array.isArray(cos) ? { ...cos } : {};
     c.customVibes = coerceCustomVibes(c.customVibes);
+    if (c.bgPattern === 'hexagons' || c.bgPattern === 'hex') {
+      c.bgPattern = 'honeycomb';
+      if (!HONEYCOMB_STYLES.includes(c.honeycombStyle)) c.honeycombStyle = 'fill';
+    } else if (c.bgPattern) {
+      c.bgPattern = healBgPattern(c.bgPattern);
+    }
     for (const k of Object.keys(def)) {
       if (k === 'customVibes') continue;
       if (c[k] === undefined) c[k] = def[k];
@@ -202,14 +335,10 @@
     return c;
   }
 
-  function isCustomVibeId(id) {
-    return CUSTOM_VIBE_IDS.includes(id);
-  }
-
   function getCustomVibe(id, customVibes) {
     if (!isCustomVibeId(id)) return null;
-    const slots = Array.isArray(customVibes) ? customVibes : [];
-    return slots.find((s) => s && s.id === id) || { id, name: '', label: 'Custom vibe ' + id.replace('custom-', ''), cos: null };
+    const slots = coerceCustomVibes(customVibes);
+    return slots.find((s) => s && s.id === id) || null;
   }
 
   function snapshotCosmetics(cos) {
@@ -623,21 +752,23 @@
   function getVibe(id) { return VIBES.find((v) => v.id === id) || null; }
 
   function validateCustomVibes(value) {
-    if (!Array.isArray(value)) return { error: 'invalid-cosmetics', message: 'cosmetics.customVibes must be an array of ' + CUSTOM_VIBE_SLOT_COUNT + ' slots' };
-    if (value.length !== CUSTOM_VIBE_SLOT_COUNT) return { error: 'invalid-cosmetics', message: 'cosmetics.customVibes must contain exactly ' + CUSTOM_VIBE_SLOT_COUNT + ' slots' };
+    if (!Array.isArray(value)) return { error: 'invalid-cosmetics', message: 'cosmetics.customVibes must be an array' };
+    const seen = new Set();
     for (let i = 0; i < value.length; i++) {
       const slot = value[i];
       if (!slot || typeof slot !== 'object') return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}] must be an object` };
-      if (slot.id !== CUSTOM_VIBE_IDS[i]) return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].id must be "${CUSTOM_VIBE_IDS[i]}"` };
+      if (!isCustomVibeId(slot.id)) return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].id must start with "${CUSTOM_VIBE_ID_PREFIX}"` };
+      if (seen.has(slot.id)) return { error: 'invalid-cosmetics', message: `cosmetics.customVibes duplicate id "${slot.id}"` };
+      seen.add(slot.id);
       if (typeof slot.label !== 'string') return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].label must be a string` };
       if (slot.name != null && typeof slot.name !== 'string') return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].name must be a string` };
-      if (slot.cos != null) {
-        if (typeof slot.cos !== 'object' || Array.isArray(slot.cos)) return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].cos must be an object or null` };
-        for (const k of Object.keys(slot.cos)) {
-          if (!COSMETIC_SNAPSHOT_KEYS.includes(k)) return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].cos.${k} is not a valid cosmetic field` };
-          const err = validateCosmeticsWrite('cosmetics.' + k, slot.cos[k]);
-          if (err) return err;
-        }
+      if (slot.cos == null || typeof slot.cos !== 'object' || Array.isArray(slot.cos)) {
+        return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].cos must be an object` };
+      }
+      for (const k of Object.keys(slot.cos)) {
+        if (!COSMETIC_SNAPSHOT_KEYS.includes(k)) return { error: 'invalid-cosmetics', message: `cosmetics.customVibes[${i}].cos.${k} is not a valid cosmetic field` };
+        const err = validateCosmeticsWrite('cosmetics.' + k, slot.cos[k]);
+        if (err) return err;
       }
     }
     return null;
@@ -723,6 +854,15 @@
       case 'cursorStyle':
         if (!CURSOR_STYLES.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.cursorStyle must be one of: ${CURSOR_STYLES.join(', ')}` };
         break;
+      case 'cursorEffect':
+        if (!CURSOR_EFFECTS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.cursorEffect must be one of: ${CURSOR_EFFECTS.join(', ')}` };
+        break;
+      case 'cursorEffectTrailStyle':
+        if (!CURSOR_EFFECT_TRAIL_STYLES.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.cursorEffectTrailStyle must be one of: ${CURSOR_EFFECT_TRAIL_STYLES.join(', ')}` };
+        break;
+      case 'cursorEffectCometDirection':
+        if (!CURSOR_EFFECT_COMET_DIRECTIONS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.cursorEffectCometDirection must be one of: ${CURSOR_EFFECT_COMET_DIRECTIONS.join(', ')}` };
+        break;
       case 'bgPattern':
         if (!BG_PATTERNS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.bgPattern must be one of: ${BG_PATTERNS.join(', ')}` };
         break;
@@ -743,13 +883,16 @@
         break;
       case 'vibe':
         if (!getVibe(value) && !isCustomVibeId(value)) {
-          return { error: 'unknown-vibe', message: `Unknown vibe id: ${value}. Use applyVibePreset for built-in presets or custom-1..custom-6.` };
+          return { error: 'unknown-vibe', message: `Unknown vibe id: ${value}. Use applyVibePreset for built-in presets or a custom-* slot id.` };
         }
         break;
       case 'customVibes':
         return validateCustomVibes(value);
       case 'rainDirection':
         if (!RAIN_DIRECTIONS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.rainDirection must be one of: ${RAIN_DIRECTIONS.join(', ')}` };
+        break;
+      case 'waveDirection':
+        if (!WAVE_DIRECTIONS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.waveDirection must be one of: ${WAVE_DIRECTIONS.join(', ')}` };
         break;
       case 'cometDirection':
         if (!COMET_DIRECTIONS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.cometDirection must be one of: ${COMET_DIRECTIONS.join(', ')}` };
@@ -759,6 +902,14 @@
         break;
       case 'morphStyle':
         if (!MORPH_STYLES.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.morphStyle must be one of: ${MORPH_STYLES.join(', ')}` };
+        break;
+      case 'morphBlobCount': {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n < 2 || n > 8) return { error: 'invalid-cosmetics', message: 'cosmetics.morphBlobCount must be a number 2–8' };
+        break;
+      }
+      case 'honeycombStyle':
+        if (!HONEYCOMB_STYLES.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.honeycombStyle must be one of: ${HONEYCOMB_STYLES.join(', ')}` };
         break;
       case 'numberFormat':
         if (!NUMBER_FORMATS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.numberFormat must be one of: ${NUMBER_FORMATS.join(', ')}` };
@@ -774,13 +925,27 @@
       case 'particleSize':
       case 'particleDensity':
       case 'particleOpacity':
+      case 'morphSmoothness':
+      case 'morphMergeStrength':
       case 'binaryFontSize':
+      case 'cursorInteractStrength':
+      case 'cursorTrailLength':
+      case 'cursorParticleDensity':
+      case 'cursorSweepRadius':
+      case 'cursorEffectTrailLength':
+      case 'cursorEffectIntensity':
+      case 'cursorEffectRippleCount':
+      case 'cursorEffectRippleSpeed':
+      case 'cursorEffectCometIntensity':
+      case 'cursorEffectCometSpeed':
       case 'vignetteIntensity':
       case 'glow': {
         const ranges = {
           accentTone: [0, 100], fontScale: [85, 120], wallpaperBrightness: [0, 100], wallpaperIntensity: [0, 100],
           wallpaperAnimSpeed: [0, 100], wallpaperRandomness: [0, 100], starSize: [0, 100], cometDensity: [0, 100],
-          particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], binaryFontSize: [0, 100],
+          particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], morphSmoothness: [0, 100], morphMergeStrength: [0, 100], binaryFontSize: [0, 100],
+          cursorInteractStrength: [0, 100], cursorTrailLength: [0, 100], cursorParticleDensity: [0, 100], cursorSweepRadius: [0, 100],
+          cursorEffectTrailLength: [0, 100], cursorEffectIntensity: [0, 100], cursorEffectRippleCount: [0, 100], cursorEffectRippleSpeed: [0, 100], cursorEffectCometIntensity: [0, 100], cursorEffectCometSpeed: [0, 100],
           vignetteIntensity: [0, 100], glow: [0, 160],
         };
         const bounds = ranges[field];
@@ -791,6 +956,7 @@
         break;
       }
       case 'wallpaperUseAccent':
+      case 'wallpaperAnimPaused':
       case 'scanlines':
         if (typeof value !== 'boolean') return { error: 'invalid-cosmetics', message: `cosmetics.${field} must be a boolean` };
         break;
@@ -800,7 +966,7 @@
     return null;
   }
 
-  /* Resolve active cosmetics — merges custom-1..6 slot snapshot when cosmetics.vibe is custom. */
+  /* Resolve active cosmetics — merges custom-* slot snapshot when cosmetics.vibe is custom. */
   function resolveEffectiveCosmetics(cos) {
     return mergeCustomVibeCosmetics(cos);
   }
@@ -828,10 +994,17 @@
         : k === 'vignetteDirection' ? 'center'
         : k === 'fontScale' ? 100
         : k === 'rainDirection' ? 'down'
+        : k === 'waveDirection' ? 'up'
+        : k === 'wallpaperAnimPaused' ? false
         : k === 'cometDirection' ? 'right-down'
         : k === 'particleDrift' ? 'up'
         : k === 'morphStyle' ? 'spin'
+        : k === 'morphBlobCount' ? 4
+        : k === 'honeycombStyle' ? 'outline'
         : k === 'numberFormat' ? 'binary'
+        : k === 'cursorEffect' ? 'none'
+        : k === 'cursorEffectTrailStyle' ? 'glow'
+        : k === 'cursorEffectCometDirection' ? 'cursor'
         : 50;
       return !validateCosmeticsWrite('cosmetics.' + k, sample);
     });
@@ -854,17 +1027,140 @@
   function cosmeticsFieldHint() {
     return [
       'Appearance (cosmetics.*): theme · accent · accentTone · type · headingFont · tracking · fontScale',
-      'bgPattern (grid|dots|scan|starfield|crosshatch|hex|circuits|waves|diagonal|brick|noise|aurora|cosmos|matrixrain|particles|pulse|lightning|rain|smoke|binarystream|nebula|morphgeo|none)',
-      'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperRandomness (0=deterministic/uniform sliders · 100=chaos overrides direction/speed/phase per element) · wallpaperUseAccent · wallpaperColor',
-      'Per-pattern: rainDirection (down|diagonal-left|diagonal-right|left|right) · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift (up|down|diagonal-up|diagonal-down|left|right) · morphStyle (spin|pulse|warp|orbit) · numberFormat (binary|octal|decimal|hex) · binaryFontSize',
+      'bgPattern (grid|dots|diagonal|crosshatch|3dgrid|honeycomb|honeycombGlow|padgrid|circuits|waves|brick|noise|aurora|cosmos|matrixrain|particles|lightning|rain|binarystream|nebula|morphgeo|snowinteractive|ripplepool|fireflies|none)',
+      'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperAnimPaused (freeze animated motion) · wallpaperRandomness (0=deterministic/uniform sliders · 100=chaos overrides direction/speed/phase per element) · wallpaperUseAccent (pattern ink follows accent when true) · wallpaperColor (custom pattern tint when wallpaperUseAccent is false; accent color always used for glow/hi on canvas patterns)',
+      'Per-pattern: honeycombStyle (outline|fill) · rainDirection · waveDirection · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · morphStyle (spin|pulse|warp|orbit) · morphBlobCount (2–8) · morphSmoothness (0–100 spline tension) · morphMergeStrength (0–100 blob attraction) · numberFormat · binaryFontSize · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
+      'cursorEffect (none|trail|comet|ripple|spark|glow) — global overlay independent of wallpaper · cursorEffectTrailStyle (glow|line|dotted|particles) · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount (ripple burst: 0=1 ring · 100=8 varied) · cursorEffectRippleSpeed (0=slow expansion · 100=fast) · cursorEffectCometDirection (cursor|up|down|random) · cursorEffectCometIntensity · cursorEffectCometSpeed',
       'vignetteIntensity (0=off) · vignetteDirection · glow · radius · scanlines · cursorStyle · cursorColor',
-      'botIcon · botIconColor · vibe (built-in preset id or custom-1..custom-6) · customVibes (6 saved slots). Prefer applyVibePreset / applyCustomVibe / saveCustomVibe.',
-      'Animated patterns: circuits · aurora · cosmos · matrixrain · particles · pulse · lightning · rain · smoke · binarystream · nebula · morphgeo.',
+      'botIcon · botIconColor · vibe (built-in preset id or custom-* slot id; segments: dark, light, retro, bold, multi-tone; admin shows 20 core presets — 28 extended tier hidden by default; agent applyVibePreset accepts any id) · customVibes (unlimited saved slots). Read: readAppearanceConfig. Write: setContentPath (cosmetics.*), updateAppearance (batch fields), applyVibePreset / applyCustomVibe, saveCustomVibe.',
+      'Multi-tone presets: wallpaperUseAccent false + explicit wallpaperColor for pattern ink; cursorColor often differs from accent and wallpaper tint.',
+      'Static honeycomb: honeycombStyle outline (grid lines) · fill (sparse filled cells via wallpaperIntensity). Animated: honeycombGlow (random accent hex pulses).',
+      'Interactive wallpapers: snowinteractive (continuous snowfall swept by cursor) · ripplepool (cursor disturbs water ripples) · fireflies (motes scatter from cursor).',
+      'Animated patterns: circuits · waves · aurora · cosmos · matrixrain · particles · lightning · rain · binarystream · nebula · morphgeo · honeycombGlow.',
     ].join(' ');
   }
+
+  function honeycombCellHash(col, row) {
+    const x = Math.sin(col * 127.1 + row * 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  function flatTopHexPath(cx, cy, r) {
+    const w = Math.sqrt(3) * r;
+    const pts = [
+      [cx, cy - r],
+      [cx + w / 2, cy - r / 2],
+      [cx + w / 2, cy + r / 2],
+      [cx, cy + r],
+      [cx - w / 2, cy + r / 2],
+      [cx - w / 2, cy - r / 2],
+    ];
+    return 'M' + pts.map((p) => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join('L') + 'Z';
+  }
+
+  function flatTopHexCorners(cx, cy, r) {
+    const hw = Math.sqrt(3) * r;
+    return [
+      [cx, cy - r],
+      [cx + hw / 2, cy - r / 2],
+      [cx + hw / 2, cy + r / 2],
+      [cx, cy + r],
+      [cx - hw / 2, cy + r / 2],
+      [cx - hw / 2, cy - r / 2],
+    ];
+  }
+
+  function honeycombEdgeKey(x1, y1, x2, y2) {
+    const a = x1.toFixed(2) + ',' + y1.toFixed(2);
+    const b = x2.toFixed(2) + ',' + y2.toFixed(2);
+    return a < b ? a + '|' + b : b + '|' + a;
+  }
+
+  function honeycombEdgeMidInTile(x1, y1, x2, y2, tileW, tileH) {
+    const mx = (x1 + x2) * 0.5;
+    const my = (y1 + y2) * 0.5;
+    const eps = 0.001;
+    return mx >= -eps && mx < tileW - eps && my >= -eps && my < tileH - eps;
+  }
+
+  function honeycombCenterInTile(cx, cy, tileW, tileH) {
+    const eps = 0.001;
+    return cx >= -eps && cx < tileW - eps && cy >= -eps && cy < tileH - eps;
+  }
+
+  /** Largest flat-top hex radius at (cx,cy) that fits entirely inside the repeat tile. */
+  function honeycombFillRadiusInTile(cx, cy, r, tileW, tileH) {
+    const rFromX = (2 / Math.sqrt(3)) * Math.min(cx, tileW - cx);
+    const rf = Math.min(r, rFromX, cy, tileH - cy);
+    return rf >= r * 0.92 ? r : rf >= r * 0.55 ? rf : 0;
+  }
+
+  /** Flat-top honeycomb SVG tile — deduped 1px edges for seamless repeat. */
+  function buildHoneycombSvgDataUri(opts) {
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const rowH = Math.max(12, o.size || 36);
+    const r = rowH / 1.5;
+    const w = Math.sqrt(3) * r;
+    const tileW = w * 2;
+    const tileH = rowH * 2;
+    const stroke = o.strokeColor || 'rgba(200,232,86,0.38)';
+    const fill = o.fillColor || stroke;
+    const style = o.style || o.mode || 'outline';
+    const isFill = style === 'fill' || style === 'filled-sparse';
+    const fillRatio = typeof o.fillRatio === 'number' ? o.fillRatio : 0;
+    const edges = new Map();
+    const cells = [];
+    for (let row = -1; row <= 3; row++) {
+      for (let col = -1; col <= 4; col++) {
+        const cx = col * w + (row % 2 !== 0 ? w / 2 : 0) + w / 2;
+        const cy = row * rowH + r;
+        if (cx < -w || cx > tileW + w || cy < -r || cy > tileH + r) continue;
+        cells.push({ col, row, cx, cy });
+        const pts = flatTopHexCorners(cx, cy, r);
+        for (let i = 0; i < 6; i++) {
+          const x1 = pts[i][0];
+          const y1 = pts[i][1];
+          const x2 = pts[(i + 1) % 6][0];
+          const y2 = pts[(i + 1) % 6][1];
+          if (!honeycombEdgeMidInTile(x1, y1, x2, y2, tileW, tileH)) continue;
+          edges.set(honeycombEdgeKey(x1, y1, x2, y2), { x1, y1, x2, y2 });
+        }
+      }
+    }
+    let body = '';
+    if (isFill) {
+      cells.forEach((cell) => {
+        if (!honeycombCenterInTile(cell.cx, cell.cy, tileW, tileH)) return;
+        if (honeycombCellHash(cell.col, cell.row) >= fillRatio) return;
+        const fillR = honeycombFillRadiusInTile(cell.cx, cell.cy, r, tileW, tileH);
+        if (fillR <= 0) return;
+        const d = flatTopHexPath(cell.cx, cell.cy, fillR);
+        body += '<path d="' + d + '" fill="' + fill + '" fill-opacity="0.52" stroke="none"/>';
+      });
+    }
+    if (!isFill || fillRatio > 0) {
+      edges.forEach(({ x1, y1, x2, y2 }) => {
+        body += '<line x1="' + x1.toFixed(2) + '" y1="' + y1.toFixed(2)
+          + '" x2="' + x2.toFixed(2) + '" y2="' + y2.toFixed(2)
+          + '" stroke="' + stroke + '" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+      });
+    }
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + tileW.toFixed(2) + '" height="' + tileH.toFixed(2)
+      + '" viewBox="0 0 ' + tileW.toFixed(2) + ' ' + tileH.toFixed(2) + '">' + body + '</svg>';
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+  }
+
+  function resolveHoneycombTileMetrics(size) {
+    const rowH = Math.max(12, size || 36);
+    const r = rowH / 1.5;
+    const w = Math.sqrt(3) * r;
+    return { tileW: w * 2, tileH: rowH * 2, r, rowH };
+  }
+
   function resolveWallpaperCosmetics(cos) {
     const c = cos && typeof cos === 'object' ? cos : {};
-    const pattern = BG_PATTERNS.includes(c.bgPattern) ? c.bgPattern : 'grid';
+    const rawPattern = typeof c.bgPattern === 'string' ? c.bgPattern : 'grid';
+    const pattern = healBgPattern(rawPattern);
     const bright = clampCosmeticNumber(c.wallpaperBrightness, 0, 100, 50);
     const intense = clampCosmeticNumber(c.wallpaperIntensity, 0, 100, 50);
     const animSpeed = clampCosmeticNumber(c.wallpaperAnimSpeed, 0, 100, 50);
@@ -877,8 +1173,17 @@
     const particleDrift = PARTICLE_DRIFT_DIRECTIONS.includes(c.particleDrift) ? c.particleDrift : 'up';
     const binaryFontSize = clampCosmeticNumber(c.binaryFontSize, 0, 100, 50);
     const rainDirection = RAIN_DIRECTIONS.includes(c.rainDirection) ? c.rainDirection : 'down';
+    const waveDirection = WAVE_DIRECTIONS.includes(c.waveDirection) ? c.waveDirection : 'up';
     const cometDirection = COMET_DIRECTIONS.includes(c.cometDirection) ? c.cometDirection : 'right-down';
     const morphStyle = MORPH_STYLES.includes(c.morphStyle) ? c.morphStyle : 'spin';
+    const morphBlobCount = Math.round(clampCosmeticNumber(c.morphBlobCount, 2, 8, 4));
+    const morphSmoothness = clampCosmeticNumber(c.morphSmoothness, 0, 100, 72);
+    const morphMergeStrength = clampCosmeticNumber(c.morphMergeStrength, 0, 100, 50);
+    const honeycombStyle = HONEYCOMB_STYLES.includes(c.honeycombStyle) ? c.honeycombStyle : 'outline';
+    const cursorInteractStrength = clampCosmeticNumber(c.cursorInteractStrength, 0, 100, 55);
+    const cursorTrailLength = clampCosmeticNumber(c.cursorTrailLength, 0, 100, 50);
+    const cursorParticleDensity = clampCosmeticNumber(c.cursorParticleDensity, 0, 100, 40);
+    const cursorSweepRadius = clampCosmeticNumber(c.cursorSweepRadius, 0, 100, 50);
     const numberFormat = NUMBER_FORMATS.includes(c.numberFormat) ? c.numberFormat : 'binary';
     const rand = randomness / 100;
     const i = intense / 100;
@@ -886,9 +1191,7 @@
     const pDensity = pattern === 'particles' ? particleDensity / 100 : i;
     const opacity = 0.15 + (bright / 100) * 0.85;
     const size = Math.round(56 - i * 44);
-    const fieldSize = pattern === 'starfield'
-      ? Math.round(520 + (1 - i) * 480)
-      : Math.round(480 - i * 360);
+    const fieldSize = Math.round(480 - i * 360);
     // Higher animSpeed → shorter duration (faster motion). 0≈60s · 50≈18s · 100≈1.5s.
     const speedSec = Math.max(1.5, Math.round(60 - (animSpeed / 100) * 58.5));
     const speedMult = 20 / speedSec;
@@ -930,6 +1233,15 @@
       right: { x: 1, y: 0 },
     };
     const particleDriftNorm = particleDriftVec[particleDrift] || particleDriftVec.up;
+    const waveDriftVec = {
+      up: { x: 0, y: -1 },
+      down: { x: 0, y: 1 },
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 },
+      'diagonal-up': { x: 1, y: -1 },
+      'diagonal-down': { x: 1, y: 1 },
+    };
+    const waveDriftNorm = waveDriftVec[waveDirection] || waveDriftVec.up;
     const particleDrifts = resolveParticleDriftLayers(
       particleDriftNorm.x,
       particleDriftNorm.y,
@@ -954,7 +1266,19 @@
       morphVariant,
       morphVariantAfter,
       morphStyle,
+      morphBlobCount,
+      morphSmoothness,
+      morphMergeStrength,
       morphPhase: randPhaseA + 'deg',
+      honeycombStyle,
+      cursorInteractStrength,
+      cursorTrailLength,
+      cursorTrailPoints: Math.round(8 + (cursorTrailLength / 100) * 36),
+      cursorParticleDensity,
+      cursorSnowCount: Math.max(12, Math.round(24 + ((cursorParticleDensity / 100) * 0.55 + (intense / 100) * 0.45) * 196)),
+      cursorSweepRadius,
+      cursorSweepPx: Math.round(28 + (cursorSweepRadius / 100) * 88),
+      cursorInteractNorm: cursorInteractStrength / 100,
       starCount: Math.round(24 + i * 72),
       starScale,
       cometInterval: Math.max(2.5, Math.round(16 - cometFreq * 12)),
@@ -962,7 +1286,7 @@
       cometDirection,
       cometVecX: cometVecNorm.vx,
       cometVecY: cometVecNorm.vy,
-      particleCount: Math.min(20, Math.round(6 + pDensity * 14)),
+      particleCount: Math.min(90, Math.round(8 + Math.pow(pDensity, 1.35) * 72)),
       particleSize,
       particleSizeScale: 0.65 + (particleSize / 100) * 1.1,
       particleOpacity,
@@ -978,6 +1302,11 @@
       rainDropCount: Math.round(90 + i * 260),
       rainDirection,
       rainTilt: rainTilt[rainDirection] != null ? rainTilt[rainDirection] : 1.5,
+      waveDirection,
+      waveDriftX: waveDriftNorm.x,
+      waveDriftY: waveDriftNorm.y,
+      waveTileX: Math.round(size * 2.5),
+      waveTileY: Math.round(size * 1.25),
       binaryRowCount: Math.round(18 + i * 34),
       numberFormat,
       numberGlyphs: numberGlyphs[numberFormat] || numberGlyphs.binary,
@@ -1140,13 +1469,23 @@
       alphaBoost: 0.95 + i * 0.35,
     };
   }
+  /** Pattern ink vs accent glow — dual-tone wallpaper colors. */
+  function resolveWallpaperColors(cos, tonedAccent) {
+    const c = cos && typeof cos === 'object' ? cos : {};
+    const accent = typeof tonedAccent === 'string' && tonedAccent ? tonedAccent : (c.accent || '#c8e856');
+    const useAccent = c.wallpaperUseAccent !== false;
+    const patternColor = useAccent ? accent : (c.wallpaperColor || accent);
+    return { patternColor, accentColor: accent };
+  }
+
   function applyWallpaperVarsToRoot(root, cos, tonedAccent) {
     if (!root) return;
     const c = cos && typeof cos === 'object' ? cos : {};
-    const useAccent = c.wallpaperUseAccent !== false;
-    const wpColor = useAccent ? tonedAccent : (c.wallpaperColor || tonedAccent);
+    const wpColors = resolveWallpaperColors(c, tonedAccent);
+    const wpColor = wpColors.patternColor;
     const wp = resolveWallpaperCosmetics(c);
     root.style.setProperty('--wallpaper-color', wpColor);
+    root.style.setProperty('--wallpaper-accent', wpColors.accentColor);
     root.style.setProperty('--wp-opacity', wp.opacity.toString());
     root.style.setProperty('--wp-size', wp.size + 'px');
     root.style.setProperty('--wp-field-size', wp.fieldSize + 'px');
@@ -1166,6 +1505,10 @@
     root.style.setProperty('--wp-p-drift-y-a', (wp.particleDriftAY == null ? wp.particleDriftY : wp.particleDriftAY).toString());
     root.style.setProperty('--wp-p-drift-x-b', (wp.particleDriftBX == null ? wp.particleDriftX : wp.particleDriftBX).toString());
     root.style.setProperty('--wp-p-drift-y-b', (wp.particleDriftBY == null ? wp.particleDriftY : wp.particleDriftBY).toString());
+    root.style.setProperty('--wp-wave-dx', (wp.waveDriftX == null ? 0 : wp.waveDriftX).toString());
+    root.style.setProperty('--wp-wave-dy', (wp.waveDriftY == null ? -1 : wp.waveDriftY).toString());
+    root.style.setProperty('--wp-wave-tile-x', (wp.waveTileX || wp.size * 2.5) + 'px');
+    root.style.setProperty('--wp-wave-tile-y', (wp.waveTileY || wp.size * 1.25) + 'px');
     root.style.setProperty('--wp-rand-dur-a', wp.randDurA || wp.randDurScale);
     root.style.setProperty('--wp-rand-dur-b', wp.randDurB || wp.randDurScale);
     root.style.setProperty('--wp-rand-phase-a', (wp.randPhaseA || '0') + 'deg');
@@ -1175,7 +1518,39 @@
     else delete root.dataset.morphStyle;
     const gridMix = root.dataset.theme === 'light' ? '32%' : '38%';
     root.style.setProperty('--grid', 'color-mix(in oklab, var(--wallpaper-color) ' + gridMix + ', transparent)');
+    const bgPat = healBgPattern(c.bgPattern);
+    if (bgPat === 'honeycomb') {
+      const honeyStyle = HONEYCOMB_STYLES.includes(c.honeycombStyle) ? c.honeycombStyle : 'outline';
+      root.dataset.honeycombStyle = honeyStyle;
+      const gridAlpha = root.dataset.theme === 'light' ? 0.32 : 0.38;
+      const rgb = /^#([0-9a-fA-F]{6})$/.test(String(wpColor || ''))
+        ? {
+          r: parseInt(String(wpColor).slice(1, 3), 16),
+          g: parseInt(String(wpColor).slice(3, 5), 16),
+          b: parseInt(String(wpColor).slice(5, 7), 16),
+        }
+        : { r: 200, g: 232, b: 86 };
+      const stroke = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + gridAlpha + ')';
+      const fill = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + Math.min(0.72, gridAlpha + 0.18) + ')';
+      const tile = resolveHoneycombTileMetrics(wp.size);
+      const uri = buildHoneycombSvgDataUri({
+        size: wp.size,
+        style: honeyStyle,
+        fillRatio: honeyStyle === 'fill' ? (wp.intense / 100) * 0.22 : 0,
+        strokeColor: stroke,
+        fillColor: fill,
+      });
+      root.style.setProperty('--wp-honeycomb-bg', uri);
+      root.style.setProperty('--wp-honeycomb-tile-x', tile.tileW.toFixed(2) + 'px');
+      root.style.setProperty('--wp-honeycomb-tile-y', tile.tileH.toFixed(2) + 'px');
+    } else {
+      delete root.dataset.honeycombStyle;
+      root.style.removeProperty('--wp-honeycomb-bg');
+      root.style.removeProperty('--wp-honeycomb-tile-x');
+      root.style.removeProperty('--wp-honeycomb-tile-y');
+    }
     if (wp.animated) root.dataset.bgAnimated = 'on'; else delete root.dataset.bgAnimated;
+    if (c.wallpaperAnimPaused) root.dataset.wpAnimPaused = 'on'; else delete root.dataset.wpAnimPaused;
   }
   function resolveVignetteCosmetics(cos) {
     const c = cos && typeof cos === 'object' ? cos : {};
@@ -1195,21 +1570,21 @@
     if (i <= 0 || !direction || direction === 'none') return null;
     const light = theme === 'light';
     const peak = light
-      ? 0.06 + 0.62 * Math.pow(i, 0.78)
-      : 0.1 + 0.9 * Math.pow(i, 0.72);
-    const mid = peak * 0.5;
-    const reach = Math.round(20 + 62 * i);
+      ? 0.1 + 0.9 * Math.pow(i, 0.55)
+      : 0.14 + 0.86 * Math.pow(i, 0.5);
+    const mid = peak * 0.58;
+    const reach = Math.round(32 + 68 * i);
     const midStop = Math.round(reach * 0.42);
     const ink = light ? '255,252,245' : '0,0,0';
     const c = (a) => 'rgba(' + ink + ',' + Math.min(1, a).toFixed(3) + ')';
     switch (direction) {
       case 'center': {
-        const inner = Math.round(38 - 28 * i);
-        return 'radial-gradient(ellipse 88% 78% at center, transparent ' + inner + '%, ' + c(peak) + ' 100%)';
+        const inner = Math.round(34 - 32 * i);
+        return 'radial-gradient(ellipse 92% 84% at center, transparent ' + inner + '%, ' + c(peak) + ' 100%)';
       }
       case 'all': {
-        const inner = Math.round(28 - 20 * i);
-        return 'radial-gradient(ellipse 100% 96% at center, transparent ' + inner + '%, ' + c(peak) + ' 100%)';
+        const inner = Math.round(24 - 22 * i);
+        return 'radial-gradient(ellipse 104% 100% at center, transparent ' + inner + '%, ' + c(peak) + ' 100%)';
       }
       case 'top':
         return 'linear-gradient(to bottom, ' + c(peak) + ' 0%, ' + c(mid) + ' ' + midStop + '%, transparent ' + reach + '%)';
@@ -1242,20 +1617,20 @@
   function buildWallpaperVignetteMask(direction, intensity, theme) {
     const i = clampCosmeticNumber(intensity, 0, 100, 0) / 100;
     if (i <= 0 || !direction || direction === 'none') return { mask: 'none', composite: null };
-    const edge = Math.round(18 + 52 * i);
-    const cornerReach = Math.round(55 + 45 * i);
+    const edge = Math.round(24 + 62 * i);
+    const cornerReach = Math.round(48 + 52 * i);
     /* CSS mask: black = show wallpaper, transparent = hide. Same shape both themes. */
     const vis = '#000';
     switch (direction) {
       case 'center': {
-        const inner = Math.round(58 - 38 * i);
-        const outer = Math.round(92 - 14 * i);
-        return { mask: 'radial-gradient(ellipse 85% 75% at center, ' + vis + ' ' + inner + '%, transparent ' + outer + '%)', composite: null };
+        const inner = Math.round(54 - 50 * i);
+        const outer = Math.round(86 - 24 * i);
+        return { mask: 'radial-gradient(ellipse 90% 82% at center, ' + vis + ' ' + inner + '%, transparent ' + outer + '%)', composite: null };
       }
       case 'all': {
-        const inner = Math.round(42 - 28 * i);
-        const outer = Math.round(94 - 12 * i);
-        return { mask: 'radial-gradient(ellipse 98% 94% at center, ' + vis + ' ' + inner + '%, transparent ' + outer + '%)', composite: null };
+        const inner = Math.round(38 - 34 * i);
+        const outer = Math.round(88 - 26 * i);
+        return { mask: 'radial-gradient(ellipse 102% 98% at center, ' + vis + ' ' + inner + '%, transparent ' + outer + '%)', composite: null };
       }
       case 'top':
         return { mask: 'linear-gradient(to bottom, transparent 0%, ' + vis + ' ' + edge + '%)', composite: null };
@@ -1304,7 +1679,7 @@
     root.style.setProperty('--wp-vignette-overlay', overlay);
     root.style.setProperty('--wp-vignette-ink', theme === 'light' ? '255,252,245' : '0,0,0');
     const { mask, composite } = buildWallpaperVignetteMask(direction, intensity, theme);
-    if (mask && mask !== 'none' && intensity >= 35) {
+    if (mask && mask !== 'none' && intensity >= 18) {
       root.style.setProperty('--wp-vignette-mask', mask);
       if (composite) root.style.setProperty('--wp-vignette-composite', composite);
       else root.style.removeProperty('--wp-vignette-composite');
@@ -1382,15 +1757,22 @@
     EXPERTISE_ICONS,
     SOCIAL_ICONS,
     CURSOR_STYLES,
+    CURSOR_EFFECTS,
+    CURSOR_EFFECT_TRAIL_STYLES,
+    CURSOR_EFFECT_COMET_DIRECTIONS,
     BG_PATTERNS,
     BG_PATTERN_META,
+    HONEYCOMB_STYLES,
+    CURSOR_WALLPAPERS,
     RAIN_DIRECTIONS,
+    WAVE_DIRECTIONS,
     COMET_DIRECTIONS,
     PARTICLE_DRIFT_DIRECTIONS,
     MORPH_STYLES,
     NUMBER_FORMATS,
     CANVAS_WALLPAPERS,
     CSS_ANIM_WALLPAPERS,
+    LEGACY_BG_PATTERNS,
     FONT_TYPES,
     HEADING_FONTS,
     RADIUS_VALUES,
@@ -1417,16 +1799,22 @@
     validateProjectItem,
     renumberExpertise,
     getVibe,
+    isVibeHidden,
+    getVisibleVibes,
+    getExtendedVibes,
     isCustomVibeId,
     getCustomVibe,
     createDefaultCustomVibes,
+    healBgPattern,
     coerceCustomVibes,
     normalizeCosmetics,
     snapshotCosmetics,
     mergeCustomVibeCosmetics,
     resolveEffectiveCosmetics,
     auditCosmeticsSync,
-    CUSTOM_VIBE_IDS,
+    CUSTOM_VIBE_ID_PREFIX,
+    nextCustomVibeId,
+    customVibeNum,
     COSMETIC_SNAPSHOT_KEYS,
     COSMETICS_ALL_KEYS,
     BOT_ICON_IDS,
@@ -1439,7 +1827,10 @@
     validateRadius,
     validateCosmeticsWrite,
     cosmeticsFieldHint,
+    buildHoneycombSvgDataUri,
+    resolveHoneycombTileMetrics,
     resolveWallpaperCosmetics,
+    resolveWallpaperColors,
     resolveWallpaperCanvasInk,
     applyWallpaperVarsToRoot,
     resolveVignetteCosmetics,
