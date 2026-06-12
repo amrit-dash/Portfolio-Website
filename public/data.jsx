@@ -460,11 +460,10 @@ const DEFAULT_COSMETICS = {
   wallpaperBrightness: 50, // pattern visibility: 0 faint · 50 default · 100 bright
   wallpaperIntensity: 50,  // pattern density: 0 sparse · 50 default · 100 dense
   wallpaperAnimSpeed: 50, // animated pattern motion: 0 slow · 50 default · 100 fast
-  wallpaperRandomness: 40, // animated pattern variance: 0 uniform · 40 default · 100 chaotic
+  wallpaperRandomness: 40, // chaos mixer: 0 = uniform sliders · 40 default · 100 = per-element overrides
   rainDirection: 'down',
   starSize: 50,
   cometDensity: 40,
-  nightSkyBrightness: 50,
   cometDirection: 'right-down',
   particleSize: 45,
   particleDensity: 35,

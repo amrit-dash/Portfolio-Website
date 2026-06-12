@@ -607,6 +607,9 @@ function AppearanceEditor({ content, setAt }) {
   const bgPattern = c.bgPattern || 'grid';
   const bgMeta = (_BG_SCHEMA.BG_PATTERN_META || {})[bgPattern] || { label: bgPattern, animated: false };
   const bgAnimated = !!bgMeta.animated;
+  const bgSupportsRandomness = bgMeta.supportsRandomness != null ? bgMeta.supportsRandomness : bgAnimated;
+  const wallpaperRandomness = c.wallpaperRandomness == null ? 40 : c.wallpaperRandomness;
+  const chaosMode = wallpaperRandomness >= 95;
   const bgPatternLabel = bgMeta.label || bgPattern;
   const customVibes = useMemo(() => {
     const slots = Array.isArray(c.customVibes) ? c.customVibes : [];
@@ -795,17 +798,26 @@ function AppearanceEditor({ content, setAt }) {
                 <Field label="Pattern density" hint="sparse ← → dense"><RangeRow label="Density" value={c.wallpaperIntensity == null ? 50 : c.wallpaperIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperIntensity', v)} /></Field>
               )}
               <Field label="Animation speed" hint="slow ← → fast"><RangeRow label="Speed" value={c.wallpaperAnimSpeed == null ? 50 : c.wallpaperAnimSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperAnimSpeed', v)} /></Field>
-              <Field label="Randomness" hint="uniform ← → varied"><RangeRow label="Random" value={c.wallpaperRandomness == null ? 40 : c.wallpaperRandomness} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperRandomness', v)} /></Field>
+              {bgSupportsRandomness && (
+                <>
+                  <Field label="Randomness" hint="0 = uniform (other sliders rule) · 100 = chaos (per-element direction, speed & phase override uniformity)">
+                    <RangeRow label="Random" value={wallpaperRandomness} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperRandomness', v)} />
+                  </Field>
+                  {chaosMode && (
+                    <p className="helptext" style={{ margin: '4px 0 0' }}>At high randomness, direction and format sliders have less effect — motion splits across elements instead of staying uniform.</p>
+                  )}
+                </>
+              )}
 
+              <div className={chaosMode ? 'wallpaper-chaos-dim' : undefined}>
               {bgPattern === 'rain' && (
-                <Field label="Rain direction" hint="angle of falling drops"><Select value={c.rainDirection || 'down'} options={RAIN_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.rainDirection', v)} /></Field>
+                <Field label="Rain direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'angle of falling drops'}><Select value={c.rainDirection || 'down'} options={RAIN_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.rainDirection', v)} /></Field>
               )}
               {bgPattern === 'cosmos' && (
                 <>
                   <Field label="Star size" hint="small ← → large"><RangeRow label="Size" value={c.starSize == null ? 50 : c.starSize} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.starSize', v)} /></Field>
                   <Field label="Comet density" hint="rare ← → frequent"><RangeRow label="Comets" value={c.cometDensity == null ? 40 : c.cometDensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cometDensity', v)} /></Field>
-                  <Field label="Night sky brightness" hint="dark ← → bright"><RangeRow label="Sky" value={c.nightSkyBrightness == null ? 50 : c.nightSkyBrightness} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.nightSkyBrightness', v)} /></Field>
-                  <Field label="Comet direction" hint="travel angle for shooting stars"><Select value={c.cometDirection || 'right-down'} options={COMET_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.cometDirection', v)} /></Field>
+                  <Field label="Comet direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'travel angle for shooting stars'}><Select value={c.cometDirection || 'right-down'} options={COMET_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.cometDirection', v)} /></Field>
                 </>
               )}
               {bgPattern === 'particles' && (
@@ -813,18 +825,19 @@ function AppearanceEditor({ content, setAt }) {
                   <Field label="Particle density" hint="sparse ← → dense (tile count)"><RangeRow label="Density" value={c.particleDensity == null ? 35 : c.particleDensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.particleDensity', v)} /></Field>
                   <Field label="Particle size" hint="small motes ← → large"><RangeRow label="Size" value={c.particleSize == null ? 45 : c.particleSize} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.particleSize', v)} /></Field>
                   <Field label="Particle opacity" hint="faint ← → vivid"><RangeRow label="Opacity" value={c.particleOpacity == null ? 70 : c.particleOpacity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.particleOpacity', v)} /></Field>
-                  <Field label="Drift direction" hint="scroll vector for floating motes"><Select value={c.particleDrift || 'up'} options={PARTICLE_DRIFT_OPTIONS} onChange={(v) => setCosAt('cosmetics.particleDrift', v)} /></Field>
+                  <Field label="Drift direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'scroll vector for floating motes'}><Select value={c.particleDrift || 'up'} options={PARTICLE_DRIFT_OPTIONS} onChange={(v) => setCosAt('cosmetics.particleDrift', v)} /></Field>
                 </>
               )}
               {bgPattern === 'morphgeo' && (
-                <Field label="Morph style" hint="keyframe motion variant"><Select value={c.morphStyle || 'spin'} options={MORPH_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.morphStyle', v)} /></Field>
+                <Field label="Morph style" hint={chaosMode ? 'layers may diverge at 100% randomness' : 'keyframe motion variant'}><Select value={c.morphStyle || 'spin'} options={MORPH_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.morphStyle', v)} /></Field>
               )}
               {bgPattern === 'binarystream' && (
                 <>
-                  <Field label="Number format" hint="glyph set for data stream"><Select value={c.numberFormat || 'binary'} options={NUMBER_FORMAT_OPTIONS} onChange={(v) => setCosAt('cosmetics.numberFormat', v)} /></Field>
+                  <Field label="Number format" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'glyph set for data stream'}><Select value={c.numberFormat || 'binary'} options={NUMBER_FORMAT_OPTIONS} onChange={(v) => setCosAt('cosmetics.numberFormat', v)} /></Field>
                   <Field label="Font size" hint="small ← → large"><RangeRow label="Size" value={c.binaryFontSize == null ? 50 : c.binaryFontSize} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.binaryFontSize', v)} /></Field>
                 </>
               )}
+              </div>
             </Panel>
           )}
 
