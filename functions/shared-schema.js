@@ -894,10 +894,10 @@
     const particleDriftVec = {
       up: { x: 0, y: -1 },
       down: { x: 0, y: 1 },
-      'diagonal-up': { x: 0.55, y: -1 },
-      'diagonal-down': { x: 0.55, y: 1 },
-      left: { x: -1, y: 0.25 },
-      right: { x: 1, y: 0.25 },
+      'diagonal-up': { x: 1, y: -1 },
+      'diagonal-down': { x: 1, y: 1 },
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 },
     };
     const particleDriftNorm = particleDriftVec[particleDrift] || particleDriftVec.up;
     return {
