@@ -57,7 +57,7 @@ function AdminIcon({ name, size = 16, strokeWidth = 1.7 }) {
     case 'publish': return (<svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor" stroke="none" style={{ display: 'block' }}><path d="M9.967 8.193L5 13h3v6h4v-6h3L9.967 8.193zM18 1H2C.9 1 0 1.9 0 3v12c0 1.1.9 2 2 2h4v-2H2V6h16v9h-4v2h4c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zM2.5 4.25a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5zm2 0a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5zM18 4H6V3h12.019L18 4z"/></svg>);
     case 'rocket': return (<svg {...p}><path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.8a2 2 0 00-3 .8z"/><path d="M9 13l-2-2c1-4 4-7 11-8-1 7-4 10-8 11z"/><circle cx="15" cy="9" r="1.4"/></svg>);
     case 'save': return (<svg {...p}><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>);
-    case 'pencil': return (<svg {...p}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>);
+    case 'pencil': return (<svg {...p}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>);
     case 'link': return (<svg {...p}><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1.5-1.5"/></svg>);
     case 'play': return (<svg {...p}><path d="M6 4l14 8-14 8z" fill="currentColor"/></svg>);
     case 'key': return (<svg {...p}><circle cx="8" cy="8" r="5"/><path d="M11.5 11.5L21 21M17 17l2-2M15 19l2-2"/></svg>);

@@ -1278,6 +1278,29 @@ body::before {
    margin-top: 0;
 }
 
+.unsaved-vibe-card {
+   border-style: dashed;
+   border-color: var(--line-2);
+   cursor: default;
+}
+
+.unsaved-vibe-card:hover {
+   transform: none;
+   border-color: var(--line-2);
+}
+
+.unsaved-vibe-card[data-on="true"] {
+   border-color: var(--accent);
+   border-style: dashed;
+   box-shadow: 0 0 0 1px var(--accent), 0 8px 22px -14px var(--accent);
+}
+
+.unsaved-vibe-card__swatch {
+   background: transparent !important;
+   border: 1.5px dashed color-mix(in srgb, var(--fg-mute) 55%, transparent);
+   box-shadow: none;
+}
+
 .custom-vibe-card {
    position: relative;
    padding: 0;
@@ -1291,7 +1314,7 @@ body::before {
    gap: 10px;
    width: 100%;
    text-align: left;
-   padding: 10px 56px 10px 12px;
+   padding: 10px 44px 10px 12px;
    border: none;
    background: transparent;
    color: inherit;
@@ -1305,6 +1328,29 @@ body::before {
    transform: translateY(-50%);
    flex-shrink: 0;
    z-index: 1;
+   appearance: none;
+   border: none;
+   background: transparent;
+   box-shadow: none;
+   color: var(--fg-dim);
+}
+
+.custom-vibe-card__edit:hover {
+   border: none;
+   color: var(--accent);
+   background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.custom-vibe-card__edit:focus-visible {
+   outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+   outline-offset: 1px;
+}
+
+.custom-vibe-card__edit--active,
+.custom-vibe-card[data-editing="true"] .custom-vibe-card__edit {
+   border: none;
+   color: var(--accent);
+   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .advanced-toggle {
@@ -1349,6 +1395,25 @@ body::before {
 .effects-split-row .sel {
   min-height: 38px;
 }
+
+.effects-cursor-sliders {
+  padding-top: 14px;
+  margin-top: 2px;
+}
+
+.effects-cursor-sliders:empty {
+  display: none;
+}
+
+.effects-cursor-sliders > .field {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.effects-cursor-sliders > .field:last-child {
+  margin-bottom: 0;
+}
+
 @media (max-width: 640px) {
   .effects-split-row { grid-template-columns: 1fr; }
 }
@@ -1377,6 +1442,14 @@ body::before {
 .custom-vibes__create .inp:focus {
    border-color: var(--accent);
    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.custom-vibes__actions {
+   display: flex;
+   flex-wrap: wrap;
+   align-items: center;
+   gap: 8px;
+   margin-top: 12px;
 }
 
 /* =====================================================
