@@ -1444,12 +1444,10 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "particleDensity": 35,
   "particleOpacity": 70,
   "particleDrift": "up",
-  "morphStyle": "spin",
-  "morphBlobCount": 4,
-  "morphSmoothness": 72,
-  "morphMergeStrength": 50,
   "numberFormat": "binary",
   "binaryFontSize": 50,
+  "fluidSize": 50,
+  "fluidMorphSpeed": 45,
   "honeycombStyle": "outline",
   "cursorInteractStrength": 55,
   "cursorParticleDensity": 40,
@@ -1661,6 +1659,8 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
     let floatParticles = [];
     let morphBlobs = [];
     let morphTick = 0;
+    let fluidCoreTick = 0;
+    let fluidCoreRot = 0;
     let honeyCells = [];
     let honeyGlowNow = 0;
     let snowFlakes = [];
@@ -1970,211 +1970,145 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
       });
     };
 
-    const MORPH_SAMPLES = 72;
-    const morphEase = (t) => t * t * (3 - 2 * t);
-    const MORPH_HARM_FREQS = [2, 3, 4, 5, 6];
-
-    const morphHarmonicTargets = (blob, i) => {
-      blob.harmonics.forEach((h, j) => {
-        h.amp = h.amp + (h.targetAmp - h.amp);
-        h.phase = h.targetPhase;
-        const spread = 0.08 + randAmt() * 0.14;
-        h.targetAmp = blob.baseR * (0.04 + hash2(i + j, 83) * spread + intenseNorm() * 0.06);
-        h.targetPhase = h.phase + (hash2(i, j + 97) - 0.5) * Math.PI * 0.75;
-      });
-    };
-
-    const morphRadiusAt = (blob, theta, tGlobal) => {
-      const mt = morphEase(blob.morphT);
-      let r = blob.baseR;
-      blob.harmonics.forEach((h) => {
-        const amp = h.amp + (h.targetAmp - h.amp) * mt;
-        const phase = h.phase + (h.targetPhase - h.phase) * mt;
-        r += amp * Math.sin(h.freq * theta + phase + tGlobal * h.freq * 0.11);
-      });
-      const breathe = 1 + Math.sin(tGlobal * 0.62 + blob.phase) * blob.pulseAmp;
-      return Math.max(blob.baseR * 0.35, r * breathe);
-    };
-
-    const morphSamplePoints = (blob, tGlobal) => {
-      const pts = [];
-      for (let i = 0; i < MORPH_SAMPLES; i++) {
-        const theta = blob.rot + (i / MORPH_SAMPLES) * Math.PI * 2;
-        const rad = morphRadiusAt(blob, theta, tGlobal);
-        pts.push({ x: blob.cx + Math.cos(theta) * rad, y: blob.cy + Math.sin(theta) * rad });
-      }
-      return pts;
-    };
-
-    const morphTraceSmoothPath = (pts, tensionNorm) => {
-      const n = pts.length;
-      if (n < 3) return;
-      const t = 0.28 + tensionNorm * 0.62;
-      ctx.moveTo(pts[0].x, pts[0].y);
+    const seedMorphGeo = () => {
+      morphBlobs = [];
+      morphTick = 0;
+      const n = Math.round(3 + intenseNorm() * 1.5);
+      const minDim = Math.min(w, h);
+      const rAmt = randAmt();
       for (let i = 0; i < n; i++) {
-        const p0 = pts[(i - 1 + n) % n];
-        const p1 = pts[i];
-        const p2 = pts[(i + 1) % n];
-        const p3 = pts[(i + 2) % n];
-        const cp1x = p1.x + ((p2.x - p0.x) / 6) * t;
-        const cp1y = p1.y + ((p2.y - p0.y) / 6) * t;
-        const cp2x = p2.x - ((p3.x - p1.x) / 6) * t;
-        const cp2y = p2.y - ((p3.y - p1.y) / 6) * t;
-        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+        morphBlobs.push({
+          hx: w * (0.2 + hash2(i, 3) * 0.6),
+          hy: h * (0.18 + hash2(i, 11) * 0.64),
+          r: minDim * (0.22 + hash2(i, 19) * (0.14 + intenseNorm() * 0.1)),
+          phase: hash2(i, 7) * Math.PI * 2,
+          freqX: 0.28 + hash2(i, 13) * 0.42 + rAmt * 0.18,
+          freqY: 0.22 + hash2(i, 17) * 0.38 + rAmt * 0.15,
+          ampX: minDim * (0.06 + hash2(i, 23) * 0.08 + intenseNorm() * 0.04),
+          ampY: minDim * (0.05 + hash2(i, 29) * 0.07 + intenseNorm() * 0.035),
+          pulsePhase: hash2(i, 31) * Math.PI * 2,
+          pulseRate: 0.4 + hash2(i, 37) * 0.35,
+        });
+      }
+    };
+
+    const fluidRadiusAt = (theta, t, morphRate, baseR, intense, rAmt) => {
+      const m = t * morphRate;
+      const lobe1 = 0.11 + intense * 0.07 + rAmt * 0.05;
+      const lobe2 = 0.08 + intense * 0.05 + rAmt * 0.035;
+      const lobe3 = 0.055 + intense * 0.04 + rAmt * 0.02;
+      const flow = 0.045 * Math.sin(m * 0.65 + theta * 2.2);
+      return baseR * (1
+        + lobe1 * Math.sin(3 * theta + m)
+        + lobe2 * Math.sin(5 * theta - m * 1.18)
+        + lobe3 * Math.cos(2 * theta + m * 0.92)
+        + flow);
+    };
+
+    const traceFluidBlob = (t, morphRate, scale, intense, rAmt) => {
+      const steps = 160;
+      const baseR = scale;
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const theta = (i / steps) * Math.PI * 2;
+        const r = fluidRadiusAt(theta, t, morphRate, baseR, intense, rAmt);
+        const x = Math.cos(theta) * r;
+        const y = Math.sin(theta) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       ctx.closePath();
     };
 
-    const morphLayoutSlots = (count) => {
-      const slots = [];
-      const cx = w * 0.5;
-      const cy = h * 0.48;
-      if (count <= 1) {
-        slots.push({ cx, cy, scale: 1.2 });
-        return slots;
-      }
-      slots.push({ cx, cy, scale: 1.18 });
-      const ring = Math.min(w, h) * (0.17 + count * 0.018);
-      for (let i = 0; i < count - 1; i++) {
-        const ang = (i / (count - 1)) * Math.PI * 2 - Math.PI / 2;
-        slots.push({
-          cx: cx + Math.cos(ang) * ring,
-          cy: cy + Math.sin(ang) * ring * 0.92,
-          scale: 0.78 + hash2(i, 7) * 0.28,
-        });
-      }
-      return slots;
+    const seedFluidCore = () => {
+      fluidCoreTick = 0;
+      fluidCoreRot = 0;
     };
 
-    const seedMorphGeo = () => {
-      morphBlobs = [];
-      morphTick = 0;
+    const drawFluidCore = (colors, aBase, sm) => {
       const p = getProps();
-      const n = p.wp.morphBlobCount || Math.round(2 + intenseNorm() * 4);
-      const style = p.wp.morphStyle || 'spin';
-      const slots = morphLayoutSlots(n);
-      for (let i = 0; i < n; i++) {
-        const slot = slots[i] || slots[0];
-        const baseR = Math.min(w, h) * (0.055 + hash2(i, 19) * (0.07 + intenseNorm() * 0.06));
-        const harmonics = MORPH_HARM_FREQS.map((freq, j) => {
-          const amp = baseR * (0.05 + hash2(i, j * 11 + 3) * (0.1 + intenseNorm() * 0.08));
-          const phase = hash2(i, j * 13 + 7) * Math.PI * 2;
-          return { freq, amp, targetAmp: amp, phase, targetPhase: phase };
-        });
-        morphBlobs.push({
-          cx: slot.cx,
-          cy: slot.cy,
-          homeCx: slot.cx,
-          homeCy: slot.cy,
-          baseR: baseR * (slot.scale || 1),
-          harmonics,
-          morphT: hash2(i, 29) * 0.4,
-          morphSpd: vary(0.0012 + hash2(i, 43) * 0.0024, 0.3) * (style === 'warp' ? 1.25 : 1),
-          rot: hash2(i, 31) * Math.PI * 2,
-          rotSpd: vary(0.0018 + hash2(i, 47) * 0.005, 0.3) * (style === 'spin' ? 1.45 : 0.85),
-          phase: hash2(i, 37) * Math.PI * 2,
-          vx: (hash2(i, 61) - 0.5) * 0.22,
-          vy: (hash2(i, 67) - 0.5) * 0.18,
-          orbitR: style === 'orbit' ? Math.min(w, h) * (0.035 + hash2(i, 71) * 0.07) : 0,
-          orbitSpd: (hash2(i, 73) - 0.5) * 0.011,
-          pulseAmp: style === 'pulse' ? 0.1 + hash2(i, 79) * 0.09 : 0.04 + hash2(i, 79) * 0.03,
-        });
-      }
-    };
-
-    const updateMorphBlobs = (sm, mergeNorm) => {
-      const t = morphTick;
-      const style = getProps().wp.morphStyle || 'spin';
+      const morphMult = (p.wp.fluidMorphMult != null ? p.wp.fluidMorphMult : 0.6) * (reducedMotion ? 0.1 : 1);
+      const rotMult = reducedMotion ? 0.08 : 1;
+      fluidCoreTick += 0.014 * morphMult * sm;
+      fluidCoreRot += 0.0028 * rotMult * sm;
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const minDim = Math.min(w, h);
+      const baseR = minDim * (p.wp.fluidScale != null ? p.wp.fluidScale : 0.28);
+      const intense = intenseNorm();
       const rAmt = randAmt();
-      const motion = reducedMotion ? sm * 0.12 : sm;
-      morphBlobs.forEach((b, idx) => {
-        b.morphT += b.morphSpd * motion * (1 + rAmt * 0.22);
-        if (b.morphT >= 1) {
-          morphHarmonicTargets(b, idx);
-          b.morphT = 0;
-        }
-        const orbitAng = t * b.orbitSpd * (style === 'orbit' ? 2.1 : 0.45);
-        const pulse = 1 + Math.sin(t * 0.78 + b.phase) * b.pulseAmp * (style === 'pulse' ? 1.35 : 0.85);
-        const drift = reducedMotion ? 4 : 14;
-        b.cx = b.homeCx + Math.cos(orbitAng + b.phase) * b.orbitR + b.vx * t * drift;
-        b.cy = b.homeCy + Math.sin(orbitAng + b.phase) * b.orbitR * 0.9 + b.vy * t * drift * 0.88;
-        b.cx += (b.homeCx - b.cx) * 0.0008 * motion;
-        b.cy += (b.homeCy - b.cy) * 0.0008 * motion;
-        b.rot += b.rotSpd * motion * 28 * pulse;
-        if (style === 'warp' && !reducedMotion) {
-          b.vx += Math.sin(t * 0.38 + b.phase) * 0.0014 * motion;
-          b.vy += Math.cos(t * 0.33 + b.phase) * 0.0014 * motion;
-        }
-      });
-      const mergePull = 0.008 + mergeNorm * 0.028;
-      for (let i = 0; i < morphBlobs.length; i++) {
-        for (let j = i + 1; j < morphBlobs.length; j++) {
-          const a = morphBlobs[i];
-          const b = morphBlobs[j];
-          const dx = b.cx - a.cx;
-          const dy = b.cy - a.cy;
-          const dist = Math.hypot(dx, dy);
-          const mergeAt = (a.baseR + b.baseR) * (0.62 + mergeNorm * 0.22 + rAmt * 0.08);
-          if (dist > mergeAt || dist < 1) continue;
-          const pull = (1 - dist / mergeAt) * mergePull * motion;
-          a.cx += dx * pull;
-          a.cy += dy * pull;
-          b.cx -= dx * pull * 0.92;
-          b.cy -= dy * pull * 0.92;
-          if (dist < mergeAt * 0.48) {
-            const sync = 0.0025 * motion * (0.4 + mergeNorm * 0.6);
-            a.morphT = Math.min(1, a.morphT + sync);
-            b.morphT = Math.min(1, b.morphT + sync);
-          }
-        }
-      }
+      const light = p.theme === 'light';
+      const t = fluidCoreTick;
+      const morphRate = morphMult;
+      const gx = baseR * 0.1 * Math.sin(t * 0.55);
+      const gy = -baseR * 0.08 * Math.cos(t * 0.48);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(fluidCoreRot);
+      ctx.globalCompositeOperation = light ? 'multiply' : 'screen';
+
+      traceFluidBlob(t, morphRate, baseR * 1.42, intense, rAmt);
+      const haloGrd = ctx.createRadialGradient(0, 0, baseR * 0.15, 0, 0, baseR * 1.55);
+      haloGrd.addColorStop(0, `rgba(${colors.r},${colors.g},${colors.b},${aBase * (light ? 0.1 : 0.16)})`);
+      haloGrd.addColorStop(0.55, `rgba(${colors.r},${colors.g},${colors.b},${aBase * (light ? 0.05 : 0.08)})`);
+      haloGrd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = haloGrd;
+      ctx.shadowColor = `rgba(${colors.r},${colors.g},${colors.b},${light ? 0.3 : 0.5})`;
+      ctx.shadowBlur = baseR * 0.22 * (1 + intense * 0.45);
+      ctx.fill();
+
+      traceFluidBlob(t, morphRate, baseR, intense, rAmt);
+      const bodyGrd = ctx.createRadialGradient(gx, gy, 0, gx * 0.35, gy * 0.35, baseR * 1.08);
+      bodyGrd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase * (light ? 0.58 : 0.52)})`);
+      bodyGrd.addColorStop(0.32, `rgba(${colors.r},${colors.g},${colors.b},${aBase * (light ? 0.4 : 0.34)})`);
+      bodyGrd.addColorStop(0.68, `rgba(${colors.r},${colors.g},${colors.b},${aBase * (light ? 0.16 : 0.14)})`);
+      bodyGrd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bodyGrd;
+      ctx.shadowBlur = baseR * 0.14 * (1 + intense * 0.35);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      traceFluidBlob(t + 0.35, morphRate * 1.15, baseR * 0.52, intense, rAmt * 0.45);
+      const innerGrd = ctx.createRadialGradient(
+        gx * 0.6, gy * 0.6, 0,
+        gx * 0.25, gy * 0.25, baseR * 0.58,
+      );
+      innerGrd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${aBase * (light ? 0.42 : 0.36)})`);
+      innerGrd.addColorStop(0.5, `rgba(${colors.r},${colors.g},${colors.b},${aBase * (light ? 0.18 : 0.14)})`);
+      innerGrd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = innerGrd;
+      ctx.fill();
+
+      ctx.restore();
     };
 
     const drawMorphGeo = (colors, aBase, sm) => {
-      const motion = reducedMotion ? sm * 0.1 : sm;
+      const motion = reducedMotion ? sm * 0.12 : sm;
       morphTick += 0.016 * motion;
       const t = morphTick;
-      const p = getProps();
-      const light = p.theme === 'light';
-      const smoothNorm = (p.wp.morphSmoothness != null ? p.wp.morphSmoothness : 72) / 100;
-      const mergeNorm = (p.wp.morphMergeStrength != null ? p.wp.morphMergeStrength : 50) / 100;
-      updateMorphBlobs(sm, mergeNorm);
+      const light = getProps().theme === 'light';
+      const rAmt = randAmt();
 
       ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
       ctx.globalCompositeOperation = light ? 'multiply' : 'screen';
       morphBlobs.forEach((b) => {
-        const pts = morphSamplePoints(b, t);
-        if (pts.length < 3) return;
-        const fillA = aBase * (0.07 + intenseNorm() * 0.06);
-        const strokeA = aBase * (0.16 + intenseNorm() * 0.1);
-        const haloA = fillA * (0.35 + mergeNorm * 0.25);
-
-        ctx.beginPath();
-        ctx.arc(b.cx, b.cy, b.baseR * (1.35 + mergeNorm * 0.35), 0, Math.PI * 2);
-        const halo = ctx.createRadialGradient(b.cx, b.cy, 0, b.cx, b.cy, b.baseR * (1.55 + mergeNorm * 0.4));
-        halo.addColorStop(0, `rgba(${colors.r},${colors.g},${colors.b},${haloA * 0.45})`);
-        halo.addColorStop(0.55, `rgba(${colors.r},${colors.g},${colors.b},${haloA * 0.12})`);
-        halo.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = halo;
-        ctx.fill();
-
-        ctx.beginPath();
-        morphTraceSmoothPath(pts, smoothNorm);
-        const grd = ctx.createRadialGradient(b.cx, b.cy, 0, b.cx, b.cy, b.baseR * 1.25);
-        grd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${fillA * 0.28})`);
-        grd.addColorStop(0.42, `rgba(${colors.r},${colors.g},${colors.b},${fillA})`);
-        grd.addColorStop(1, `rgba(${colors.r},${colors.g},${colors.b},${fillA * 0.08})`);
+        const wobble = 1 + Math.sin(t * b.pulseRate + b.pulsePhase) * (0.08 + rAmt * 0.06);
+        const x = b.hx + Math.sin(t * b.freqX + b.phase) * b.ampX + Math.cos(t * b.freqY * 0.62 + b.phase) * b.ampX * 0.35;
+        const y = b.hy + Math.cos(t * b.freqY + b.phase * 1.1) * b.ampY + Math.sin(t * b.freqX * 0.78 + b.phase) * b.ampY * 0.4;
+        const rad = b.r * wobble;
+        const coreA = aBase * (light ? 0.42 + intenseNorm() * 0.28 : 0.38 + intenseNorm() * 0.24);
+        const midA = aBase * (light ? 0.22 + intenseNorm() * 0.16 : 0.16 + intenseNorm() * 0.12);
+        const edgeA = aBase * (light ? 0.08 + intenseNorm() * 0.06 : 0.05 + intenseNorm() * 0.04);
+        const grd = ctx.createRadialGradient(x, y, 0, x, y, rad);
+        grd.addColorStop(0, `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${coreA})`);
+        grd.addColorStop(0.38, `rgba(${colors.r},${colors.g},${colors.b},${midA})`);
+        grd.addColorStop(0.72, `rgba(${colors.r},${colors.g},${colors.b},${edgeA})`);
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(x, y, rad, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 6 + intenseNorm() * 8;
-        ctx.shadowColor = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${strokeA * 0.55})`;
-        ctx.lineWidth = 0.85;
-        ctx.strokeStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${strokeA})`;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
       });
       ctx.restore();
     };
@@ -2473,6 +2407,7 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
       else if (pat === 'circuits') seedCircuits();
       else if (pat === 'particles') seedFloatParticles();
       else if (pat === 'morphgeo') seedMorphGeo();
+      else if (pat === 'fluidcore') seedFluidCore();
       else if (pat === 'honeycombGlow') seedHoneycombGlow();
       else if (pat === 'snowinteractive') seedSnowInteractive();
       else if (pat === 'ripplepool') seedRipplePool();
@@ -2488,7 +2423,6 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
         p.wp.circuitPathCount, p.wp.circuitCellSize,
         p.wp.cometDirection, p.wp.cometDensity, p.wp.rainDirection,
         p.wp.particleCount, p.wp.particleSize, p.wp.particleOpacity, p.wp.particleDrift,
-        p.wp.morphStyle, p.wp.morphBlobCount, p.wp.morphSmoothness, p.wp.morphMergeStrength,
         p.wp.cursorSnowCount, p.wp.cursorParticleDensity, p.wp.cursorSweepPx,
       ].join('|');
       if (sig === seedSignature) return;
@@ -2943,6 +2877,8 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
         drawFloatParticles(colors, aBase, sm);
       } else if (activePattern === 'morphgeo') {
         drawMorphGeo(colors, aBase, sm);
+      } else if (activePattern === 'fluidcore') {
+        drawFluidCore(colors, aBase, sm);
       } else if (activePattern === 'honeycombGlow') {
         drawHoneycombGlow(colors, aBase, sm, now);
       } else if (activePattern === 'snowinteractive') {
@@ -3061,12 +2997,10 @@ const TWEAK_DEFAULTS = (() => {
     particleDensity: typeof c.particleDensity === 'number' ? c.particleDensity : _COSMETICS_BASE.particleDensity,
     particleOpacity: typeof c.particleOpacity === 'number' ? c.particleOpacity : _COSMETICS_BASE.particleOpacity,
     particleDrift: typeof c.particleDrift === 'string' ? c.particleDrift : _COSMETICS_BASE.particleDrift,
-    morphStyle: typeof c.morphStyle === 'string' ? c.morphStyle : _COSMETICS_BASE.morphStyle,
-    morphBlobCount: typeof c.morphBlobCount === 'number' ? c.morphBlobCount : _COSMETICS_BASE.morphBlobCount,
-    morphSmoothness: typeof c.morphSmoothness === 'number' ? c.morphSmoothness : _COSMETICS_BASE.morphSmoothness,
-    morphMergeStrength: typeof c.morphMergeStrength === 'number' ? c.morphMergeStrength : _COSMETICS_BASE.morphMergeStrength,
     numberFormat: typeof c.numberFormat === 'string' ? c.numberFormat : _COSMETICS_BASE.numberFormat,
     binaryFontSize: typeof c.binaryFontSize === 'number' ? c.binaryFontSize : _COSMETICS_BASE.binaryFontSize,
+    fluidSize: typeof c.fluidSize === 'number' ? c.fluidSize : _COSMETICS_BASE.fluidSize,
+    fluidMorphSpeed: typeof c.fluidMorphSpeed === 'number' ? c.fluidMorphSpeed : _COSMETICS_BASE.fluidMorphSpeed,
     honeycombStyle: typeof c.honeycombStyle === 'string' ? c.honeycombStyle : _COSMETICS_BASE.honeycombStyle,
     cursorInteractStrength: typeof c.cursorInteractStrength === 'number' ? c.cursorInteractStrength : _COSMETICS_BASE.cursorInteractStrength,
     cursorTrailLength: typeof c.cursorTrailLength === 'number' ? c.cursorTrailLength : _COSMETICS_BASE.cursorTrailLength,
@@ -3167,7 +3101,8 @@ function App() {
     ['accent', 'accentTone', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale',
       'headingFont', 'tracking', 'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperAnimPaused', 'wallpaperRandomness',
       'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
-      'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'morphStyle', 'morphBlobCount', 'morphSmoothness', 'morphMergeStrength', 'numberFormat', 'binaryFontSize',
+      'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'numberFormat', 'binaryFontSize',
+      'fluidSize', 'fluidMorphSpeed',
       'honeycombStyle', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
       'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
       'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
