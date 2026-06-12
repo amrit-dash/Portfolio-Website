@@ -134,10 +134,6 @@ const CURSOR_EFFECT_COMET_DIRECTION_OPTIONS = (_BG_SCHEMA.CURSOR_EFFECT_COMET_DI
   value: v,
   label: v === 'cursor' ? 'Follow cursor' : v.charAt(0).toUpperCase() + v.slice(1),
 }));
-const MORPH_STYLE_OPTIONS = (_BG_SCHEMA.MORPH_STYLES || ['spin', 'pulse', 'warp', 'orbit']).map((v) => ({
-  value: v,
-  label: v.charAt(0).toUpperCase() + v.slice(1),
-}));
 const NUMBER_FORMAT_OPTIONS = (_BG_SCHEMA.NUMBER_FORMATS || ['binary', 'octal', 'decimal', 'hex']).map((v) => ({
   value: v,
   label: v.charAt(0).toUpperCase() + v.slice(1),
@@ -859,10 +855,10 @@ function AppearanceEditor({ content, setAt }) {
           {bgAnimated && (
             <Panel title={bgPatternLabel + ' ✦'} sub="Animated wallpaper">
               <Field label="Pattern brightness" hint="faint ← → vivid"><RangeRow label="Brightness" value={c.wallpaperBrightness == null ? 50 : c.wallpaperBrightness} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperBrightness', v)} /></Field>
-              {bgPattern !== 'particles' && (
+              {bgPattern !== 'particles' && bgPattern !== 'fluidcore' && (
                 <Field label="Pattern density" hint="sparse ← → dense"><RangeRow label="Density" value={c.wallpaperIntensity == null ? 50 : c.wallpaperIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperIntensity', v)} /></Field>
               )}
-              <Field label="Animation speed" hint="slow ← → fast"><RangeRow label="Speed" value={c.wallpaperAnimSpeed == null ? 50 : c.wallpaperAnimSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperAnimSpeed', v)} /></Field>
+              <Field label="Animation speed" hint={bgPattern === 'fluidcore' ? 'slow ← → fast (blob rotation)' : 'slow ← → fast'}><RangeRow label="Speed" value={c.wallpaperAnimSpeed == null ? 50 : c.wallpaperAnimSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.wallpaperAnimSpeed', v)} /></Field>
               <ToggleRow title="Freeze animation" sub="keep the pattern visible but stop motion" value={!!c.wallpaperAnimPaused} onChange={(v) => setCosAt('cosmetics.wallpaperAnimPaused', v)} />
               {bgSupportsRandomness && (
                 <>
@@ -897,14 +893,6 @@ function AppearanceEditor({ content, setAt }) {
                   <Field label="Drift direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'scroll vector for floating motes'}><Select value={c.particleDrift || 'up'} options={PARTICLE_DRIFT_OPTIONS} onChange={(v) => setCosAt('cosmetics.particleDrift', v)} /></Field>
                 </>
               )}
-              {bgPattern === 'morphgeo' && (
-                <>
-                  <Field label="Morph style" hint={chaosMode ? 'layers may diverge at 100% randomness' : 'motion variant — spin · pulse · warp · orbit'}><Select value={c.morphStyle || 'spin'} options={MORPH_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.morphStyle', v)} /></Field>
-                  <Field label="Blob count" hint="few ← → many overlapping shapes"><RangeRow label="Blobs" value={c.morphBlobCount == null ? 4 : c.morphBlobCount} min={2} max={8} step={1} unit="" onChange={(v) => setCosAt('cosmetics.morphBlobCount', v)} /></Field>
-                  <Field label="Curve smoothness" hint="soft organic ← → tighter curves"><RangeRow label="Smooth" value={c.morphSmoothness == null ? 72 : c.morphSmoothness} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.morphSmoothness', v)} /></Field>
-                  <Field label="Merge strength" hint="separate ← → blobs attract and blend"><RangeRow label="Merge" value={c.morphMergeStrength == null ? 50 : c.morphMergeStrength} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.morphMergeStrength', v)} /></Field>
-                </>
-              )}
               {bgCursorReactive && (
                 <>
                   <Field label="Interact strength" hint="subtle ← → strong pointer response"><RangeRow label="Strength" value={c.cursorInteractStrength == null ? 55 : c.cursorInteractStrength} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorInteractStrength', v)} /></Field>
@@ -920,6 +908,13 @@ function AppearanceEditor({ content, setAt }) {
                 <>
                   <Field label="Number format" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'glyph set for data stream'}><Select value={c.numberFormat || 'binary'} options={NUMBER_FORMAT_OPTIONS} onChange={(v) => setCosAt('cosmetics.numberFormat', v)} /></Field>
                   <Field label="Font size" hint="small ← → large"><RangeRow label="Size" value={c.binaryFontSize == null ? 50 : c.binaryFontSize} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.binaryFontSize', v)} /></Field>
+                </>
+              )}
+              {bgPattern === 'fluidcore' && (
+                <>
+                  <Field label="Blob size" hint="small ← → large (viewport scale)"><RangeRow label="Size" value={c.fluidSize == null ? 50 : c.fluidSize} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.fluidSize', v)} /></Field>
+                  <Field label="Morph speed" hint="calm ← → lively shape + internal flow"><RangeRow label="Morph" value={c.fluidMorphSpeed == null ? 45 : c.fluidMorphSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.fluidMorphSpeed', v)} /></Field>
+                  <p className="helptext" style={{ margin: '4px 0 0' }}>Animation speed above controls blob rotation; morph speed changes how fast the silhouette and internal flow shift.</p>
                 </>
               )}
               </div>
