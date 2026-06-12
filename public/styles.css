@@ -35,6 +35,8 @@
   --wallpaper-tone: #0a0b08;
   --scanline-opacity: 0.05;
   --glow: 1; /* accent bloom multiplier — driven by cosmetics.glow (admin Appearance) */
+  --ui-glass-mix: 100%;
+  --ui-glass-blur: 0px;
   --titlebar: linear-gradient(180deg, #2a2d22 0%, #1c1f15 100%);
   --titlebar-solid: #21241a; /* opaque fallback for fixed bars iOS won't paint a gradient on */
   --titlebar-text: #ecead6;
@@ -515,12 +517,14 @@ html[data-theme="dark"][data-boot="active"] body::after {
 
 /* ---------- Generic Window ---------- */
 .window {
-  background: var(--bg-card);
+  background: color-mix(in oklab, var(--bg-card) var(--ui-glass-mix, 100%), transparent);
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: var(--shadow);
   overflow: hidden;
   position: relative;
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 .window__titlebar {
   display: flex; align-items: center;
@@ -735,16 +739,16 @@ html[data-theme="dark"][data-boot="active"] body::after {
   height: 520px;
   background:
     linear-gradient(180deg,
-      color-mix(in oklab, var(--bg-card) 92%, transparent) 0%,
-      color-mix(in oklab, var(--bg-elev) 96%, transparent) 100%);
+      color-mix(in oklab, var(--bg-card) calc(var(--ui-glass-mix, 100%) * 0.92), transparent) 0%,
+      color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent) 100%);
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 .console::before {
   /* subtle ambient accent glow */
@@ -1216,12 +1220,14 @@ html[data-theme="dark"][data-boot="active"] body::after {
   margin-top: 20px;
 }
 .expertise-card {
-  background: var(--bg-elev);
+  background: color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px 18px 16px;
   position: relative;
   transition: border-color .2s, transform .2s, background .2s, box-shadow .2s;
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
   /* Reset button styles since this is now a <button> */
   font: inherit;
   color: inherit;
@@ -1328,9 +1334,11 @@ html[data-theme="dark"][data-boot="active"] body::after {
 .exp-folder {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--bg-card);
+  background: color-mix(in oklab, var(--bg-card) var(--ui-glass-mix, 100%), transparent);
   box-shadow: var(--shadow);
   overflow: hidden;
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 .exp-folder__body {
   display: grid;

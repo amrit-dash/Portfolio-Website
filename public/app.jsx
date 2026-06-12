@@ -1462,6 +1462,8 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "cursorEffectCometDirection": "cursor",
   "cursorEffectCometIntensity": 50,
   "cursorEffectCometSpeed": 50,
+  "cursorRingLag": 50,
+  "uiGlassOpacity": 0,
   "wallpaperUseAccent": true,
   "wallpaperColor": "",
   "vignetteIntensity": 45,
@@ -2708,6 +2710,10 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
 
     const frame = (now) => {
       if (cancelled) return;
+      if (document.hidden) {
+        animRef.current = requestAnimationFrame(frame);
+        return;
+      }
       syncSeed();
       const p = getProps();
       const activePattern = p.pattern;
@@ -3034,6 +3040,8 @@ const TWEAK_DEFAULTS = (() => {
     cursorEffectCometDirection: typeof c.cursorEffectCometDirection === 'string' ? c.cursorEffectCometDirection : _COSMETICS_BASE.cursorEffectCometDirection,
     cursorEffectCometIntensity: typeof c.cursorEffectCometIntensity === 'number' ? c.cursorEffectCometIntensity : _COSMETICS_BASE.cursorEffectCometIntensity,
     cursorEffectCometSpeed: typeof c.cursorEffectCometSpeed === 'number' ? c.cursorEffectCometSpeed : _COSMETICS_BASE.cursorEffectCometSpeed,
+    cursorRingLag: typeof c.cursorRingLag === 'number' ? c.cursorRingLag : _COSMETICS_BASE.cursorRingLag,
+    uiGlassOpacity: typeof c.uiGlassOpacity === 'number' ? c.uiGlassOpacity : _COSMETICS_BASE.uiGlassOpacity,
     wallpaperUseAccent: c.wallpaperUseAccent == null ? _COSMETICS_BASE.wallpaperUseAccent : !!c.wallpaperUseAccent,
     wallpaperColor: typeof c.wallpaperColor === 'string' ? c.wallpaperColor : _COSMETICS_BASE.wallpaperColor,
     vignetteIntensity: typeof c.vignetteIntensity === 'number' ? c.vignetteIntensity : _COSMETICS_BASE.vignetteIntensity,
@@ -3126,6 +3134,7 @@ function App() {
       'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
       'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
       'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
+      'cursorRingLag', 'uiGlassOpacity',
       'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection', 'glow', 'radius'].forEach((k) => {
         if (merged[k] !== undefined) next[k] = merged[k];
       });
@@ -3157,6 +3166,13 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.boot = booted ? 'done' : 'active';
     return () => { delete document.documentElement.dataset.boot; };
+  }, [booted]);
+
+  // Reveal observer arms at DOMContentLoaded — before boot finishes and sections
+  // mount. Tell it when scrollable content is on-screen so IO + safety nets run.
+  useEffect(() => {
+    if (!booted) return;
+    try { window.dispatchEvent(new CustomEvent('amritos:content-ready')); } catch (e) { }
   }, [booted]);
 
   // (The fixed menubar is now full-width — the scroll container .os-root sits
@@ -3196,6 +3212,8 @@ function App() {
   const wpTint = wpCos.wallpaperUseAccent !== false
     ? tonedAccent
     : (wpCos.wallpaperColor || wpCos.accent);
+  const wpMeta = (_SCHEMA.BG_PATTERN_META || {})[wpCos.bgPattern || 'grid'] || {};
+  const heavyWallpaperAnim = !!wpMeta.animated && !uiCos.wallpaperAnimPaused;
 
   return (
     <ContentCtx.Provider value={liveContent}>
@@ -3300,7 +3318,11 @@ function App() {
             cursorColor={uiCos.cursorColor || tonedAccent}
             paused={!!uiCos.wallpaperAnimPaused}
           />
-          <CustomCursor cursorStyle={uiCos.cursorStyle || 'ring'} />
+          <CustomCursor
+            cursorStyle={uiCos.cursorStyle || 'ring'}
+            cursorRingLag={uiCos.cursorRingLag}
+            heavyAnim={heavyWallpaperAnim || (uiCos.cursorEffect && uiCos.cursorEffect !== 'none')}
+          />
         </>
       )}
     </ContentCtx.Provider>);
@@ -3489,7 +3511,7 @@ function CursorEffects({ cos, theme, accentColor, cursorColor, paused }) {
     const frame = () => {
       if (cancelled) return;
       const p = getProps();
-      if (p.paused || reducedMotion) {
+      if (document.hidden || p.paused || reducedMotion) {
         ctx.clearRect(0, 0, w, h);
         animRef.current = requestAnimationFrame(frame);
         return;
@@ -3685,9 +3707,18 @@ function CursorEffects({ cos, theme, accentColor, cursorColor, paused }) {
    CUSTOM CURSOR
    ===================================================== */
 
-function CustomCursor({ cursorStyle }) {
+function ringLagToLerp(lag) {
+  const t = Math.max(0, Math.min(100, typeof lag === 'number' ? lag : 50)) / 100;
+  return 0.55 - t * 0.50;
+}
+
+function CustomCursor({ cursorStyle, cursorRingLag, heavyAnim }) {
   const primaryRef = useRef(null);
   const trailRef = useRef(null);
+  const heavyRef = useRef(!!heavyAnim);
+  const lagRef = useRef(cursorRingLag);
+  heavyRef.current = !!heavyAnim;
+  lagRef.current = cursorRingLag;
   // No custom cursor on touch / no-hover devices — it would sit frozen and jump
   // on tap. Native cursor is restored via CSS for these devices too.
   const isTouch = typeof window !== 'undefined' && window.matchMedia &&
@@ -3699,41 +3730,66 @@ function CustomCursor({ cursorStyle }) {
     const trail = trailRef.current;
     if (!primary) return;
 
-    let mx = -200, my = -200;
-    let tx = -200, ty = -200;
-    let raf;
+    let mx = -200; let my = -200;
+    let tx = -200; let ty = -200;
+    let raf = 0;
+    let hidden = false;
+    const hasTrail = !!trail;
+    const spin = cursorStyle === 'diamond' ? ' rotate(45deg)' : '';
+    const offset = cursorStyle === 'pixel' ? 0 : 0;
 
-    const onMove = (e) => { mx = e.clientX; my = e.clientY; };
+    const placePrimary = () => {
+      primary.style.transform = `translate3d(${mx + offset}px, ${my + offset}px, 0)${spin}`;
+    };
 
-    // ring hover expand
+    const onMove = (e) => {
+      mx = e.clientX;
+      my = e.clientY;
+      placePrimary();
+    };
+
     const onEnter = () => { if (trail) trail.classList.add('cursor-ring--active'); };
     const onLeave = () => { if (trail) trail.classList.remove('cursor-ring--active'); };
     const SEL = 'a, button, [role="button"], input, textarea, .folder-icon';
-    document.querySelectorAll(SEL).forEach((el) => {
+    const hoverEls = Array.from(document.querySelectorAll(SEL));
+    hoverEls.forEach((el) => {
       el.addEventListener('mouseenter', onEnter);
       el.addEventListener('mouseleave', onLeave);
     });
 
-    const animate = () => {
-      // pixel cursor anchors at 2,2 to match hotspot — others center
-      const offset = cursorStyle === 'pixel' ? 0 : 0;
-      const spin = cursorStyle === 'diamond' ? ' rotate(45deg)' : '';
-      primary.style.transform = `translate(${mx + offset}px, ${my + offset}px)${spin}`;
-      if (trail) {
-        tx += (mx - tx) * 0.12;
-        ty += (my - ty) * 0.12;
-        trail.style.transform = `translate(${tx}px, ${ty}px)`;
+    const onVis = () => { hidden = document.hidden; };
+    document.addEventListener('visibilitychange', onVis);
+
+    const animateTrail = () => {
+      if (!hidden && trail) {
+        let lerp = ringLagToLerp(lagRef.current);
+        if (heavyRef.current) lerp = Math.min(0.65, lerp * 1.35);
+        tx += (mx - tx) * lerp;
+        ty += (my - ty) * lerp;
+        trail.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
       }
-      raf = requestAnimationFrame(animate);
+      raf = requestAnimationFrame(animateTrail);
     };
 
-    document.addEventListener('mousemove', onMove);
-    raf = requestAnimationFrame(animate);
+    document.addEventListener('pointermove', onMove, { passive: true });
+    if (hasTrail) {
+      tx = mx;
+      ty = my;
+      raf = requestAnimationFrame(animateTrail);
+    } else {
+      placePrimary();
+    }
+
     return () => {
-      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('visibilitychange', onVis);
+      hoverEls.forEach((el) => {
+        el.removeEventListener('mouseenter', onEnter);
+        el.removeEventListener('mouseleave', onLeave);
+      });
       cancelAnimationFrame(raf);
     };
-  }, [cursorStyle]);
+  }, [cursorStyle, cursorRingLag, isTouch]);
 
   if (isTouch) return null;
 

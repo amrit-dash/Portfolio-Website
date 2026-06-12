@@ -123,40 +123,86 @@
       function startReveals() {
         document.documentElement.classList.add('js-reveal-ready');
         const reveal = (el) => el.classList.add('is-visible');
+        const revealRoot = () => document.querySelector('.os-root') || null;
+        const forceRevealInView = () => {
+          const root = revealRoot();
+          const vh = window.innerHeight || 800;
+          const vw = window.innerWidth || 1200;
+          document.querySelectorAll('[data-reveal]:not(.is-visible)').forEach((el) => {
+            const r = el.getBoundingClientRect();
+            if (r.width < 1 && r.height < 1) return;
+            const inView = r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw;
+            if (inView) reveal(el);
+          });
+          if (root) {
+            const rr = root.getBoundingClientRect();
+            root.querySelectorAll('[data-reveal]:not(.is-visible)').forEach((el) => {
+              const r = el.getBoundingClientRect();
+              if (r.width < 1 && r.height < 1) return;
+              const inRoot = r.bottom > rr.top && r.top < rr.bottom && r.right > rr.left && r.left < rr.right;
+              if (inRoot) reveal(el);
+            });
+          }
+        };
         if (!('IntersectionObserver' in window)) {
           document.querySelectorAll('[data-reveal]').forEach(reveal);
           return;
         }
-        const io = new IntersectionObserver((entries) => {
-          entries.forEach((e) => {
-            if (e.isIntersecting) {
-              reveal(e.target);
-              io.unobserve(e.target);
-            }
-          });
-        }, { threshold: 0.05, rootMargin: '0px 0px 0px 0px' });
+        let io = null;
+        const makeIo = () => {
+          if (io) io.disconnect();
+          io = new IntersectionObserver((entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                reveal(e.target);
+                io.unobserve(e.target);
+              }
+            });
+          }, { threshold: 0.05, root: revealRoot(), rootMargin: '0px 0px 8% 0px' });
+        };
+        makeIo();
         function scan() {
+          makeIo();
           document.querySelectorAll('[data-reveal]:not(.is-visible)').forEach((el) => {
-            if (!el.dataset.revealObserved) {
-              el.dataset.revealObserved = '1';
-              io.observe(el);
-            }
+            delete el.dataset.revealObserved;
+            io.observe(el);
+          });
+          requestAnimationFrame(function () {
+            requestAnimationFrame(forceRevealInView);
           });
         }
         scan();
         const mo = new MutationObserver(scan);
         mo.observe(document.body, { childList: true, subtree: true });
         [60, 240, 600, 1200].forEach((t) => setTimeout(scan, t));
+        window.addEventListener('amritos:content-ready', function () {
+          setTimeout(scan, 0);
+          setTimeout(forceRevealInView, 80);
+          setTimeout(forceRevealInView, 400);
+        });
+        const scrollRoot = () => revealRoot();
+        const onScroll = () => forceRevealInView();
+        document.addEventListener('scroll', onScroll, { passive: true, capture: true });
+        const rootMo = new MutationObserver(function () {
+          const root = scrollRoot();
+          if (root && !root.dataset.revealScrollBound) {
+            root.dataset.revealScrollBound = '1';
+            root.addEventListener('scroll', onScroll, { passive: true });
+          }
+        });
+        rootMo.observe(document.body, { childList: true, subtree: true });
         // Hard safety net: if the IO never fires (some preview/test environments
         // throttle or never trigger initial callbacks), force-reveal anything
         // still hidden after a short grace period.
         setTimeout(function forceReveal() {
           document.querySelectorAll('[data-reveal]:not(.is-visible)').forEach(reveal);
         }, 1600);
-        // And again later for anything that mounts late
         setTimeout(function forceReveal2() {
           document.querySelectorAll('[data-reveal]:not(.is-visible)').forEach(reveal);
         }, 3200);
+        setTimeout(function forceReveal3() {
+          document.querySelectorAll('[data-reveal]:not(.is-visible)').forEach(reveal);
+        }, 8000);
       }
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', arm);
