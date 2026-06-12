@@ -2053,8 +2053,7 @@ function useAnalytics() {
   const totalEvents = ['views', 'cvDownloads', 'botChats', 'projectOpens', 'socialClicks', 'linkClicks', 'ctaClicks']
     .reduce((s, k) => s + (Reflect.get(c, k) || 0), 0);
 
-  return {
-    ready: counters != null,
+  return { ready: counters != null,
     pageViews: c.views || 0, cvDownloads: c.cvDownloads || 0, botChats: c.botChats || 0, projectOpens: c.projectOpens || 0,
     socialClicks: c.socialClicks || 0, linkClicks: c.linkClicks || 0, ctaClicks: c.ctaClicks || 0,
     history, topProjects, activity, totalEvents, daily, recent, counters: c, refreshDaily,
@@ -2062,7 +2061,48 @@ function useAnalytics() {
   };
 }
 
+/* Custom vibe edit UI states (Appearance editor + live preview semantics).
+   applied — slot loaded, cosmetics match last saved baseline
+   editing — pencil edit mode on a slot, no unsaved cosmetic changes
+   dirty-new — cosmetics differ from baseline, not editing a slot → save as new
+   dirty-editing — editing a slot with unsaved changes → save updates slot */
+const CUSTOM_VIBE_UI = {
+  APPLIED: 'applied',
+  EDITING: 'editing',
+  DIRTY_NEW: 'dirty-new',
+  DIRTY_EDITING: 'dirty-editing',
+  /* Display-only selection sentinel — never persisted as cosmetics.vibe */
+  UNSAVED_ID: 'unsaved',
+};
+
+function snapshotCosForCompare(cos) {
+  const schema = window.SHARED_SCHEMA || {};
+  return schema.snapshotCosmetics ? schema.snapshotCosmetics(cos) : (cos || {});
+}
+
+function cosmeticsSnapshotsEqual(a, b) {
+  return JSON.stringify(snapshotCosForCompare(a)) === JSON.stringify(snapshotCosForCompare(b));
+}
+
+function getCustomVibeUiState(cosmetics, editingCustomId, baselineSnapshot) {
+  const cos = cosmetics && typeof cosmetics === 'object' ? cosmetics : {};
+  const baseline = baselineSnapshot || snapshotCosForCompare(cos);
+  const dirty = !cosmeticsSnapshotsEqual(cos, baseline);
+  if (editingCustomId) return dirty ? CUSTOM_VIBE_UI.DIRTY_EDITING : CUSTOM_VIBE_UI.EDITING;
+  return dirty ? CUSTOM_VIBE_UI.DIRTY_NEW : CUSTOM_VIBE_UI.APPLIED;
+}
+
+function getCustomVibeDisplayId(cosmetics, editingCustomId, baselineSnapshot) {
+  const state = getCustomVibeUiState(cosmetics, editingCustomId, baselineSnapshot);
+  if (state === CUSTOM_VIBE_UI.DIRTY_NEW || state === CUSTOM_VIBE_UI.DIRTY_EDITING) {
+    return CUSTOM_VIBE_UI.UNSAVED_ID;
+  }
+  const cos = cosmetics && typeof cosmetics === 'object' ? cosmetics : {};
+  return typeof cos.vibe === 'string' ? cos.vibe : 'classic';
+}
+
 window.ADMIN_STORE = {
   Store, buildDefaultContent, useContent, useAnalytics, useVersionHistory, LLM_PROVIDERS, LS,
   contentFingerprint, draftMatchesPublished, mergeDraftApiKeys, canonicalPublishedFromDraft, fsTsToIso, MAX_PUBLISHED_VERSIONS,
+  CUSTOM_VIBE_UI, snapshotCosForCompare, cosmeticsSnapshotsEqual, getCustomVibeUiState, getCustomVibeDisplayId,
 };

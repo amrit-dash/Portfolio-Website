@@ -604,24 +604,45 @@ function VibeButton({ vibe, active, onClick, extended }) {
   );
 }
 
+/* Unsaved tweaks — dotted card shown when cosmetics diverge from last saved baseline. */
+function UnsavedVibeCard({ active }) {
+  return (
+    <button
+      type="button"
+      className="vibe unsaved-vibe-card"
+      data-on={active}
+      title="Unsaved vibe · tweaks not saved to a slot"
+      aria-label="Unsaved vibe"
+      aria-pressed={active}
+    >
+      <span className="vibe__swatch unsaved-vibe-card__swatch" aria-hidden="true" />
+      <span className="vibe__txt"><b>Unsaved vibe</b><span>Tweaks not saved to a slot</span></span>
+    </button>
+  );
+}
+
 /* Saved custom vibe card — mirrors preset vibe card layout. */
-function CustomVibeCard({ slot, active, onSelect, onEdit }) {
+function CustomVibeCard({ slot, active, editing, onSelect, onEdit }) {
+  const { AdminIcon } = window.ADMIN_UI;
   const accent = (slot.cos && slot.cos.accent) || '#c8e856';
   const title = (slot.name && slot.name.trim()) ? slot.name.trim() : 'Untitled';
   const subtitle = _customVibeLabel(slot.id);
 
   return (
-    <div className="vibe custom-vibe-card" data-on={active}>
+    <div className="vibe custom-vibe-card" data-on={active} data-editing={editing ? 'true' : undefined}>
       <button type="button" className="custom-vibe-card__main" onClick={onSelect} title={title + ' · ' + subtitle}>
         <span className="vibe__swatch" style={{ background: accent }} />
         <span className="vibe__txt"><b>{title}</b><span>{subtitle}</span></span>
       </button>
       <button
         type="button"
-        className="custom-vibe-card__edit btn btn--sm"
+        className={'custom-vibe-card__edit iconbtn' + (editing ? ' custom-vibe-card__edit--active' : '')}
         onClick={(e) => { e.stopPropagation(); onEdit(slot); }}
+        title={editing ? 'Editing this vibe' : 'Edit custom vibe'}
+        aria-label={editing ? 'Editing this vibe' : 'Edit custom vibe'}
+        aria-pressed={editing}
       >
-        Edit
+        <AdminIcon name="pencil" size={14} />
       </button>
     </div>
   );
@@ -629,6 +650,7 @@ function CustomVibeCard({ slot, active, onSelect, onEdit }) {
 
 function AppearanceEditor({ content, setAt }) {
   const { PageHead, Panel, Field, Select, Segmented, Swatches, ToggleRow, Input, AdminIcon, Btn } = window.ADMIN_UI;
+  const { CUSTOM_VIBE_UI, getCustomVibeUiState, getCustomVibeDisplayId, snapshotCosForCompare } = window.ADMIN_STORE;
   const c = content.cosmetics;
   const useAccentWallpaper = c.wallpaperUseAccent !== false;
   const wallpaperTint = useAccentWallpaper ? (c.accent || '#c8e856') : (c.wallpaperColor || c.accent || '#c8e856');
@@ -642,19 +664,20 @@ function AppearanceEditor({ content, setAt }) {
   const bgPatternLabel = bgMeta.label || bgPattern;
   const customVibes = useMemo(() => _coerceCustomVibes(c.customVibes), [c.customVibes]);
   const savedCustomVibes = customVibes;
-  const cosBaselineRef = useRef(_SNAPSHOT_COS(c));
+  const cosBaselineRef = useRef(snapshotCosForCompare(c));
   const editIntentRef = useRef(null);
+  const [cosBaseline, setCosBaseline] = useState(() => snapshotCosForCompare(c));
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [showAllVibes, setShowAllVibes] = useState(() => {
     try { return localStorage.getItem('amritos.vibes.showAll') === '1'; } catch (e) { return false; }
   });
   const [editingCustomId, setEditingCustomId] = useState(null);
-  const [pendingCustomEdit, setPendingCustomEdit] = useState(false);
   const [createName, setCreateName] = useState('');
 
   React.useEffect(() => {
-    cosBaselineRef.current = _SNAPSHOT_COS(c);
-    setPendingCustomEdit(false);
+    const baseline = snapshotCosForCompare(c);
+    cosBaselineRef.current = baseline;
+    setCosBaseline(baseline);
     if (editIntentRef.current && editIntentRef.current === c.vibe) {
       editIntentRef.current = null;
       return;
@@ -663,11 +686,15 @@ function AppearanceEditor({ content, setAt }) {
     setCreateName('');
   }, [c.vibe]);
 
-  React.useEffect(() => {
-    if (!advancedOpen) return;
-    const changed = JSON.stringify(_SNAPSHOT_COS(c)) !== JSON.stringify(cosBaselineRef.current);
-    setPendingCustomEdit(changed);
-  }, [c, advancedOpen]);
+  const vibeUiState = useMemo(
+    () => getCustomVibeUiState(c, editingCustomId, cosBaseline),
+    [c, editingCustomId, cosBaseline],
+  );
+  const vibeDisplayId = useMemo(
+    () => getCustomVibeDisplayId(c, editingCustomId, cosBaseline),
+    [c, editingCustomId, cosBaseline],
+  );
+  const showUnsavedCard = vibeDisplayId === CUSTOM_VIBE_UI.UNSAVED_ID;
 
   const setCosAt = useCallback((path, value) => {
     setAt(path, value);
@@ -685,12 +712,37 @@ function AppearanceEditor({ content, setAt }) {
     }
   };
 
+  const handleSelectCustom = (slot) => {
+    applyCustomSlot(slot);
+    setAdvancedOpen(true);
+  };
+
   const handleEditCustom = (slot) => {
     editIntentRef.current = slot.id;
     setEditingCustomId(slot.id);
     setCreateName(slot.name || '');
     setAdvancedOpen(true);
-    applyCustomSlot(slot);
+    if (c.vibe !== slot.id) {
+      applyCustomSlot(slot);
+    } else {
+      const savedBaseline = snapshotCosForCompare(slot.cos || {});
+      cosBaselineRef.current = savedBaseline;
+      setCosBaseline(savedBaseline);
+    }
+  };
+
+  const cancelCustomEdit = () => {
+    if (!editingCustomId) return;
+    const slot = customVibes.find((s) => s.id === editingCustomId);
+    if (slot && slot.cos) {
+      const restored = { ...c, ...slot.cos, vibe: editingCustomId, customVibes };
+      setAt('cosmetics', restored);
+      const baseline = snapshotCosForCompare(restored);
+      cosBaselineRef.current = baseline;
+      setCosBaseline(baseline);
+    }
+    setEditingCustomId(null);
+    setCreateName('');
   };
 
   const saveCustomFromPanel = () => {
@@ -705,7 +757,7 @@ function AppearanceEditor({ content, setAt }) {
       setEditingCustomId(null);
       setCreateName('');
       cosBaselineRef.current = snapshot;
-      setPendingCustomEdit(false);
+      setCosBaseline(snapshot);
       return;
     }
 
@@ -716,7 +768,7 @@ function AppearanceEditor({ content, setAt }) {
     setAt('cosmetics', { ...c, vibe: id, customVibes: next });
     setCreateName('');
     cosBaselineRef.current = snapshot;
-    setPendingCustomEdit(false);
+    setCosBaseline(snapshot);
   };
 
   const vibeCount = VIBES.length;
@@ -732,8 +784,18 @@ function AppearanceEditor({ content, setAt }) {
       return next;
     });
   };
-  const showCreatePanel = advancedOpen && (editingCustomId || pendingCustomEdit);
-  const createPanelTitle = editingCustomId ? 'Update custom vibe' : 'Create new custom vibe';
+  const showCreatePanel = advancedOpen && vibeUiState !== CUSTOM_VIBE_UI.APPLIED;
+  const createPanelTitle = vibeUiState === CUSTOM_VIBE_UI.DIRTY_NEW
+    ? 'Save as new vibe'
+    : vibeUiState === CUSTOM_VIBE_UI.DIRTY_EDITING
+      ? 'Save changes to custom vibe'
+      : 'Edit custom vibe';
+  const createPanelSub = vibeUiState === CUSTOM_VIBE_UI.DIRTY_NEW
+    ? 'your tweaks differ from the last saved look — name and save as a new slot'
+    : vibeUiState === CUSTOM_VIBE_UI.DIRTY_EDITING
+      ? 'unsaved changes — save updates this slot or cancel to revert'
+      : 'rename or save when you change settings below';
+  const saveButtonLabel = editingCustomId ? 'Save changes' : 'Save custom vibe';
   const editingSlot = editingCustomId ? customVibes.find((s) => s.id === editingCustomId) : null;
 
   return (
@@ -768,7 +830,7 @@ function AppearanceEditor({ content, setAt }) {
                   <VibeButton
                     key={v.id}
                     vibe={v}
-                    active={c.vibe === v.id}
+                    active={vibeDisplayId === v.id}
                     extended={_isVibeHidden(v)}
                     onClick={() => applyVibe(v)}
                   />
@@ -784,20 +846,21 @@ function AppearanceEditor({ content, setAt }) {
         title="Custom vibes"
         sub={savedCount + ' saved look' + (savedCount === 1 ? '' : 's')}
       >
-        {savedCount > 0 ? (
-          <div className="vibes custom-vibes__grid">
-            {savedCustomVibes.map((slot) => (
-              <CustomVibeCard
-                key={slot.id}
-                slot={slot}
-                active={c.vibe === slot.id}
-                onSelect={() => applyCustomSlot(slot)}
-                onEdit={handleEditCustom}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="helptext" style={{ margin: 0 }}>No custom vibes saved yet. Pick a preset, open view more settings, tweak settings, then save a new look.</p>
+        <div className="vibes custom-vibes__grid">
+          <UnsavedVibeCard active={showUnsavedCard} />
+          {savedCustomVibes.map((slot) => (
+            <CustomVibeCard
+              key={slot.id}
+              slot={slot}
+              active={vibeDisplayId === slot.id}
+              editing={editingCustomId === slot.id}
+              onSelect={() => handleSelectCustom(slot)}
+              onEdit={handleEditCustom}
+            />
+          ))}
+        </div>
+        {savedCount === 0 && !showUnsavedCard && (
+          <p className="helptext" style={{ margin: '10px 0 0' }}>No custom vibes saved yet. Pick a preset, open view more settings, tweak settings, then save a new look.</p>
         )}
       </Panel>
 
@@ -917,6 +980,9 @@ function AppearanceEditor({ content, setAt }) {
                   <p className="helptext" style={{ margin: '4px 0 0' }}>Animation speed above controls blob rotation; morph speed changes how fast the silhouette and internal flow shift.</p>
                 </>
               )}
+              {bgPattern === 'honeycombGlow' && (
+                <Field label="Glow density" hint="few hexes lit ← → many glowing at once"><RangeRow label="Glow max" value={c.honeycombGlowDensity == null ? 50 : c.honeycombGlowDensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.honeycombGlowDensity', v)} /></Field>
+              )}
               </div>
             </Panel>
           )}
@@ -926,6 +992,7 @@ function AppearanceEditor({ content, setAt }) {
               <Field label="Corner radius" hint="UI boxes & windows"><Segmented value={c.radius || 'soft'} options={RADIUS_OPTIONS} onChange={(v) => setCosAt('cosmetics.radius', v)} /></Field>
               <Field label="Cursor effect" hint="global overlay — works on any wallpaper"><Select value={c.cursorEffect || 'none'} options={CURSOR_EFFECT_OPTIONS} onChange={(v) => setCosAt('cosmetics.cursorEffect', v)} /></Field>
             </div>
+            <div className="effects-cursor-sliders">
             {(c.cursorEffect || 'none') === 'trail' && (
               <>
                 <Field label="Trail style"><Select value={c.cursorEffectTrailStyle || 'glow'} options={CURSOR_EFFECT_TRAIL_STYLE_OPTIONS} onChange={(v) => setCosAt('cosmetics.cursorEffectTrailStyle', v)} /></Field>
@@ -950,6 +1017,7 @@ function AppearanceEditor({ content, setAt }) {
             {['spark', 'glow'].includes(c.cursorEffect || '') && (
               <Field label="Effect intensity" hint="subtle ← → vivid"><RangeRow label="Intensity" value={c.cursorEffectIntensity == null ? 55 : c.cursorEffectIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cursorEffectIntensity', v)} /></Field>
             )}
+            </div>
             <Field label="Accent glow" hint="bloom on accent-colored UI"><RangeRow label="Bloom" value={c.glow == null ? 100 : c.glow} min={0} max={160} step={10} unit="%" onChange={(v) => setCosAt('cosmetics.glow', v)} /></Field>
             <div className="divider" />
             <ToggleRow title="CRT scanlines" sub="retro overlay across the page" value={c.scanlines} onChange={(v) => setCosAt('cosmetics.scanlines', v)} />
@@ -969,7 +1037,7 @@ function AppearanceEditor({ content, setAt }) {
           {showCreatePanel && (
             <>
               <div className="divider" style={{ margin: '20px 0' }} />
-              <Panel title={createPanelTitle} sub={editingCustomId ? 'save changes to this custom vibe slot' : 'name and save your tweaked look'} className="custom-vibes__create">
+              <Panel title={createPanelTitle} sub={createPanelSub} className="custom-vibes__create" data-vibe-state={vibeUiState}>
                 <Field label="Vibe name" hint="shown on the card">
                   <Input
                     value={createName}
@@ -977,11 +1045,14 @@ function AppearanceEditor({ content, setAt }) {
                     onChange={setCreateName}
                   />
                 </Field>
-                <div style={{ marginTop: 12 }}>
+                <div className="custom-vibes__actions">
                   <Btn kind="primary" onClick={saveCustomFromPanel}>
                     <AdminIcon name="save" size={13} />
-                    {editingCustomId ? 'Save changes' : 'Save custom vibe'}
+                    {saveButtonLabel}
                   </Btn>
+                  {editingCustomId && (
+                    <Btn kind="ghost" onClick={cancelCustomEdit}>Cancel</Btn>
+                  )}
                 </div>
               </Panel>
             </>
