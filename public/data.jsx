@@ -490,6 +490,8 @@ const DEFAULT_COSMETICS = {
   cursorEffectCometDirection: 'cursor',
   cursorEffectCometIntensity: 50,
   cursorEffectCometSpeed: 50,
+  cursorRingLag: 50,
+  uiGlassOpacity: 0,
   wallpaperUseAccent: true, // wallpaper tint follows accent when true
   wallpaperColor: '',     // custom wallpaper tint when wallpaperUseAccent is false
   vignetteIntensity: 45,  // wallpaper edge fade: 0 off · 45 legacy center · 100 strong
@@ -636,7 +638,14 @@ function _deepMerge(base, over) {
   const out = { ...base };
   for (const k of Object.keys(over)) {
     if (_UNSAFE_KEY(k)) continue;
-    out[k] = _deepMerge(base[k], over[k]);
+    const bVal = base[k];
+    const oVal = over[k];
+    // Empty arrays from Firestore/cache must not wipe seeded defaults on first paint.
+    if (Array.isArray(oVal) && oVal.length === 0 && Array.isArray(bVal) && bVal.length > 0) {
+      out[k] = bVal;
+      continue;
+    }
+    out[k] = _deepMerge(bVal, oVal);
   }
   return out;
 }
@@ -645,8 +654,30 @@ function _coerceExperience(arr) {
   const fn = window.SHARED_SCHEMA && window.SHARED_SCHEMA.coerceExperienceArray;
   return fn ? fn(arr) : arr;
 }
+const _COLLECTION_KEYS = ['expertise', 'experience', 'projects', 'cards'];
+
+function _normalizeSiteContent(content) {
+  if (!content || typeof content !== 'object') return content;
+  _COLLECTION_KEYS.forEach((k) => {
+    const arr = content[k];
+    const fb = PORTFOLIO_DEFAULTS[k];
+    if ((!Array.isArray(arr) || arr.length === 0) && Array.isArray(fb) && fb.length > 0) {
+      content[k] = JSON.parse(JSON.stringify(fb));
+    }
+  });
+  const about = content.about;
+  if (about) {
+    const coerce = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.coerceImpactArray)
+      || ((v, fb) => (Array.isArray(v) && v.length ? v : Array.isArray(fb) ? fb : []));
+    const fallback = (DEFAULT_ABOUT && DEFAULT_ABOUT.impact) || [];
+    about.impact = coerce(about.impact, fallback);
+  }
+  return content;
+}
+
 function _withExperienceNorm(content) {
   if (!content) return content;
+  _normalizeSiteContent(content);
   if (Array.isArray(content.experience)) content.experience = _coerceExperience(content.experience);
   const normCos = window.SHARED_SCHEMA && window.SHARED_SCHEMA.normalizeCosmetics;
   if (normCos && content.cosmetics) {
@@ -767,6 +798,10 @@ window.applyCosmeticsToRoot = function applyCosmeticsToRoot(cos, opts) {
   _root.style.setProperty('--cursor-color', _cos.cursorColor || _toned);
   if (typeof _cos.fontScale === 'number') _root.style.setProperty('--font-scale', (_cos.fontScale / 100).toString());
   _root.style.setProperty('--glow', ((typeof _cos.glow === 'number' ? _cos.glow : 100) / 100).toString());
+  const _glass = typeof _cos.uiGlassOpacity === 'number' ? _cos.uiGlassOpacity : 0;
+  const _glassMix = Math.round(100 - (_glass / 100) * 55);
+  _root.style.setProperty('--ui-glass-mix', _glassMix + '%');
+  _root.style.setProperty('--ui-glass-blur', Math.round((_glass / 100) * 16) + 'px');
   _root.dataset.scanlines = _cos.scanlines === false ? 'off' : 'on';
   if (_cos.type && _cos.type !== 'default') _root.dataset.type = _cos.type; else delete _root.dataset.type;
   if (_cos.headingFont && _cos.headingFont !== 'match') _root.dataset.heading = _cos.headingFont; else delete _root.dataset.heading;

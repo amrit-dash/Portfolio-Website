@@ -251,6 +251,7 @@
     'cursorEffect', 'cursorEffectTrailStyle', 'cursorEffectTrailLength', 'cursorEffectIntensity',
     'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
     'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
+    'cursorRingLag', 'uiGlassOpacity',
     'glow', 'radius',
   ];
 
@@ -937,6 +938,8 @@
       case 'cursorEffectRippleSpeed':
       case 'cursorEffectCometIntensity':
       case 'cursorEffectCometSpeed':
+      case 'cursorRingLag':
+      case 'uiGlassOpacity':
       case 'vignetteIntensity':
       case 'glow': {
         const ranges = {
@@ -946,6 +949,7 @@
           fluidSize: [0, 100], fluidMorphSpeed: [0, 100], honeycombGlowDensity: [0, 100],
           cursorInteractStrength: [0, 100], cursorTrailLength: [0, 100], cursorParticleDensity: [0, 100], cursorSweepRadius: [0, 100],
           cursorEffectTrailLength: [0, 100], cursorEffectIntensity: [0, 100], cursorEffectRippleCount: [0, 100], cursorEffectRippleSpeed: [0, 100], cursorEffectCometIntensity: [0, 100], cursorEffectCometSpeed: [0, 100],
+          cursorRingLag: [0, 100], uiGlassOpacity: [0, 100],
           vignetteIntensity: [0, 100], glow: [0, 160],
         };
         const bounds = ranges[field];
@@ -1029,7 +1033,7 @@
       'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperAnimPaused (freeze animated motion) · wallpaperRandomness (0=deterministic/uniform sliders · 100=chaos overrides direction/speed/phase per element) · wallpaperUseAccent (pattern ink follows accent when true) · wallpaperColor (custom pattern tint when wallpaperUseAccent is false; accent color always used for glow/hi on canvas patterns)',
       'Per-pattern: honeycombStyle (outline|fill) · honeycombGlowDensity (0–100 max % of hex cells glowing at once on honeycombGlow) · rainDirection · waveDirection · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · numberFormat · binaryFontSize · fluidSize · fluidMorphSpeed (fluidcore blob scale + morph/flow rate; wallpaperAnimSpeed controls rotation) · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
       'cursorEffect (none|trail|comet|ripple|spark|glow) — global overlay independent of wallpaper · cursorEffectTrailStyle (glow|line|dotted|particles) · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount (ripple burst: 0=1 ring · 100=8 varied) · cursorEffectRippleSpeed (0=slow expansion · 100=fast) · cursorEffectCometDirection (cursor|up|down|random) · cursorEffectCometIntensity · cursorEffectCometSpeed',
-      'vignetteIntensity (0=off) · vignetteDirection · glow · radius · scanlines · cursorStyle · cursorColor',
+      'vignetteIntensity (0=off) · vignetteDirection · glow · radius · scanlines · cursorStyle · cursorColor · cursorRingLag (0=snappy ring follow · 100=floaty trail on ring/trail cursors) · uiGlassOpacity (0=opaque panels · 100=translucent windows/bot/expertise cards with blur)',
       'botIcon · botIconColor · vibe (built-in preset id or custom-* slot id; segments: dark, light, retro, bold, multi-tone; admin shows 20 core presets — 28 extended tier hidden by default; agent applyVibePreset accepts any id) · customVibes (unlimited saved slots). Read: readAppearanceConfig. Write: setContentPath (cosmetics.*), updateAppearance (batch fields), applyVibePreset / applyCustomVibe, saveCustomVibe.',
       'Multi-tone presets: wallpaperUseAccent false + explicit wallpaperColor for pattern ink; cursorColor often differs from accent and wallpaper tint.',
       'Static honeycomb: honeycombStyle outline (grid lines) · fill (sparse filled cells via wallpaperIntensity). Animated: honeycombGlow (staggered accent hex pulses · honeycombGlowDensity caps simultaneous glow count).',

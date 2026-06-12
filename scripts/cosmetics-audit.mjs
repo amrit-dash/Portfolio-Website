@@ -55,6 +55,8 @@ const DEFAULT_COSMETICS = {
   cursorEffectCometDirection: 'cursor',
   cursorEffectCometIntensity: 50,
   cursorEffectCometSpeed: 50,
+  cursorRingLag: 50,
+  uiGlassOpacity: 0,
   wallpaperUseAccent: true,
   wallpaperColor: '',
   vignetteIntensity: 45,
