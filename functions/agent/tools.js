@@ -20,12 +20,85 @@ const {
   COSMETIC_SNAPSHOT_KEYS,
   getVisibleVibes,
   getExtendedVibes,
+  BG_PATTERN_META,
 } = schema;
 const VIBE_IDS = VIBES.map((v) => v.id);
 const VIBE_VISIBLE_COUNT = getVisibleVibes().length;
 const VIBE_EXTENDED_COUNT = getExtendedVibes().length;
 const VIBE_TOTAL_COUNT = VIBES.length;
-const COSMETICS_WRITE_HINT = 'cursorEffect (none|trail|comet|ripple|spark|glow) · cursorEffectTrailStyle · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount · cursorEffectRippleSpeed · cursorEffectCometDirection · cursorEffectCometIntensity · cursorEffectCometSpeed · honeycombStyle · honeycombGlowDensity · cursorInteractStrength · cursorTrailLength · cursorParticleDensity · cursorSweepRadius · wallpaperColor · wallpaperUseAccent · interactive: snowinteractive|ripplepool|fireflies';
+const COSMETICS_WRITE_HINT = 'cursorEffect (none|trail|comet|ripple|spark|glow) · cursorEffectTrailStyle · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount · cursorEffectRippleSpeed · cursorEffectCometDirection · cursorEffectCometIntensity · cursorEffectCometSpeed · cursorRingLag · uiGlassOpacity · honeycombStyle · honeycombGlowDensity · cursorInteractStrength · cursorTrailLength · cursorParticleDensity · cursorSweepRadius · wallpaperColor · wallpaperUseAccent · interactive: snowinteractive|ripplepool|fireflies';
+const CUSTOM_VIBE_NAME_HINT = 'Always set a short human name (2–4 words) inferred from cosmetics — theme, bgPattern, accent/wallpaper colors, cursorEffect (e.g. dark+matrixrain → "Neon Matrix", light+snowinteractive → "Winter Drift", split accent+wallpaper → "Coral Split"). Never leave new slots unnamed or use generic "Custom vibe N" labels.';
+const PATTERN_VIBE_NAMES = {
+  matrixrain: 'Neon Matrix',
+  snowinteractive: 'Winter Drift',
+  ripplepool: 'Ripple Pool',
+  fireflies: 'Firefly Glade',
+  binarystream: 'Binary Stream',
+  honeycombGlow: 'Honeycomb Glow',
+  fluidcore: 'Fluid Core',
+  morphgeo: 'Morph Geo',
+  aurora: 'Aurora',
+  cosmos: 'Cosmic Drift',
+  circuits: 'Circuit Grid',
+  lightning: 'Lightning',
+  nebula: 'Nebula',
+  particles: 'Particle Field',
+};
+const ACCENT_FAMILY_NAMES = [
+  { match: (h) => h >= 70 && h < 95, name: 'Lime' },
+  { match: (h) => h >= 95 && h < 150, name: 'Green' },
+  { match: (h) => h >= 150 && h < 190, name: 'Teal' },
+  { match: (h) => h >= 190 && h < 250, name: 'Blue' },
+  { match: (h) => h >= 250 && h < 290, name: 'Purple' },
+  { match: (h) => h >= 290 && h < 340, name: 'Pink' },
+  { match: (h) => h >= 340 || h < 25, name: 'Coral' },
+  { match: (h) => h >= 25 && h < 55, name: 'Amber' },
+];
+
+function hexToHue(hex) {
+  const h = String(hex || '').replace('#', '');
+  if (h.length < 6) return null;
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  let hue = 0;
+  const d = max - min;
+  if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+  else if (max === g) hue = ((b - r) / d + 2) * 60;
+  else hue = ((r - g) / d + 4) * 60;
+  return hue;
+}
+
+function accentFamilyName(hex) {
+  const hue = hexToHue(hex);
+  if (hue == null) return '';
+  const row = ACCENT_FAMILY_NAMES.find((r) => r.match(hue));
+  return row ? row.name : '';
+}
+
+function inferCustomVibeName(cos) {
+  const snap = cos && typeof cos === 'object' ? cos : {};
+  const pattern = snap.bgPattern || 'grid';
+  const accentName = accentFamilyName(snap.accent);
+  const wallName = snap.wallpaperUseAccent === false ? accentFamilyName(snap.wallpaperColor) : '';
+  if (accentName && wallName && accentName !== wallName) {
+    return accentName + ' ' + wallName + ' Split';
+  }
+  if (PATTERN_VIBE_NAMES[pattern]) return PATTERN_VIBE_NAMES[pattern];
+  const meta = BG_PATTERN_META[pattern];
+  if (meta && meta.label) {
+    const short = meta.label.replace(/\s+interactive$/i, '').trim();
+    if (short) return short;
+  }
+  const theme = snap.theme === 'light' ? 'Light' : 'Dark';
+  const cursor = snap.cursorEffect && snap.cursorEffect !== 'none' ? String(snap.cursorEffect) : '';
+  if (cursor) return theme + ' ' + (cursor.charAt(0).toUpperCase() + cursor.slice(1));
+  if (accentName) return theme + ' ' + accentName;
+  return theme + ' Custom';
+}
 const { pathString } = require('./guards');
 const { deepClone, getAtPath, undoLastChange } = require('./content-ops');
 const { agentPublish } = require('./publish');
@@ -121,7 +194,7 @@ const STRUCTURED_TOOLS = [
     parameters: { type: 'object', properties: { collection: { type: 'string' }, index: { type: 'number' }, id: { type: 'string' } }, required: ['collection'] }, mutates: true },
   { name: 'reorder', description: 'Reorder a collection to match the given order of ids or indices.',
     parameters: { type: 'object', properties: { collection: { type: 'string' }, order: { type: 'array', items: { type: 'string' } } }, required: ['collection', 'order'] }, mutates: true },
-  { name: 'applyVibePreset', description: 'Apply a built-in cosmetic vibe preset to cosmetics. ' + VIBE_TOTAL_COUNT + ' presets total (' + VIBE_VISIBLE_COUNT + ' core visible in admin · ' + VIBE_EXTENDED_COUNT + ' extended tier hidden by default — agent may apply any id). Multi-tone vibes split accent, wallpaperColor (pattern ink), and cursorColor independently (wallpaperUseAccent: false). Sets theme, accent, fonts, cursor, wallpaper (static: grid/dots/diagonal/crosshatch/3dgrid/honeycomb/padgrid/brick/noise · animated: circuits, waves, aurora, cosmos, matrixrain, particles, lightning, rain, binarystream, nebula, morphgeo, fluidcore, honeycombGlow · interactive: snowinteractive, ripplepool, fireflies), ' + COSMETICS_WRITE_HINT + ', brightness/density/animSpeed/wallpaperAnimPaused/randomness/tint/vignette, per-pattern params, glow, radius, scanlines. Does not apply custom-* saved slots — use applyCustomVibe.',
+  { name: 'applyVibePreset', description: 'Apply a built-in cosmetic vibe preset to cosmetics. ' + VIBE_TOTAL_COUNT + ' presets total (' + VIBE_VISIBLE_COUNT + ' core visible in admin · ' + VIBE_EXTENDED_COUNT + ' extended tier hidden by default — agent may apply any id). Multi-tone vibes split accent, wallpaperColor (pattern ink), and cursorColor independently (wallpaperUseAccent: false). Sets theme, accent, fonts, cursor, wallpaper (static: grid/dots/diagonal/crosshatch/3dgrid/honeycomb/padgrid/brick/noise · animated: circuits, waves, aurora, cosmos, matrixrain, particles, lightning, rain, binarystream, nebula, morphgeo, fluidcore, honeycombGlow · interactive: snowinteractive, ripplepool, fireflies), ' + COSMETICS_WRITE_HINT + ', brightness/density/animSpeed/wallpaperAnimPaused/randomness/tint/vignette, per-pattern params, glow, radius, scanlines. Does not apply custom-* saved slots — use applyCustomVibe. To persist tweaks as a custom slot after applying, call saveCustomVibe with a descriptive name — ' + CUSTOM_VIBE_NAME_HINT,
     parameters: {
       type: 'object',
       properties: {
@@ -143,12 +216,12 @@ const STRUCTURED_TOOLS = [
       required: ['id'],
     },
     mutates: true },
-  { name: 'saveCustomVibe', description: 'Save current cosmetics snapshot to a custom vibe slot (includes cursorEffect*, honeycombStyle, interactive wallpaper params, wallpaperColor). Auto-assigns the next custom-* id when id is omitted. Persists in draft cosmetics.customVibes (unlimited slots).',
+  { name: 'saveCustomVibe', description: 'Save current cosmetics snapshot to a custom vibe slot (includes cursorEffect*, honeycombStyle, interactive wallpaper params, wallpaperColor). Auto-assigns the next custom-* id when id is omitted. Persists in draft cosmetics.customVibes (unlimited slots). ' + CUSTOM_VIBE_NAME_HINT,
     parameters: {
       type: 'object',
       properties: {
         id: { type: 'string', description: 'Optional custom slot id to update; omit to create a new slot' },
-        name: { type: 'string', description: 'Optional display name for the slot' },
+        name: { type: 'string', description: 'Display name for the card — required on create; short human title (2–4 words) inferred from theme, bgPattern, accent/wallpaper colors, cursorEffect' },
       },
     },
     mutates: true },
@@ -164,7 +237,7 @@ const STRUCTURED_TOOLS = [
       required: ['id'],
     },
     mutates: false },
-  { name: 'deleteCustomVibe', description: 'Remove a saved custom vibe slot from cosmetics.customVibes. Resets active vibe to classic if the deleted slot was active.',
+  { name: 'deleteCustomVibe', description: 'Remove a saved custom vibe slot from cosmetics.customVibes. Resets active vibe to the classic preset (with its cosmetics) if the deleted slot was active.',
     parameters: {
       type: 'object',
       properties: {
@@ -176,7 +249,7 @@ const STRUCTURED_TOOLS = [
   { name: 'readAppearanceConfig', description: 'Read full cosmetics config including ' + COSMETICS_WRITE_HINT + ', vignette, and all pattern-specific fields. Returns active fields, customVibes slots, resolveEffectiveCosmetics, and presetCatalog (total/visible/extended ids — extended presets hidden in admin by default). Write: updateAppearance (batch), setContentPath (cosmetics.* single field), applyVibePreset / applyCustomVibe, saveCustomVibe.',
     parameters: { type: 'object', properties: {} },
     mutates: false },
-  { name: 'updateAppearance', description: 'Apply one or more validated cosmetics fields in a single write. Keys: ' + COSMETICS_WRITE_HINT + ', plus theme, accent, bgPattern, wallpaperBrightness/Intensity/AnimSpeed/AnimPaused/Randomness, vignetteIntensity/Direction, glow, radius, scanlines, cursorStyle/Color, type, fonts. Same validation as setContentPath on cosmetics.*. Optional saveToCustom saves the result to a custom vibe slot.',
+  { name: 'updateAppearance', description: 'Apply one or more validated cosmetics fields in a single write. Keys: ' + COSMETICS_WRITE_HINT + ', plus theme, accent, bgPattern, wallpaperBrightness/Intensity/AnimSpeed/AnimPaused/Randomness, vignetteIntensity/Direction, glow, radius, scanlines, cursorStyle/Color, type, fonts. Same validation as setContentPath on cosmetics.*. Optional saveToCustom saves the result to a custom vibe slot — pass customVibeName with a descriptive title when saving a new or renamed slot (' + CUSTOM_VIBE_NAME_HINT + ').',
     parameters: {
       type: 'object',
       properties: {
@@ -187,6 +260,10 @@ const STRUCTURED_TOOLS = [
         saveToCustom: {
           type: 'string',
           description: 'Optional custom-* slot id to overwrite, or omit/false to skip. Use saveCustomVibe separately to snapshot without other field edits.',
+        },
+        customVibeName: {
+          type: 'string',
+          description: 'When saveToCustom is set: display name for the slot (' + CUSTOM_VIBE_NAME_HINT + ')',
         },
       },
       required: ['fields'],
@@ -542,9 +619,13 @@ function execSaveCustomVibe(a, session) {
   const id = (typeof a.id === 'string' && isCustomVibeId(a.id)) ? a.id : nextCustomVibeId(slots);
   const idx = slots.findIndex((s) => s.id === id);
   const num = customVibeNum(id) || slots.length + 1;
+  const isNew = idx < 0;
+  let name = typeof a.name === 'string' ? a.name.trim() : '';
+  if (!name && isNew) name = inferCustomVibeName(snap);
+  else if (!name && idx >= 0) name = slots[idx].name || '';
   const slot = {
     id,
-    name: typeof a.name === 'string' ? a.name : (idx >= 0 ? slots[idx].name : ''),
+    name,
     label: 'Custom vibe ' + num,
     cos: snap,
   };
@@ -588,8 +669,16 @@ function execDeleteCustomVibe(a, session) {
   if (slots.length === coerceCustomVibes(cur.customVibes).length) {
     return { ok: false, error: 'slot-not-found', id: a.id };
   }
-  const vibe = cur.vibe === a.id ? 'classic' : cur.vibe;
-  return session.setPath('cosmetics', { ...cur, vibe, customVibes: slots });
+  let next = { ...cur, customVibes: slots };
+  if (cur.vibe === a.id) {
+    const classic = schema.getVibe('classic');
+    if (classic && classic.cos) {
+      next = { ...next, ...deepClone(classic.cos), vibe: 'classic' };
+    } else {
+      next.vibe = 'classic';
+    }
+  }
+  return session.setPath('cosmetics', next);
 }
 
 function execReadAppearanceConfig(session) {
@@ -636,7 +725,8 @@ function execUpdateAppearance(a, session) {
   const result = session.setPath('cosmetics', next);
   if (!result.ok) return result;
   if (typeof a.saveToCustom === 'string' && isCustomVibeId(a.saveToCustom)) {
-    const saved = execSaveCustomVibe({ id: a.saveToCustom, name: '' }, session);
+    const name = typeof a.customVibeName === 'string' ? a.customVibeName.trim() : '';
+    const saved = execSaveCustomVibe({ id: a.saveToCustom, name }, session);
     return attachLinks({ ...saved, applied }, ['appearance']);
   }
   return attachLinks({ ok: true, applied, cosmetics: next }, ['appearance']);
