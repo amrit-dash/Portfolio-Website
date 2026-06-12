@@ -183,7 +183,7 @@ function normalizeContent(content) {
   if (bot && bot.providers) {
     const by = bot.providers.byProvider = (bot.providers.byProvider && typeof bot.providers.byProvider === 'object') ? bot.providers.byProvider : {};
     for (const p of LLM_PROVIDERS) {
-      if (p.id === '__proto__' || p.id === 'constructor' || p.id === 'prototype') continue;
+      if (!p || !p.id || p.id === '__proto__' || p.id === 'constructor' || p.id === 'prototype') continue;
       const cur = Reflect.get(by, p.id);
       const defProvider = DEFAULT_BOT.providers && DEFAULT_BOT.providers.byProvider ? Reflect.get(DEFAULT_BOT.providers.byProvider, p.id) : null;
       const fallbackModel = (defProvider || {}).model || (p.models && p.models[0]) || '';
@@ -196,9 +196,15 @@ function normalizeContent(content) {
         model: typeof cur.model === 'string' && cur.model ? cur.model : fallbackModel,
       });
     }
-    if (typeof bot.providers.active !== 'string' || !LLM_PROVIDERS.some((p) => p.id === bot.providers.active)) {
-      bot.providers.active = LLM_PROVIDERS[0].id;
+    if (typeof bot.providers.active !== 'string' || !LLM_PROVIDERS.some((p) => p && p.id === bot.providers.active)) {
+      bot.providers.active = (LLM_PROVIDERS[0] && LLM_PROVIDERS[0].id) || 'gemini';
     }
+  }
+  const cosmetics = content.cosmetics;
+  if (cosmetics) {
+    const normCos = window.SHARED_SCHEMA && window.SHARED_SCHEMA.normalizeCosmetics;
+    const defCos = (PORTFOLIO_DEFAULTS && PORTFOLIO_DEFAULTS.cosmetics) || {};
+    content.cosmetics = normCos ? normCos(cosmetics, defCos) : cosmetics;
   }
   // Heal impact-timeline — always an array of {id,label,html} (agent may write a
   // single object or numeric-key map instead of replacing the whole array).
@@ -212,6 +218,24 @@ function normalizeContent(content) {
   if (Array.isArray(content.experience)) {
     const coerceExp = window.SHARED_SCHEMA && window.SHARED_SCHEMA.coerceExperienceArray;
     if (coerceExp) content.experience = coerceExp(content.experience);
+  }
+  const normProject = window.SHARED_SCHEMA && window.SHARED_SCHEMA.normalizeProjectItem;
+  if (normProject) {
+    if (Array.isArray(content.projects)) {
+      content.projects = content.projects.map((item, idx) => {
+        const row = normProject(item);
+        if (!row.id) row.id = 'proj_' + idx;
+        return row;
+      });
+    }
+    if (Array.isArray(content.cards)) {
+      content.cards = content.cards.map((item, idx) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return { id: 'card_' + idx, title: '', desc: '' };
+        const row = { ...item };
+        if (!row.id) row.id = 'card_' + idx;
+        return row;
+      });
+    }
   }
   return content;
 }
