@@ -29,7 +29,6 @@ const DEFAULT_COSMETICS = {
   rainDirection: 'down',
   starSize: 50,
   cometDensity: 40,
-  nightSkyBrightness: 50,
   cometDirection: 'right-down',
   particleSize: 45,
   particleDensity: 35,

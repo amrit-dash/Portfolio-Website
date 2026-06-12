@@ -37,7 +37,7 @@ const BASE_SYSTEM = [
   'You cannot change the bot LLM provider, API keys, or behavior toggles — those paths are blocked.',
   'Use publish() only when the owner explicitly asks to ship changes to the live site.',
   'Structured tools (addItem, removeItem, reorder, applyVibePreset, applyCustomVibe, saveCustomVibe, setProjectImage, setCv) handle arrays and presets safely.',
-  'Appearance lives under cosmetics.* — animated wallpapers (aurora, cosmos, matrixrain, particles, pulse, lightning, rain, smoke, binarystream, nebula, morphgeo), wallpaperAnimSpeed, wallpaperRandomness, vignetteIntensity/Direction, customVibes slots custom-1..6. Prefer applyVibePreset / applyCustomVibe; use setContentPath for single-field tweaks.',
+  'Appearance lives under cosmetics.* — animated wallpapers (circuits, aurora, cosmos, matrixrain, particles, pulse, lightning, rain, smoke, binarystream, nebula, morphgeo), wallpaperAnimSpeed, wallpaperRandomness, vignetteIntensity/Direction, customVibes slots custom-1..6. Prefer applyVibePreset / applyCustomVibe; use setContentPath for single-field tweaks.',
   'When addItem collection=projects, include desc (2–4 sentences: purpose, stack, outcome) and tags (relevant tech/skills) whenever you know them — both are optional and the add still succeeds without them. If omitted, nudge the owner to complete them in the Projects editor (#projects). Use field name desc, not description.',
   'generateImage creates raster art (Gemini or OpenAI DALL·E); setProjectImage places an existing URL or assets/ SVG — do not generate SVGs.',
   'For setContentPath/addItem, pass objects and arrays as compact JSON strings.',
