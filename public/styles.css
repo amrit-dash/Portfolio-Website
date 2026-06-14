@@ -527,20 +527,27 @@ html[data-theme="dark"][data-boot="active"] body::after {
   background:
     linear-gradient(180deg,
       color-mix(in oklab, var(--bg-card) calc(var(--ui-glass-mix, 100%) * 0.92), transparent) 0%,
-      color-mix(in oklab, var(--bg-card) var(--ui-glass-mix, 100%), transparent) 100%);
+      color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent) 100%);
   backdrop-filter: blur(var(--ui-glass-blur, 0px));
   -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
-.exp-folder,
+.exp-folder {
+  background-color: color-mix(in oklab, var(--bg-card) var(--ui-glass-mix, 100%), transparent);
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
+}
 .projects-desktop {
   background-color: color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent);
   backdrop-filter: blur(var(--ui-glass-blur, 0px));
   -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
-}
-.projects-desktop {
   background-image:
     radial-gradient(circle, var(--line) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+.exp-sidebar {
+  background: color-mix(in oklab, var(--bg-elev) var(--ui-glass-mix, 100%), transparent);
+  backdrop-filter: blur(var(--ui-glass-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 /* Cards, chips, bubbles — existing surfaces only (no nested section boxes) */
 .ui-glass,
@@ -1693,6 +1700,11 @@ html[data-theme="dark"][data-boot="active"] body::after {
   border-radius: 8px;
   transition: background .15s, transform .2s;
   border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
   min-height: 150px;
   width: 100%;
   justify-content: flex-start;
