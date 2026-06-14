@@ -59,6 +59,13 @@ const BG_PATTERNS = (() => {
   groups.push({ group: 'Other', options: [toOption('none')] });
   return groups;
 })();
+function wallpaperOptionsForIds(ids) {
+  const allowed = new Set(ids || []);
+  return BG_PATTERNS.map((group) => ({
+    ...group,
+    options: (group.options || []).filter((o) => allowed.has(o.value)),
+  })).filter((g) => g.options && g.options.length);
+}
 const HONEYCOMB_STYLE_OPTIONS = (_BG_SCHEMA.HONEYCOMB_STYLES || ['outline', 'fill']).map((v) => ({
   value: v,
   label: v === 'outline' ? 'Outline · grid lines' : 'Fill · sparse cells',
@@ -102,9 +109,16 @@ const VIGNETTE_DIRECTIONS = (window.SHARED_SCHEMA && window.SHARED_SCHEMA.VIGNET
   'none', 'center', 'all', 'top', 'bottom', 'left', 'right', 'horizontal', 'vertical',
   'top-left', 'top-right', 'bottom-left', 'bottom-right',
 ];
+const RAIN_DIRECTION_LABELS = {
+  down: 'Down (natural drift)',
+  'diagonal-left': 'Down-left',
+  'diagonal-right': 'Down-right',
+  left: 'Down-left (strong wind)',
+  right: 'Down-right (strong wind)',
+};
 const RAIN_DIRECTION_OPTIONS = (_BG_SCHEMA.RAIN_DIRECTIONS || ['down', 'diagonal-left', 'diagonal-right', 'left', 'right']).map((v) => ({
   value: v,
-  label: v === 'down' ? 'Straight down' : v.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+  label: RAIN_DIRECTION_LABELS[v] || v.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
 }));
 const WAVE_DIRECTION_OPTIONS = (_BG_SCHEMA.WAVE_DIRECTIONS || ['up', 'down', 'left', 'right', 'diagonal-up', 'diagonal-down']).map((v) => ({
   value: v,
@@ -671,6 +685,22 @@ function AppearanceEditor({ content, setAt }) {
   const wallpaperRandomness = c.wallpaperRandomness == null ? 40 : c.wallpaperRandomness;
   const chaosMode = wallpaperRandomness >= 95;
   const bgPatternLabel = bgMeta.label || bgPattern;
+  const w2 = c.wallpaper2 || (_BG_SCHEMA.createDefaultWallpaper2 ? _BG_SCHEMA.createDefaultWallpaper2() : { enabled: false, bgPattern: 'lightning' });
+  const w2Enabled = !!w2.enabled;
+  const w2Pattern = w2.bgPattern || 'lightning';
+  const w2Meta = (_BG_SCHEMA.BG_PATTERN_META || {})[w2Pattern] || { label: w2Pattern, animated: false };
+  const w2Animated = !!w2Meta.animated;
+  const w2CursorReactive = !!w2Meta.cursorReactive;
+  const w2SupportsRandomness = w2Meta.supportsRandomness != null ? w2Meta.supportsRandomness : (w2Animated && !w2CursorReactive);
+  const w2Randomness = w2.wallpaperRandomness == null ? 40 : w2.wallpaperRandomness;
+  const w2ChaosMode = w2Randomness >= 95;
+  const w2UseAccent = w2.wallpaperUseAccent !== false;
+  const w2Tint = w2UseAccent ? (c.accent || '#c8e856') : (w2.wallpaperColor || c.accent || '#c8e856');
+  const compatibleW2Ids = useMemo(
+    () => (_BG_SCHEMA.getCompatibleWallpaper2Patterns ? _BG_SCHEMA.getCompatibleWallpaper2Patterns(bgPattern) : []),
+    [bgPattern],
+  );
+  const w2PatternOptions = useMemo(() => wallpaperOptionsForIds(compatibleW2Ids), [compatibleW2Ids]);
   const customVibes = useMemo(() => _coerceCustomVibes(c.customVibes), [c.customVibes]);
   const savedCustomVibes = customVibes;
   const cosBaselineRef = useRef(snapshotCosForCompare(c));
@@ -709,8 +739,21 @@ function AppearanceEditor({ content, setAt }) {
     setAt(path, value);
   }, [setAt]);
 
+  const setW2 = useCallback((patch) => {
+    const cur = c.wallpaper2 || {};
+    setAt('cosmetics.wallpaper2', { ...cur, ...patch });
+  }, [c.wallpaper2, setAt]);
+
+  const setW2At = useCallback((key, value) => {
+    setW2({ [key]: value });
+  }, [setW2]);
+
   const applyVibe = (v) => {
-    setAt('cosmetics', { ...c, ...v.cos, vibe: v.id, customVibes: c.customVibes || customVibes });
+    const schema = window.SHARED_SCHEMA || {};
+    const next = schema.applyVibePresetCos
+      ? schema.applyVibePresetCos(c, v)
+      : { ...c, ...v.cos, vibe: v.id, customVibes: c.customVibes || customVibes };
+    setAt('cosmetics', next);
   };
 
   const applyCustomSlot = (slot) => {
@@ -921,7 +964,15 @@ function AppearanceEditor({ content, setAt }) {
           </div>
 
           <Panel title="Wallpaper">
-            <Field label="Pattern"><Select value={bgPattern} options={BG_PATTERNS} onChange={(v) => setCosAt('cosmetics.bgPattern', v)} /></Field>
+            <Field label="Pattern"><Select value={bgPattern} options={BG_PATTERNS} onChange={(v) => {
+              setCosAt('cosmetics.bgPattern', v);
+              if (w2Enabled) {
+                const compatible = _BG_SCHEMA.getCompatibleWallpaper2Patterns ? _BG_SCHEMA.getCompatibleWallpaper2Patterns(v) : [];
+                if (!compatible.includes(w2Pattern)) {
+                  setW2({ bgPattern: compatible[0] || 'lightning' });
+                }
+              }
+            }} /></Field>
             <p className="helptext" style={{ margin: '4px 0 0' }}>Patterns marked <span className="mono">✦ animated</span> open the animated wallpaper panel below for motion and per-pattern controls.</p>
             {!bgAnimated && (
               <>
@@ -964,14 +1015,15 @@ function AppearanceEditor({ content, setAt }) {
               )}
 
               <div className={chaosMode ? 'wallpaper-chaos-dim' : undefined}>
-              {bgPattern === 'rain' && (
-                <Field label="Rain direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'angle of falling drops'}><Select value={c.rainDirection || 'down'} options={RAIN_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.rainDirection', v)} /></Field>
+              {(bgPattern === 'rain' || bgPattern === 'thunderstorm') && (
+                <Field label="Rain direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : bgPattern === 'thunderstorm' ? 'fall trajectory — lightning strikes sync with rain' : 'fall trajectory — always obeys gravity'}><Select value={c.rainDirection || 'down'} options={RAIN_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.rainDirection', v)} /></Field>
               )}
               {bgPattern === 'waves' && (
                 <Field label="Wave direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'travel direction for rolling bands'}><Select value={c.waveDirection || 'up'} options={WAVE_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.waveDirection', v)} /></Field>
               )}
               {bgPattern === 'cosmos' && (
                 <>
+                  <Field label="Moon size" hint="small ← → large"><RangeRow label="Moon" value={c.moonScale == null ? 35 : c.moonScale} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.moonScale', v)} /></Field>
                   <Field label="Star size" hint="small ← → large"><RangeRow label="Size" value={c.starSize == null ? 50 : c.starSize} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.starSize', v)} /></Field>
                   <Field label="Comet density" hint="rare ← → frequent"><RangeRow label="Comets" value={c.cometDensity == null ? 40 : c.cometDensity} min={0} max={100} step={5} unit="" onChange={(v) => setCosAt('cosmetics.cometDensity', v)} /></Field>
                   <Field label="Comet direction" hint={chaosMode ? 'mostly overridden at 100% randomness' : 'travel angle for shooting stars'}><Select value={c.cometDirection || 'right-down'} options={COMET_DIRECTION_OPTIONS} onChange={(v) => setCosAt('cosmetics.cometDirection', v)} /></Field>
@@ -1015,6 +1067,114 @@ function AppearanceEditor({ content, setAt }) {
               </div>
             </Panel>
           )}
+
+          <Panel title="Wallpaper 2" sub="Optional second layer — pairs with pattern above">
+            <ToggleRow
+              title="Enable second layer"
+              sub="Combine a compatible pattern (e.g. rain + lightning, grid + lightning)"
+              value={w2Enabled}
+              onChange={(v) => {
+                setW2({ enabled: v });
+                if (v && !compatibleW2Ids.includes(w2Pattern)) {
+                  setW2({ enabled: true, bgPattern: compatibleW2Ids[0] || 'lightning' });
+                }
+              }}
+            />
+            {w2Enabled && (
+              <div style={{ marginTop: 8 }}>
+                    <Field label="Pattern 2">
+                      <Select value={w2Pattern} options={w2PatternOptions} onChange={(v) => setW2At('bgPattern', v)} />
+                    </Field>
+                    <p className="helptext" style={{ margin: '4px 0 0' }}>
+                      Compatible with <span className="mono">{bgPatternLabel}</span>
+                      {compatibleW2Ids.length ? '' : ' — no compatible patterns; change pattern 1 first.'}
+                    </p>
+                    {!w2Animated && (
+                      <>
+                        <Field label="Pattern brightness" hint="faint ← → vivid"><RangeRow label="Brightness" value={w2.wallpaperBrightness == null ? 50 : w2.wallpaperBrightness} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('wallpaperBrightness', v)} /></Field>
+                        <Field label="Pattern density" hint="sparse ← → dense"><RangeRow label="Density" value={w2.wallpaperIntensity == null ? 50 : w2.wallpaperIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('wallpaperIntensity', v)} /></Field>
+                      </>
+                    )}
+                    {w2Pattern === 'honeycomb' && (
+                      <Field label="Honeycomb style" hint="outline = wire grid · fill = sparse filled cells"><Select value={w2.honeycombStyle || 'outline'} options={HONEYCOMB_STYLE_OPTIONS} onChange={(v) => setW2At('honeycombStyle', v)} /></Field>
+                    )}
+                    <ToggleRow title="Use accent for layer 2" sub="when off, pick a separate tint below" value={w2UseAccent} onChange={(v) => setW2At('wallpaperUseAccent', v)} />
+                    {!w2UseAccent && (
+                      <Field label="Layer 2 color"><Swatches value={w2.wallpaperColor || c.accent} options={ACCENT_OPTIONS} onChange={(v) => setW2At('wallpaperColor', v)} allowCustom={true} /></Field>
+                    )}
+                    {w2UseAccent && (
+                      <p className="helptext" style={{ margin: '4px 0 0' }}>Layer 2 tint follows accent (<span className="mono" style={{ color: w2Tint }}>{w2Tint}</span>).</p>
+                    )}
+                    {w2Animated && (
+                      <>
+                        <div className="divider" />
+                        <p className="helptext" style={{ margin: '0 0 8px' }}>{w2Meta.label || w2Pattern} ✦ animated controls</p>
+                        <Field label="Pattern brightness" hint="faint ← → vivid"><RangeRow label="Brightness" value={w2.wallpaperBrightness == null ? 50 : w2.wallpaperBrightness} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('wallpaperBrightness', v)} /></Field>
+                        {w2Pattern !== 'particles' && w2Pattern !== 'fluidcore' && (
+                          <Field label="Pattern density" hint="sparse ← → dense"><RangeRow label="Density" value={w2.wallpaperIntensity == null ? 50 : w2.wallpaperIntensity} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('wallpaperIntensity', v)} /></Field>
+                        )}
+                        <Field label="Animation speed" hint="slow ← → fast"><RangeRow label="Speed" value={w2.wallpaperAnimSpeed == null ? 50 : w2.wallpaperAnimSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('wallpaperAnimSpeed', v)} /></Field>
+                        <ToggleRow title="Freeze layer 2" sub="keep the pattern visible but stop motion" value={!!w2.wallpaperAnimPaused} onChange={(v) => setW2At('wallpaperAnimPaused', v)} />
+                        {w2SupportsRandomness && (
+                          <Field label="Randomness" hint="0 = uniform · 100 = chaos">
+                            <RangeRow label="Random" value={w2Randomness} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('wallpaperRandomness', v)} />
+                          </Field>
+                        )}
+                        <div className={w2ChaosMode ? 'wallpaper-chaos-dim' : undefined}>
+                          {w2Pattern === 'rain' && (
+                            <Field label="Rain direction"><Select value={w2.rainDirection || 'down'} options={RAIN_DIRECTION_OPTIONS} onChange={(v) => setW2At('rainDirection', v)} /></Field>
+                          )}
+                          {w2Pattern === 'waves' && (
+                            <Field label="Wave direction"><Select value={w2.waveDirection || 'up'} options={WAVE_DIRECTION_OPTIONS} onChange={(v) => setW2At('waveDirection', v)} /></Field>
+                          )}
+                          {w2Pattern === 'cosmos' && (
+                            <>
+                              <Field label="Moon size" hint="small ← → large"><RangeRow label="Moon" value={w2.moonScale == null ? 35 : w2.moonScale} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('moonScale', v)} /></Field>
+                              <Field label="Star size"><RangeRow label="Size" value={w2.starSize == null ? 50 : w2.starSize} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('starSize', v)} /></Field>
+                              <Field label="Comet density"><RangeRow label="Comets" value={w2.cometDensity == null ? 40 : w2.cometDensity} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('cometDensity', v)} /></Field>
+                              <Field label="Comet direction"><Select value={w2.cometDirection || 'right-down'} options={COMET_DIRECTION_OPTIONS} onChange={(v) => setW2At('cometDirection', v)} /></Field>
+                            </>
+                          )}
+                          {w2Pattern === 'particles' && (
+                            <>
+                              <Field label="Particle density"><RangeRow label="Density" value={w2.particleDensity == null ? 35 : w2.particleDensity} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('particleDensity', v)} /></Field>
+                              <Field label="Particle size"><RangeRow label="Size" value={w2.particleSize == null ? 45 : w2.particleSize} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('particleSize', v)} /></Field>
+                              <Field label="Particle opacity"><RangeRow label="Opacity" value={w2.particleOpacity == null ? 70 : w2.particleOpacity} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('particleOpacity', v)} /></Field>
+                              <Field label="Drift direction"><Select value={w2.particleDrift || 'up'} options={PARTICLE_DRIFT_OPTIONS} onChange={(v) => setW2At('particleDrift', v)} /></Field>
+                            </>
+                          )}
+                          {w2CursorReactive && (
+                            <>
+                              <Field label="Interact strength"><RangeRow label="Strength" value={w2.cursorInteractStrength == null ? 55 : w2.cursorInteractStrength} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('cursorInteractStrength', v)} /></Field>
+                              {(w2Pattern === 'snowinteractive' || w2Pattern === 'fireflies') && (
+                                <Field label="Particle density"><RangeRow label="Density" value={w2.cursorParticleDensity == null ? 40 : w2.cursorParticleDensity} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('cursorParticleDensity', v)} /></Field>
+                              )}
+                              {w2Pattern === 'snowinteractive' && (
+                                <Field label="Sweep radius"><RangeRow label="Sweep" value={w2.cursorSweepRadius == null ? 50 : w2.cursorSweepRadius} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('cursorSweepRadius', v)} /></Field>
+                              )}
+                            </>
+                          )}
+                          {w2Pattern === 'binarystream' && (
+                            <>
+                              <Field label="Number format"><Select value={w2.numberFormat || 'binary'} options={NUMBER_FORMAT_OPTIONS} onChange={(v) => setW2At('numberFormat', v)} /></Field>
+                              <Field label="Font size"><RangeRow label="Size" value={w2.binaryFontSize == null ? 50 : w2.binaryFontSize} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('binaryFontSize', v)} /></Field>
+                            </>
+                          )}
+                          {w2Pattern === 'fluidcore' && (
+                            <>
+                              <Field label="Blob size"><RangeRow label="Size" value={w2.fluidSize == null ? 50 : w2.fluidSize} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('fluidSize', v)} /></Field>
+                              <Field label="Morph speed"><RangeRow label="Morph" value={w2.fluidMorphSpeed == null ? 45 : w2.fluidMorphSpeed} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('fluidMorphSpeed', v)} /></Field>
+                            </>
+                          )}
+                          {w2Pattern === 'honeycombGlow' && (
+                            <Field label="Glow density"><RangeRow label="Glow max" value={w2.honeycombGlowDensity == null ? 50 : w2.honeycombGlowDensity} min={0} max={100} step={5} unit="" onChange={(v) => setW2At('honeycombGlowDensity', v)} /></Field>
+                          )}
+                        </div>
+                      </>
+                    )}
+              </div>
+            )}
+          </Panel>
 
           <Panel title="Effects & cursor">
             <div className="effects-split-row">
