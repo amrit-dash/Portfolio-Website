@@ -590,11 +590,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
   backdrop-filter: blur(var(--ui-glass-blur, 0px));
   -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
-.folder-icon__label {
-  background: color-mix(in oklab, var(--glass-bg-elev) 80%, transparent);
-  backdrop-filter: blur(var(--ui-glass-blur, 0px));
-  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
-}
 
 /* ---------- Generic Window ---------- */
 .window {
@@ -1704,7 +1699,7 @@ html[data-theme="dark"][data-boot="active"] body::after {
   text-align: center;
 }
 .folder-icon:hover {
-  background: color-mix(in oklab, var(--accent) 8%, var(--glass-bg-elev));
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
   transform: translateY(-3px);
 }
 .folder-icon:focus-visible {
@@ -1722,7 +1717,7 @@ html[data-theme="dark"][data-boot="active"] body::after {
   position: absolute;
   top: 0; left: 0;
   width: 36px; height: 10px;
-  background: color-mix(in oklab, var(--accent) var(--ui-glass-mix, 100%), transparent);
+  background: var(--accent);
   border-radius: 5px 5px 0 0;
   box-shadow: 0 -1px 0 var(--line-2) inset;
 }
@@ -1732,13 +1727,9 @@ html[data-theme="dark"][data-boot="active"] body::after {
   content: '';
   position: absolute;
   top: 8px; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(180deg,
-    color-mix(in oklab, var(--accent) var(--ui-glass-mix, 100%), transparent) 0%,
-    color-mix(in oklab, color-mix(in oklab, var(--accent) 75%, #000 25%) var(--ui-glass-mix, 100%), transparent) 100%);
+  background: linear-gradient(180deg, var(--accent) 0%, color-mix(in oklab, var(--accent) 75%, #000 25%) 100%);
   border-radius: 0 8px 6px 6px;
   box-shadow: 0 4px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.3);
-  backdrop-filter: blur(var(--ui-glass-blur, 0px));
-  -webkit-backdrop-filter: blur(var(--ui-glass-blur, 0px));
 }
 .folder-icon__art img {
   /* Larger thumb — fills more of the folder body with minimal margins */
@@ -1785,6 +1776,7 @@ html[data-theme="dark"][data-boot="active"] body::after {
   border-radius: 3px;
   line-height: 1.25;
   max-width: 110px;
+  background: color-mix(in oklab, var(--bg-elev) 80%, transparent);
   letter-spacing: 0;
 }
 .folder-icon:hover .folder-icon__label,
