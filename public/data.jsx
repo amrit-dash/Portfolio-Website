@@ -465,6 +465,7 @@ const DEFAULT_COSMETICS = {
   rainDirection: 'down',
   waveDirection: 'up',
   starSize: 50,
+  moonScale: 35,
   cometDensity: 40,
   cometDirection: 'right-down',
   particleSize: 45,
@@ -502,6 +503,9 @@ const DEFAULT_COSMETICS = {
   customVibes: (window.SHARED_SCHEMA && window.SHARED_SCHEMA.createDefaultCustomVibes)
     ? window.SHARED_SCHEMA.createDefaultCustomVibes()
     : [],
+  wallpaper2: (window.SHARED_SCHEMA && window.SHARED_SCHEMA.createDefaultWallpaper2)
+    ? window.SHARED_SCHEMA.createDefaultWallpaper2()
+    : { enabled: false, bgPattern: 'lightning' },
 };
 
 const LLM_PROVIDERS = [
@@ -832,6 +836,9 @@ window.applyCosmeticsToRoot = function applyCosmeticsToRoot(cos, opts) {
     _root.style.setProperty('--wp-opacity', (0.15 + (_bright / 100) * 0.85).toString());
     _root.style.setProperty('--wp-size', Math.round(56 - (_intense / 100) * 44) + 'px');
     _root.style.setProperty('--wp-field-size', Math.round(480 - (_intense / 100) * 360) + 'px');
+  }
+  if (_schema.applyWallpaper2VarsToRoot) {
+    _schema.applyWallpaper2VarsToRoot(_root, _cos, _toned);
   }
   let _isPreview = false;
   try { _isPreview = new URLSearchParams(location.search).has('adminpreview'); } catch (e) {}
