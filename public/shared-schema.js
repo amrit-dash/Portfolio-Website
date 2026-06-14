@@ -18,7 +18,7 @@
   const CURSOR_EFFECTS = ['none', 'trail', 'comet', 'ripple', 'spark', 'glow'];
   const CURSOR_EFFECT_TRAIL_STYLES = ['glow', 'line', 'dotted', 'particles'];
   const CURSOR_EFFECT_COMET_DIRECTIONS = ['cursor', 'up', 'down', 'random'];
-  const BG_PATTERNS = ['grid', 'dots', 'diagonal', 'crosshatch', '3dgrid', 'honeycomb', 'honeycombGlow', 'padgrid', 'waves', 'brick', 'noise', 'circuits', 'aurora', 'cosmos', 'matrixrain', 'particles', 'lightning', 'rain', 'binarystream', 'nebula', 'morphgeo', 'fluidcore', 'snowinteractive', 'ripplepool', 'fireflies', 'none'];
+  const BG_PATTERNS = ['grid', 'dots', 'diagonal', 'crosshatch', '3dgrid', 'honeycomb', 'honeycombGlow', 'padgrid', 'waves', 'brick', 'noise', 'circuits', 'aurora', 'cosmos', 'matrixrain', 'particles', 'lightning', 'rain', 'thunderstorm', 'binarystream', 'nebula', 'morphgeo', 'fluidcore', 'snowinteractive', 'ripplepool', 'fireflies', 'none'];
   const HONEYCOMB_STYLES = ['outline', 'fill'];
   const CURSOR_WALLPAPERS = ['snowinteractive', 'ripplepool', 'fireflies'];
   const RAIN_DIRECTIONS = ['down', 'diagonal-left', 'diagonal-right', 'left', 'right'];
@@ -46,6 +46,7 @@
     particles: { label: 'Floating particles', animated: true, supportsRandomness: true },
     lightning: { label: 'Lightning', animated: true, supportsRandomness: true },
     rain: { label: 'Rain', animated: true, supportsRandomness: true },
+    thunderstorm: { label: 'Thunderstorm', animated: true, supportsRandomness: true },
     binarystream: { label: 'Binary stream', animated: true, supportsRandomness: true },
     nebula: { label: 'Nebula', animated: true, supportsRandomness: true },
     morphgeo: { label: 'Soft blobs', animated: true, supportsRandomness: true },
@@ -55,7 +56,106 @@
     fireflies: { label: 'Fireflies', animated: true, cursorReactive: true },
     none: { label: 'None', animated: false },
   };
-  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'binarystream', 'nebula', 'circuits', 'particles', 'morphgeo', 'fluidcore', 'honeycombGlow', 'snowinteractive', 'ripplepool', 'fireflies'];
+  /* Dual-wallpaper compatibility — see PATTERN_COMPATIBILITY + canPairWallpaperPatterns(). */
+  const STATIC_BG_PATTERNS = BG_PATTERNS.filter((p) => p !== 'none' && BG_PATTERN_META[p] && !BG_PATTERN_META[p].animated);
+  const EXCLUSIVE_ANIMATED_PATTERNS = ['honeycombGlow', 'binarystream', 'thunderstorm'];
+  const WALLPAPER_LAYER_SETTING_KEYS = [
+    'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperAnimPaused',
+    'wallpaperRandomness', 'wallpaperUseAccent', 'wallpaperColor',
+    'rainDirection', 'waveDirection', 'starSize', 'moonScale', 'cometDensity', 'cometDirection',
+    'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift',
+    'numberFormat', 'binaryFontSize', 'fluidSize', 'fluidMorphSpeed',
+    'honeycombStyle', 'honeycombGlowDensity',
+    'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
+  ];
+  function isPatternStatic(pattern) {
+    const p = healBgPattern(pattern);
+    return p !== 'none' && !!(BG_PATTERN_META[p] && !BG_PATTERN_META[p].animated);
+  }
+  function isPatternAnimated(pattern) {
+    const p = healBgPattern(pattern);
+    return !!(BG_PATTERN_META[p] && BG_PATTERN_META[p].animated);
+  }
+  function isExclusiveAnimated(pattern) {
+    return EXCLUSIVE_ANIMATED_PATTERNS.includes(healBgPattern(pattern));
+  }
+  function isCursorReactivePattern(pattern) {
+    return CURSOR_WALLPAPERS.includes(healBgPattern(pattern));
+  }
+  /* Pairing rules: static+animated OK · two static NO · exclusive animated + animated NO
+     (exclusive may sit over static) · cursor-reactive animated pairs with any animated. */
+  function canPairWallpaperPatterns(primary, secondary) {
+    const p1 = healBgPattern(primary);
+    const p2 = healBgPattern(secondary);
+    if (!p2 || p2 === 'none') return true;
+    if (!p1 || p1 === 'none') return true;
+    if (p1 === p2) return false;
+    const s1 = isPatternStatic(p1);
+    const s2 = isPatternStatic(p2);
+    if (s1 && s2) return false;
+    const a1 = isPatternAnimated(p1);
+    const a2 = isPatternAnimated(p2);
+    if (a1 && a2) {
+      if (isExclusiveAnimated(p1) || isExclusiveAnimated(p2)) return false;
+      if (isCursorReactivePattern(p1) || isCursorReactivePattern(p2)) return true;
+      return true;
+    }
+    return true;
+  }
+  function getCompatibleWallpaper2Patterns(primary) {
+    const p1 = healBgPattern(primary);
+    return BG_PATTERNS.filter((p) => p !== p1 && p !== 'none' && canPairWallpaperPatterns(p1, p));
+  }
+  const PATTERN_COMPATIBILITY = {
+    rules: [
+      'Two static patterns cannot pair.',
+      'Static + animated pairs are allowed (most combinations).',
+      'honeycombGlow and binarystream are exclusive — no second animated layer.',
+      'Exclusive animated patterns may pair with a static underlay.',
+      'Cursor-reactive patterns (snowinteractive, ripplepool, fireflies) pair with any animated layer.',
+      'Animated + animated pairs are allowed except exclusive conflicts (honeycombGlow, binarystream, thunderstorm).',
+      'thunderstorm combines rain + lightning in one layer — use instead of rain+lightning dual wallpaper.',
+    ],
+    staticPatterns: STATIC_BG_PATTERNS,
+    exclusiveAnimated: EXCLUSIVE_ANIMATED_PATTERNS,
+    cursorReactive: CURSOR_WALLPAPERS,
+    canPair: canPairWallpaperPatterns,
+    compatibleSecondaries: getCompatibleWallpaper2Patterns,
+  };
+  function createDefaultWallpaper2() {
+    return {
+      enabled: false,
+      bgPattern: 'lightning',
+      wallpaperBrightness: 50,
+      wallpaperIntensity: 50,
+      wallpaperAnimSpeed: 50,
+      wallpaperAnimPaused: false,
+      wallpaperRandomness: 40,
+      wallpaperUseAccent: true,
+      wallpaperColor: '',
+      rainDirection: 'down',
+      waveDirection: 'up',
+      starSize: 50,
+      moonScale: 35,
+      cometDensity: 40,
+      cometDirection: 'right-down',
+      particleSize: 45,
+      particleDensity: 35,
+      particleOpacity: 70,
+      particleDrift: 'up',
+      numberFormat: 'binary',
+      binaryFontSize: 50,
+      fluidSize: 50,
+      fluidMorphSpeed: 45,
+      honeycombStyle: 'outline',
+      honeycombGlowDensity: 50,
+      cursorInteractStrength: 55,
+      cursorTrailLength: 50,
+      cursorParticleDensity: 40,
+      cursorSweepRadius: 50,
+    };
+  }
+  const CANVAS_WALLPAPERS = ['cosmos', 'matrixrain', 'lightning', 'rain', 'thunderstorm', 'binarystream', 'nebula', 'circuits', 'particles', 'morphgeo', 'fluidcore', 'honeycombGlow', 'snowinteractive', 'ripplepool', 'fireflies'];
   const CSS_ANIM_WALLPAPERS = ['aurora', 'waves'];
   const LEGACY_BG_PATTERNS = {
     scan: 'grid',
