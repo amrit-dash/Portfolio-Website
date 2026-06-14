@@ -799,9 +799,10 @@ window.applyCosmeticsToRoot = function applyCosmeticsToRoot(cos, opts) {
   if (typeof _cos.fontScale === 'number') _root.style.setProperty('--font-scale', (_cos.fontScale / 100).toString());
   _root.style.setProperty('--glow', ((typeof _cos.glow === 'number' ? _cos.glow : 100) / 100).toString());
   const _glass = typeof _cos.uiGlassOpacity === 'number' ? _cos.uiGlassOpacity : 0;
-  const _glassMix = Math.round(100 - (_glass / 100) * 55);
+  // 0 = opaque panels (100% bg mix); 100 = strong glass (8% bg mix, heavy blur)
+  const _glassMix = Math.max(8, Math.round(100 - (_glass / 100) * 92));
   _root.style.setProperty('--ui-glass-mix', _glassMix + '%');
-  _root.style.setProperty('--ui-glass-blur', Math.round((_glass / 100) * 16) + 'px');
+  _root.style.setProperty('--ui-glass-blur', Math.round((_glass / 100) * 24) + 'px');
   _root.style.setProperty('--glass-bg-card', 'color-mix(in oklab, var(--bg-card) ' + _glassMix + '%, transparent)');
   _root.style.setProperty('--glass-bg-elev', 'color-mix(in oklab, var(--bg-elev) ' + _glassMix + '%, transparent)');
   _root.style.setProperty('--glass-titlebar', 'color-mix(in oklab, var(--titlebar-solid) ' + _glassMix + '%, transparent)');
