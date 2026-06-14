@@ -802,6 +802,9 @@ window.applyCosmeticsToRoot = function applyCosmeticsToRoot(cos, opts) {
   const _glassMix = Math.round(100 - (_glass / 100) * 55);
   _root.style.setProperty('--ui-glass-mix', _glassMix + '%');
   _root.style.setProperty('--ui-glass-blur', Math.round((_glass / 100) * 16) + 'px');
+  _root.style.setProperty('--glass-bg-card', 'color-mix(in oklab, var(--bg-card) ' + _glassMix + '%, transparent)');
+  _root.style.setProperty('--glass-bg-elev', 'color-mix(in oklab, var(--bg-elev) ' + _glassMix + '%, transparent)');
+  _root.style.setProperty('--glass-titlebar', 'color-mix(in oklab, var(--titlebar-solid) ' + _glassMix + '%, transparent)');
   _root.dataset.scanlines = _cos.scanlines === false ? 'off' : 'on';
   if (_cos.type && _cos.type !== 'default') _root.dataset.type = _cos.type; else delete _root.dataset.type;
   if (_cos.headingFont && _cos.headingFont !== 'match') _root.dataset.heading = _cos.headingFont; else delete _root.dataset.heading;
