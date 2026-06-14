@@ -271,7 +271,7 @@
     'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor',
     'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperAnimPaused', 'wallpaperRandomness',
     'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection',
-    'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
+    'rainDirection', 'waveDirection', 'starSize', 'moonScale', 'cometDensity', 'cometDirection',
     'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'numberFormat', 'binaryFontSize',
     'fluidSize', 'fluidMorphSpeed',
     'honeycombStyle', 'honeycombGlowDensity', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
@@ -280,6 +280,7 @@
     'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
     'cursorRingLag', 'uiGlassOpacity',
     'glow', 'radius',
+    'wallpaper2',
   ];
 
   function createDefaultCustomVibes() {
@@ -336,6 +337,7 @@
       const slot = normalizeCustomVibeSlot(raw, id, num > 0 ? 'Custom vibe ' + num : id);
       if (!slot.cos || typeof slot.cos !== 'object') continue;
       if (slot.cos.bgPattern) slot.cos = { ...slot.cos, bgPattern: healBgPattern(slot.cos.bgPattern) };
+      if (slot.cos.wallpaper2) slot.cos = { ...slot.cos, wallpaper2: normalizeWallpaper2(slot.cos.wallpaper2, createDefaultWallpaper2()) };
       seen.add(id);
       out.push(slot);
     }
@@ -354,14 +356,138 @@
     } else if (c.bgPattern) {
       c.bgPattern = healBgPattern(c.bgPattern);
     }
+    const w2Def = def.wallpaper2 && typeof def.wallpaper2 === 'object' ? def.wallpaper2 : createDefaultWallpaper2();
+    c.wallpaper2 = normalizeWallpaper2(c.wallpaper2, w2Def);
+    const healed = healWallpaper2Compatibility(c);
     for (const k of Object.keys(def)) {
       if (k === 'customVibes') continue;
-      if (c[k] === undefined) c[k] = def[k];
+      if (healed[k] === undefined) healed[k] = def[k];
     }
-    if (typeof c.vibe !== 'string' || (!getVibe(c.vibe) && !isCustomVibeId(c.vibe))) {
-      c.vibe = typeof def.vibe === 'string' ? def.vibe : 'classic';
+    if (typeof healed.vibe !== 'string' || (!getVibe(healed.vibe) && !isCustomVibeId(healed.vibe))) {
+      healed.vibe = typeof def.vibe === 'string' ? def.vibe : 'classic';
+    }
+    return syncBuiltInPresetWallpaper2(healed);
+  }
+
+  function normalizeWallpaper2(raw, defaults) {
+    const def = defaults && typeof defaults === 'object' ? defaults : createDefaultWallpaper2();
+    const w = raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {};
+    const out = { ...def };
+    if (typeof w.enabled === 'boolean') out.enabled = w.enabled;
+    if (w.bgPattern) out.bgPattern = healBgPattern(w.bgPattern);
+    WALLPAPER_LAYER_SETTING_KEYS.forEach((k) => {
+      if (k === 'bgPattern') return;
+      if (w[k] !== undefined) out[k] = w[k];
+    });
+    if (!out.enabled) out.enabled = false;
+    return out;
+  }
+
+  function healWallpaper2Compatibility(cos) {
+    const c = cos && typeof cos === 'object' ? { ...cos } : {};
+    const w2 = c.wallpaper2 && typeof c.wallpaper2 === 'object' ? { ...c.wallpaper2 } : createDefaultWallpaper2();
+    if (!w2.enabled) {
+      c.wallpaper2 = w2;
+      return c;
+    }
+    const primary = healBgPattern(c.bgPattern);
+    const compatible = getCompatibleWallpaper2Patterns(primary);
+    const cur = healBgPattern(w2.bgPattern);
+    if (!compatible.includes(cur)) {
+      w2.bgPattern = compatible[0] || 'lightning';
+    }
+    if (w2.bgPattern === 'none') w2.enabled = false;
+    c.wallpaper2 = w2;
+    return c;
+  }
+
+  function vibePresetHasDualWallpaper(vibeCos) {
+    return !!(vibeCos && vibeCos.wallpaper2 && vibeCos.wallpaper2.enabled);
+  }
+
+  function resolvePresetWallpaper2(vibeCos) {
+    if (vibePresetHasDualWallpaper(vibeCos)) {
+      return normalizeWallpaper2(vibeCos.wallpaper2, createDefaultWallpaper2());
+    }
+    return normalizeWallpaper2({ enabled: false }, createDefaultWallpaper2());
+  }
+
+  /* Clear stale wallpaper2 when a single-layer built-in preset is active (e.g. classic after synthwave). */
+  function syncBuiltInPresetWallpaper2(cos) {
+    const c = cos && typeof cos === 'object' ? { ...cos } : {};
+    if (!c.vibe || isCustomVibeId(c.vibe)) return c;
+    const builtIn = getVibe(c.vibe);
+    if (!builtIn || !builtIn.cos) return c;
+    const w2 = c.wallpaper2 && typeof c.wallpaper2 === 'object' ? c.wallpaper2 : createDefaultWallpaper2();
+    if (!vibePresetHasDualWallpaper(builtIn.cos) && w2.enabled) {
+      c.wallpaper2 = resolvePresetWallpaper2(builtIn.cos);
     }
     return c;
+  }
+
+  function applyVibePresetCos(curCos, vibeEntry) {
+    if (!vibeEntry || !vibeEntry.cos || typeof vibeEntry.cos !== 'object') {
+      return curCos && typeof curCos === 'object' ? { ...curCos } : {};
+    }
+    const cur = curCos && typeof curCos === 'object' ? curCos : {};
+    const preset = { ...vibeEntry.cos };
+    preset.wallpaper2 = resolvePresetWallpaper2(vibeEntry.cos);
+    return {
+      ...cur,
+      ...preset,
+      vibe: vibeEntry.id,
+      customVibes: coerceCustomVibes(cur.customVibes),
+    };
+  }
+
+  function buildWallpaperLayerCos(layer, globalCos) {
+    const g = globalCos && typeof globalCos === 'object' ? globalCos : {};
+    const l = layer && typeof layer === 'object' ? layer : {};
+    const out = {};
+    WALLPAPER_LAYER_SETTING_KEYS.forEach((k) => {
+      if (l[k] !== undefined) out[k] = l[k];
+      else if (g[k] !== undefined) out[k] = g[k];
+    });
+    out.bgPattern = healBgPattern(l.bgPattern || g.bgPattern || 'grid');
+    return out;
+  }
+
+  function resolveWallpaper2Layer(cos, tonedAccent) {
+    const c = cos && typeof cos === 'object' ? cos : {};
+    const w2 = normalizeWallpaper2(c.wallpaper2, createDefaultWallpaper2());
+    if (!w2.enabled) return null;
+    const layerCos = buildWallpaperLayerCos(w2, c);
+    const colors = resolveWallpaperColors(layerCos, tonedAccent);
+    const wp = resolveWallpaperCosmetics(layerCos);
+    return {
+      enabled: true,
+      cos: layerCos,
+      colors,
+      wp,
+      pattern: layerCos.bgPattern,
+      static: isPatternStatic(layerCos.bgPattern),
+      animated: isPatternAnimated(layerCos.bgPattern),
+    };
+  }
+
+  function validateWallpaper2Leaf(field, value) {
+    if (!field) return { error: 'invalid-cosmetics', message: 'cosmetics.wallpaper2 field required' };
+    if (field === 'enabled') {
+      if (typeof value !== 'boolean') return { error: 'invalid-cosmetics', message: 'cosmetics.wallpaper2.enabled must be a boolean' };
+      return null;
+    }
+    return validateCosmeticsWrite('cosmetics.' + field, value);
+  }
+
+  function validateWallpaper2Object(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return { error: 'invalid-cosmetics', message: 'cosmetics.wallpaper2 must be an object' };
+    }
+    for (const k of Object.keys(value)) {
+      const err = validateWallpaper2Leaf(k, value[k]);
+      if (err) return err;
+    }
+    return null;
   }
 
   function getCustomVibe(id, customVibes) {
