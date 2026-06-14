@@ -1438,6 +1438,7 @@ const _COSMETICS_BASE = /*EDITMODE-BEGIN*/{
   "rainDirection": "down",
   "waveDirection": "up",
   "starSize": 50,
+  "moonScale": 35,
   "cometDensity": 40,
   "cometDirection": "right-down",
   "particleSize": 45,
@@ -2636,7 +2637,7 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
       const brightNorm = (p.wp.bright != null ? p.wp.bright : (p.brightness == null ? 50 : p.brightness)) / 100;
       const mx = w * 0.78;
       const my = h * 0.13;
-      const mr = Math.min(w, h) * 0.098;
+      const mr = Math.min(w, h) * 0.098 * (p.wp.moonScaleMult != null ? p.wp.moonScaleMult : 1);
       const moonAlpha = p.alpha * (0.5 + brightNorm * 0.5);
 
       ctx.save();
@@ -3054,6 +3055,7 @@ const TWEAK_DEFAULTS = (() => {
     rainDirection: typeof c.rainDirection === 'string' ? c.rainDirection : _COSMETICS_BASE.rainDirection,
     waveDirection: typeof c.waveDirection === 'string' ? c.waveDirection : _COSMETICS_BASE.waveDirection,
     starSize: typeof c.starSize === 'number' ? c.starSize : _COSMETICS_BASE.starSize,
+    moonScale: typeof c.moonScale === 'number' ? c.moonScale : _COSMETICS_BASE.moonScale,
     cometDensity: typeof c.cometDensity === 'number' ? c.cometDensity : _COSMETICS_BASE.cometDensity,
     cometDirection: typeof c.cometDirection === 'string' ? c.cometDirection : _COSMETICS_BASE.cometDirection,
     particleSize: typeof c.particleSize === 'number' ? c.particleSize : _COSMETICS_BASE.particleSize,
@@ -3166,7 +3168,7 @@ function App() {
     const next = {};
     ['accent', 'accentTone', 'scanlines', 'cursorStyle', 'cursorColor', 'botIcon', 'botIconColor', 'type', 'fontScale',
       'headingFont', 'tracking', 'bgPattern', 'wallpaperBrightness', 'wallpaperIntensity', 'wallpaperAnimSpeed', 'wallpaperAnimPaused', 'wallpaperRandomness',
-      'rainDirection', 'waveDirection', 'starSize', 'cometDensity', 'cometDirection',
+      'rainDirection', 'waveDirection', 'starSize', 'moonScale', 'cometDensity', 'cometDirection',
       'particleSize', 'particleDensity', 'particleOpacity', 'particleDrift', 'numberFormat', 'binaryFontSize',
       'fluidSize', 'fluidMorphSpeed',
       'honeycombStyle', 'honeycombGlowDensity', 'cursorInteractStrength', 'cursorTrailLength', 'cursorParticleDensity', 'cursorSweepRadius',
