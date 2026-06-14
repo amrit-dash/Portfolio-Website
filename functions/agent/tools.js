@@ -26,7 +26,8 @@ const VIBE_IDS = VIBES.map((v) => v.id);
 const VIBE_VISIBLE_COUNT = getVisibleVibes().length;
 const VIBE_EXTENDED_COUNT = getExtendedVibes().length;
 const VIBE_TOTAL_COUNT = VIBES.length;
-const COSMETICS_WRITE_HINT = 'cursorEffect (none|trail|comet|ripple|spark|glow) · cursorEffectTrailStyle · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount · cursorEffectRippleSpeed · cursorEffectCometDirection · cursorEffectCometIntensity · cursorEffectCometSpeed · cursorRingLag · uiGlassOpacity · honeycombStyle · honeycombGlowDensity · cursorInteractStrength · cursorTrailLength · cursorParticleDensity · cursorSweepRadius · wallpaperColor · wallpaperUseAccent · interactive: snowinteractive|ripplepool|fireflies';
+const COSMETICS_WRITE_HINT = 'cursorEffect (none|trail|comet|ripple|spark|glow) · cursorEffectTrailStyle · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount · cursorEffectRippleSpeed · cursorEffectCometDirection · cursorEffectCometIntensity · cursorEffectCometSpeed · cursorRingLag · uiGlassOpacity · honeycombStyle · honeycombGlowDensity · cursorInteractStrength · cursorTrailLength · cursorParticleDensity · cursorSweepRadius · wallpaperColor · wallpaperUseAccent · wallpaper2 (enabled · bgPattern · per-layer brightness/intensity/animSpeed/animPaused/randomness/tint + pattern params) · interactive: snowinteractive|ripplepool|fireflies';
+const WALLPAPER2_PATH_HINT = 'Dual wallpaper leaf paths: cosmetics.wallpaper2.enabled · cosmetics.wallpaper2.bgPattern · cosmetics.wallpaper2.wallpaperColor · cosmetics.wallpaper2.wallpaperUseAccent · cosmetics.wallpaper2.wallpaperBrightness · cosmetics.wallpaper2.wallpaperIntensity · cosmetics.wallpaper2.wallpaperAnimSpeed · cosmetics.wallpaper2.wallpaperAnimPaused · cosmetics.wallpaper2.wallpaperRandomness · cosmetics.wallpaper2.rainDirection · cosmetics.wallpaper2.waveDirection · cosmetics.wallpaper2.starSize · cosmetics.wallpaper2.honeycombStyle · cosmetics.wallpaper2.cursorInteractStrength · … (any WALLPAPER_LAYER_SETTING_KEYS field). Or pass whole cosmetics.wallpaper2 object via updateAppearance. Pairing rules: readAppearanceConfig.patternCompatibility + compatibleWallpaper2.';
 const CUSTOM_VIBE_NAME_HINT = 'Always set a short human name (2–4 words) inferred from cosmetics — theme, bgPattern, accent/wallpaper colors, cursorEffect (e.g. dark+matrixrain → "Neon Matrix", light+snowinteractive → "Winter Drift", split accent+wallpaper → "Coral Split"). Never leave new slots unnamed or use generic "Custom vibe N" labels.';
 const PATTERN_VIBE_NAMES = {
   matrixrain: 'Neon Matrix',
@@ -41,6 +42,8 @@ const PATTERN_VIBE_NAMES = {
   cosmos: 'Cosmic Drift',
   circuits: 'Circuit Grid',
   lightning: 'Lightning',
+  rain: 'Rain',
+  thunderstorm: 'Thunderstorm',
   nebula: 'Nebula',
   particles: 'Particle Field',
 };
@@ -159,6 +162,7 @@ const GENERIC_TOOLS = [
       'projects.2 with {"title":"New name"} · experience.0 with {"desc":"…"} · experience.1.roles.0 with {"name":"BeGig"}',
       'about.impact root merge-by-label: path about.impact, value {"label":"Then","html":"<p>…</p>"} (matches label/id).',
       cosmeticsFieldHint(),
+      WALLPAPER2_PATH_HINT,
       'Avoid replacing a collection root with a full array unless the user explicitly asked to rewrite the whole list.',
     ].join(' '),
     parameters: {
@@ -194,7 +198,7 @@ const STRUCTURED_TOOLS = [
     parameters: { type: 'object', properties: { collection: { type: 'string' }, index: { type: 'number' }, id: { type: 'string' } }, required: ['collection'] }, mutates: true },
   { name: 'reorder', description: 'Reorder a collection to match the given order of ids or indices.',
     parameters: { type: 'object', properties: { collection: { type: 'string' }, order: { type: 'array', items: { type: 'string' } } }, required: ['collection', 'order'] }, mutates: true },
-  { name: 'applyVibePreset', description: 'Apply a built-in cosmetic vibe preset to cosmetics. ' + VIBE_TOTAL_COUNT + ' presets total (' + VIBE_VISIBLE_COUNT + ' core visible in admin · ' + VIBE_EXTENDED_COUNT + ' extended tier hidden by default — agent may apply any id). Multi-tone vibes split accent, wallpaperColor (pattern ink), and cursorColor independently (wallpaperUseAccent: false). Sets theme, accent, fonts, cursor, wallpaper (static: grid/dots/diagonal/crosshatch/3dgrid/honeycomb/padgrid/brick/noise · animated: circuits, waves, aurora, cosmos, matrixrain, particles, lightning, rain, binarystream, nebula, morphgeo, fluidcore, honeycombGlow · interactive: snowinteractive, ripplepool, fireflies), ' + COSMETICS_WRITE_HINT + ', brightness/density/animSpeed/wallpaperAnimPaused/randomness/tint/vignette, per-pattern params, glow, radius, scanlines. Does not apply custom-* saved slots — use applyCustomVibe. To persist tweaks as a custom slot after applying, call saveCustomVibe with a descriptive name — ' + CUSTOM_VIBE_NAME_HINT,
+  { name: 'applyVibePreset', description: 'Apply a built-in cosmetic vibe preset to cosmetics. ' + VIBE_TOTAL_COUNT + ' presets total (' + VIBE_VISIBLE_COUNT + ' core visible in admin · ' + VIBE_EXTENDED_COUNT + ' extended tier hidden by default — agent may apply any id). Multi-tone vibes split accent, wallpaperColor (pattern ink), and cursorColor independently (wallpaperUseAccent: false). Dual wallpaper (cosmetics.wallpaper2.enabled) is intentional only on multi-tone and select storm/retro combos — e.g. duotone, split, polar, coralpool, noir, inkwave, synthwave, gridstorm, phosphorgrid (hidden). Storm rain+lightning uses single-layer thunderstorm pattern (thunderclap hidden extended preset). Sets theme, accent, fonts, cursor, wallpaper (static: grid/dots/diagonal/crosshatch/3dgrid/honeycomb/padgrid/brick/noise · animated: circuits, waves, aurora, cosmos, matrixrain, particles, lightning, rain, thunderstorm, binarystream, nebula, morphgeo, fluidcore, honeycombGlow · interactive: snowinteractive, ripplepool, fireflies), ' + COSMETICS_WRITE_HINT + ', brightness/density/animSpeed/wallpaperAnimPaused/randomness/tint/vignette, per-pattern params, glow, radius, scanlines. Does not apply custom-* saved slots — use applyCustomVibe. To persist tweaks as a custom slot after applying, call saveCustomVibe with a descriptive name — ' + CUSTOM_VIBE_NAME_HINT,
     parameters: {
       type: 'object',
       properties: {
@@ -246,10 +250,10 @@ const STRUCTURED_TOOLS = [
       required: ['id'],
     },
     mutates: true },
-  { name: 'readAppearanceConfig', description: 'Read full cosmetics config including ' + COSMETICS_WRITE_HINT + ', vignette, and all pattern-specific fields. Returns active fields, customVibes slots, resolveEffectiveCosmetics, and presetCatalog (total/visible/extended ids — extended presets hidden in admin by default). Write: updateAppearance (batch), setContentPath (cosmetics.* single field), applyVibePreset / applyCustomVibe, saveCustomVibe.',
+  { name: 'readAppearanceConfig', description: 'Read full cosmetics config including ' + COSMETICS_WRITE_HINT + ', vignette, wallpaper2 layer state, and all pattern-specific fields. Returns active fields, customVibes slots, resolveEffectiveCosmetics, presetCatalog (total/visible/extended ids — extended presets hidden in admin by default), patternCompatibility rules, and compatibleWallpaper2 for the current primary bgPattern. Write: updateAppearance (batch), setContentPath (cosmetics.* or cosmetics.wallpaper2.* leaf), applyVibePreset / applyCustomVibe, saveCustomVibe.',
     parameters: { type: 'object', properties: {} },
     mutates: false },
-  { name: 'updateAppearance', description: 'Apply one or more validated cosmetics fields in a single write. Keys: ' + COSMETICS_WRITE_HINT + ', plus theme, accent, bgPattern, wallpaperBrightness/Intensity/AnimSpeed/AnimPaused/Randomness, vignetteIntensity/Direction, glow, radius, scanlines, cursorStyle/Color, type, fonts. Same validation as setContentPath on cosmetics.*. Optional saveToCustom saves the result to a custom vibe slot — pass customVibeName with a descriptive title when saving a new or renamed slot (' + CUSTOM_VIBE_NAME_HINT + ').',
+  { name: 'updateAppearance', description: 'Apply one or more validated cosmetics fields in a single write. Keys: ' + COSMETICS_WRITE_HINT + ', plus theme, accent, bgPattern, wallpaperBrightness/Intensity/AnimSpeed/AnimPaused/Randomness, vignetteIntensity/Direction, glow, radius, scanlines, cursorStyle/Color, type, fonts. wallpaper2 accepts a full nested object ({ enabled, bgPattern, wallpaperColor, … }) — same fields as cosmetics.wallpaper2.* leaf paths via setContentPath. Same validation as setContentPath on cosmetics.*. Optional saveToCustom saves the result to a custom vibe slot — pass customVibeName with a descriptive title when saving a new or renamed slot (' + CUSTOM_VIBE_NAME_HINT + ').',
     parameters: {
       type: 'object',
       properties: {
@@ -600,7 +604,7 @@ function execApplyVibe(a, session) {
   const vibe = schema.getVibe(a.id);
   if (!vibe) return { ok: false, error: 'unknown-vibe', id: a.id };
   const cur = getAtPath(session.content, 'cosmetics') || {};
-  return session.setPath('cosmetics', { ...cur, ...deepClone(vibe.cos), customVibes: coerceCustomVibes(cur.customVibes) });
+  return session.setPath('cosmetics', schema.applyVibePresetCos(cur, vibe));
 }
 
 function execApplyCustomVibe(a, session) {
@@ -672,8 +676,8 @@ function execDeleteCustomVibe(a, session) {
   let next = { ...cur, customVibes: slots };
   if (cur.vibe === a.id) {
     const classic = schema.getVibe('classic');
-    if (classic && classic.cos) {
-      next = { ...next, ...deepClone(classic.cos), vibe: 'classic' };
+    if (classic) {
+      next = schema.applyVibePresetCos(next, classic);
     } else {
       next.vibe = 'classic';
     }
@@ -698,6 +702,10 @@ function execReadAppearanceConfig(session) {
       extendedPresets: extended,
       note: 'Extended presets are hidden in admin UI by default; applyVibePreset accepts any built-in id.',
     },
+    patternCompatibility: schema.PATTERN_COMPATIBILITY || null,
+    compatibleWallpaper2: schema.getCompatibleWallpaper2Patterns
+      ? schema.getCompatibleWallpaper2Patterns(cur.bgPattern || 'grid')
+      : [],
     writeTools: ['updateAppearance', 'setContentPath', 'applyVibePreset', 'applyCustomVibe', 'saveCustomVibe'],
   }, ['appearance']);
 }
