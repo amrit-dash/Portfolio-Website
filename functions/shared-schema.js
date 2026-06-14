@@ -992,6 +992,9 @@
       }
       return null;
     }
+    if (parts.length === 3 && parts[1] === 'wallpaper2') {
+      return validateWallpaper2Leaf(parts[2], value);
+    }
     const field = parts[1];
     if (!field || parts.length > 2) return null;
     switch (field) {
@@ -1048,6 +1051,8 @@
         break;
       case 'customVibes':
         return validateCustomVibes(value);
+      case 'wallpaper2':
+        return validateWallpaper2Object(value);
       case 'rainDirection':
         if (!RAIN_DIRECTIONS.includes(value)) return { error: 'invalid-cosmetics', message: `cosmetics.rainDirection must be one of: ${RAIN_DIRECTIONS.join(', ')}` };
         break;
@@ -1073,6 +1078,7 @@
       case 'wallpaperAnimSpeed':
       case 'wallpaperRandomness':
       case 'starSize':
+      case 'moonScale':
       case 'cometDensity':
       case 'particleSize':
       case 'particleDensity':
@@ -1097,7 +1103,7 @@
       case 'glow': {
         const ranges = {
           accentTone: [0, 100], fontScale: [85, 120], wallpaperBrightness: [0, 100], wallpaperIntensity: [0, 100],
-          wallpaperAnimSpeed: [0, 100], wallpaperRandomness: [0, 100], starSize: [0, 100], cometDensity: [0, 100],
+          wallpaperAnimSpeed: [0, 100], wallpaperRandomness: [0, 100], starSize: [0, 100], moonScale: [0, 100], cometDensity: [0, 100],
           particleSize: [0, 100], particleDensity: [0, 100], particleOpacity: [0, 100], binaryFontSize: [0, 100],
           fluidSize: [0, 100], fluidMorphSpeed: [0, 100], honeycombGlowDensity: [0, 100],
           cursorInteractStrength: [0, 100], cursorTrailLength: [0, 100], cursorParticleDensity: [0, 100], cursorSweepRadius: [0, 100],
@@ -1160,6 +1166,7 @@
         : k === 'cursorEffect' ? 'none'
         : k === 'cursorEffectTrailStyle' ? 'glow'
         : k === 'cursorEffectCometDirection' ? 'cursor'
+        : k === 'wallpaper2' ? createDefaultWallpaper2()
         : 50;
       return !validateCosmeticsWrite('cosmetics.' + k, sample);
     });
@@ -1184,14 +1191,15 @@
       'Appearance (cosmetics.*): theme · accent · accentTone · type · headingFont · tracking · fontScale',
       'bgPattern (grid|dots|diagonal|crosshatch|3dgrid|honeycomb|honeycombGlow|padgrid|circuits|waves|brick|noise|aurora|cosmos|matrixrain|particles|lightning|rain|binarystream|nebula|morphgeo|fluidcore|snowinteractive|ripplepool|fireflies|none)',
       'wallpaperBrightness (0–100 opacity) · wallpaperIntensity (0–100 pattern density) · wallpaperAnimSpeed · wallpaperAnimPaused (freeze animated motion) · wallpaperRandomness (0=deterministic/uniform sliders · 100=chaos overrides direction/speed/phase per element) · wallpaperUseAccent (pattern ink follows accent when true) · wallpaperColor (custom pattern tint when wallpaperUseAccent is false; accent color always used for glow/hi on canvas patterns)',
-      'Per-pattern: honeycombStyle (outline|fill) · honeycombGlowDensity (0–100 max % of hex cells glowing at once on honeycombGlow) · rainDirection · waveDirection · starSize · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · numberFormat · binaryFontSize · fluidSize · fluidMorphSpeed (fluidcore blob scale + morph/flow rate; wallpaperAnimSpeed controls rotation) · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
+      'Per-pattern: honeycombStyle (outline|fill) · honeycombGlowDensity (0–100 max % of hex cells glowing at once on honeycombGlow) · rainDirection · waveDirection · starSize · moonScale (cosmos crescent scale) · cometDensity · cometDirection · particleSize · particleDensity · particleOpacity · particleDrift · numberFormat · binaryFontSize · fluidSize · fluidMorphSpeed (fluidcore blob scale + morph/flow rate; wallpaperAnimSpeed controls rotation) · cursorInteractStrength · cursorTrailLength (interactive wallpaper trail) · cursorParticleDensity · cursorSweepRadius (snowinteractive)',
       'cursorEffect (none|trail|comet|ripple|spark|glow) — global overlay independent of wallpaper · cursorEffectTrailStyle (glow|line|dotted|particles) · cursorEffectTrailLength · cursorEffectIntensity · cursorEffectRippleCount (ripple burst: 0=1 ring · 100=8 varied) · cursorEffectRippleSpeed (0=slow expansion · 100=fast) · cursorEffectCometDirection (cursor|up|down|random) · cursorEffectCometIntensity · cursorEffectCometSpeed',
       'vignetteIntensity (0=off) · vignetteDirection · glow · radius · scanlines · cursorStyle · cursorColor · cursorRingLag (0=snappy ring follow · 100=floaty trail on ring/trail cursors) · uiGlassOpacity (0=opaque panels · 100=translucent windows/bot/expertise cards with blur)',
-      'botIcon · botIconColor · vibe (built-in preset id or custom-* slot id; segments: dark, light, retro, bold, multi-tone; admin shows 20 core presets — 28 extended tier hidden by default; agent applyVibePreset accepts any id) · customVibes (unlimited saved slots). Read: readAppearanceConfig. Write: setContentPath (cosmetics.*), updateAppearance (batch fields), applyVibePreset / applyCustomVibe, saveCustomVibe.',
+      'botIcon · botIconColor · vibe (built-in preset id or custom-* slot id; segments: dark, light, retro, bold, multi-tone; admin shows ' + getVisibleVibes().length + ' core presets — ' + getExtendedVibes().length + ' extended tier hidden by default; agent applyVibePreset accepts any id) · customVibes (unlimited saved slots). Read: readAppearanceConfig. Write: setContentPath (cosmetics.*), updateAppearance (batch fields), applyVibePreset / applyCustomVibe, saveCustomVibe.',
       'Multi-tone presets: wallpaperUseAccent false + explicit wallpaperColor for pattern ink; cursorColor often differs from accent and wallpaper tint.',
       'Static honeycomb: honeycombStyle outline (grid lines) · fill (sparse filled cells via wallpaperIntensity). Animated: honeycombGlow (staggered accent hex pulses · honeycombGlowDensity caps simultaneous glow count).',
       'Interactive wallpapers: snowinteractive (continuous snowfall swept by cursor) · ripplepool (cursor disturbs water ripples) · fireflies (motes scatter from cursor).',
       'Animated patterns: circuits · waves · aurora · cosmos · matrixrain · particles · lightning · rain · binarystream · nebula · morphgeo (soft drifting blobs — uses global brightness/intensity/animSpeed/randomness) · fluidcore (centered water blob — fluidSize · fluidMorphSpeed · wallpaperAnimSpeed=rotation) · honeycombGlow.',
+      'Dual wallpaper (cosmetics.wallpaper2): enabled · bgPattern · per-layer brightness/intensity/animSpeed/animPaused/randomness/tint + pattern params. Pairing: static+animated OK · two static NO · honeycombGlow/binarystream exclusive (no second animated) · cursor-reactive pairs with any. Read PATTERN_COMPATIBILITY.',
     ].join(' ');
   }
 
@@ -1321,6 +1329,7 @@
     const animSpeed = clampCosmeticNumber(c.wallpaperAnimSpeed, 0, 100, 50);
     const randomness = clampCosmeticNumber(c.wallpaperRandomness, 0, 100, 40);
     const starSize = clampCosmeticNumber(c.starSize, 0, 100, 50);
+    const moonScale = clampCosmeticNumber(c.moonScale, 0, 100, 35);
     const cometDensity = clampCosmeticNumber(c.cometDensity, 0, 100, 40);
     const particleSize = clampCosmeticNumber(c.particleSize, 0, 100, 45);
     const particleDensity = clampCosmeticNumber(c.particleDensity, 0, 100, 35);
@@ -1350,6 +1359,7 @@
     const speedSec = Math.max(1.5, Math.round(60 - (animSpeed / 100) * 58.5));
     const speedMult = 20 / speedSec;
     const starScale = 0.55 + (starSize / 100) * 1.45;
+    const moonScaleMult = 0.55 + (moonScale / 100) * 0.9;
     const fluidScale = 0.14 + (fluidSize / 100) * 0.36;
     const fluidMorphMult = 0.12 + (fluidMorphSpeed / 100) * 1.35;
     const cometFreq = 0.35 + (cometDensity / 100) * 0.85;
@@ -1363,12 +1373,19 @@
       decimal: '0123456789',
       hex: '0123456789ABCDEF',
     };
-    const rainTilt = {
-      down: 1.5,
-      'diagonal-left': -6,
-      'diagonal-right': 6,
-      left: -12,
-      right: 12,
+    /** Rain fall vectors — vy always positive (gravity); no upward directions. */
+    const rainVec = {
+      down: { vx: 0, vy: 1 },
+      'diagonal-left': { vx: -0.5, vy: 1 },
+      'diagonal-right': { vx: 0.5, vy: 1 },
+      left: { vx: -0.85, vy: 0.55 },
+      right: { vx: 0.85, vy: 0.55 },
+    };
+    const rainVecRaw = rainVec[rainDirection] || rainVec.down;
+    const rainVecLen = Math.hypot(rainVecRaw.vx, rainVecRaw.vy) || 1;
+    const rainVecNorm = {
+      vx: rainVecRaw.vx / rainVecLen,
+      vy: rainVecRaw.vy / rainVecLen,
     };
     const cometVec = {
       'right-down': { vx: 1, vy: 0.35 },
@@ -1429,6 +1446,8 @@
       cursorInteractNorm: cursorInteractStrength / 100,
       starCount: Math.round(24 + i * 72),
       starScale,
+      moonScale,
+      moonScaleMult,
       cometInterval: Math.max(2.5, Math.round(16 - cometFreq * 12)),
       cometIntervalVar: rand * 0.85,
       cometDirection,
@@ -1449,7 +1468,8 @@
       columnCount: Math.round(22 + i * 58),
       rainDropCount: Math.round(90 + i * 260),
       rainDirection,
-      rainTilt: rainTilt[rainDirection] != null ? rainTilt[rainDirection] : 1.5,
+      rainVecX: rainVecNorm.vx,
+      rainVecY: rainVecNorm.vy,
       waveDirection,
       waveDriftX: waveDriftNorm.x,
       waveDriftY: waveDriftNorm.y,
@@ -1534,14 +1554,14 @@
         alphaBoost: 1.05 + i * 0.42,
       };
     }
-    if (pattern === 'rain') {
+    if (pattern === 'rain' || pattern === 'thunderstorm') {
       if (light) {
         return {
           r: Math.round(base.r * 0.38 + 36),
           g: Math.round(base.g * 0.38 + 40),
           b: Math.round(base.b * 0.45 + 56),
           hi: [20, 32, 64],
-          flash: 0,
+          flash: pattern === 'thunderstorm' ? 0.32 + i * 0.42 : 0,
           alphaBoost: 1.65 + i * 0.75,
         };
       }
@@ -1550,7 +1570,7 @@
         g: Math.min(255, Math.round(base.g * 0.92 + 28)),
         b: Math.min(255, Math.round(base.b * 0.95 + 36)),
         hi: [210, 228, 255],
-        flash: 0,
+        flash: pattern === 'thunderstorm' ? 0.18 + i * 0.48 : 0,
         alphaBoost: 1.05 + i * 0.5,
       };
     }
@@ -1702,6 +1722,81 @@
     if (wp.animated) root.dataset.bgAnimated = 'on'; else delete root.dataset.bgAnimated;
     if (c.wallpaperAnimPaused) root.dataset.wpAnimPaused = 'on'; else delete root.dataset.wpAnimPaused;
   }
+
+  function applyWallpaper2VarsToRoot(root, cos, tonedAccent) {
+    if (!root) return;
+    const c = cos && typeof cos === 'object' ? cos : {};
+    const layer = resolveWallpaper2Layer(c, tonedAccent);
+    if (!layer || !layer.enabled) {
+      delete root.dataset.bg2;
+      delete root.dataset.bg2Animated;
+      delete root.dataset.wp2AnimPaused;
+      delete root.dataset.wallpaper2;
+      root.style.removeProperty('--w2-wallpaper-color');
+      root.style.removeProperty('--w2-wallpaper-accent');
+      root.style.removeProperty('--w2-wp-opacity');
+      root.style.removeProperty('--w2-wp-size');
+      root.style.removeProperty('--w2-wp-field-size');
+      root.style.removeProperty('--w2-grid');
+      root.style.removeProperty('--w2-honeycomb-bg');
+      root.style.removeProperty('--w2-honeycomb-tile-x');
+      root.style.removeProperty('--w2-honeycomb-tile-y');
+      return;
+    }
+    root.dataset.wallpaper2 = 'on';
+    const wpColor = layer.colors.patternColor;
+    const wp = layer.wp;
+    root.style.setProperty('--w2-wallpaper-color', wpColor);
+    root.style.setProperty('--w2-wallpaper-accent', layer.colors.accentColor);
+    root.style.setProperty('--w2-wp-opacity', wp.opacity.toString());
+    root.style.setProperty('--w2-wp-size', wp.size + 'px');
+    root.style.setProperty('--w2-wp-field-size', wp.fieldSize + 'px');
+    const gridMix = root.dataset.theme === 'light' ? '32%' : '38%';
+    root.style.setProperty('--w2-grid', 'color-mix(in oklab, var(--w2-wallpaper-color) ' + gridMix + ', transparent)');
+    const bgPat = layer.pattern;
+    if (layer.static) {
+      root.dataset.bg2 = bgPat;
+      if (bgPat === 'honeycomb') {
+        const honeyStyle = HONEYCOMB_STYLES.includes(layer.cos.honeycombStyle) ? layer.cos.honeycombStyle : 'outline';
+        root.dataset.honeycomb2Style = honeyStyle;
+        const gridAlpha = root.dataset.theme === 'light' ? 0.32 : 0.38;
+        const rgb = /^#([0-9a-fA-F]{6})$/.test(String(wpColor || ''))
+          ? {
+            r: parseInt(String(wpColor).slice(1, 3), 16),
+            g: parseInt(String(wpColor).slice(3, 5), 16),
+            b: parseInt(String(wpColor).slice(5, 7), 16),
+          }
+          : { r: 200, g: 232, b: 86 };
+        const stroke = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + gridAlpha + ')';
+        const fill = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + Math.min(0.72, gridAlpha + 0.18) + ')';
+        const tile = resolveHoneycombTileMetrics(wp.size);
+        const uri = buildHoneycombSvgDataUri({
+          size: wp.size,
+          style: honeyStyle,
+          fillRatio: honeyStyle === 'fill' ? (wp.intense / 100) * 0.22 : 0,
+          strokeColor: stroke,
+          fillColor: fill,
+        });
+        root.style.setProperty('--w2-honeycomb-bg', uri);
+        root.style.setProperty('--w2-honeycomb-tile-x', tile.tileW.toFixed(2) + 'px');
+        root.style.setProperty('--w2-honeycomb-tile-y', tile.tileH.toFixed(2) + 'px');
+      } else {
+        delete root.dataset.honeycomb2Style;
+        root.style.removeProperty('--w2-honeycomb-bg');
+        root.style.removeProperty('--w2-honeycomb-tile-x');
+        root.style.removeProperty('--w2-honeycomb-tile-y');
+      }
+    } else {
+      delete root.dataset.bg2;
+      delete root.dataset.honeycomb2Style;
+      root.style.removeProperty('--w2-honeycomb-bg');
+      root.style.removeProperty('--w2-honeycomb-tile-x');
+      root.style.removeProperty('--w2-honeycomb-tile-y');
+    }
+    if (layer.animated) root.dataset.bg2Animated = 'on'; else delete root.dataset.bg2Animated;
+    if (layer.cos.wallpaperAnimPaused) root.dataset.wp2AnimPaused = 'on'; else delete root.dataset.wp2AnimPaused;
+  }
+
   function resolveVignetteCosmetics(cos) {
     const c = cos && typeof cos === 'object' ? cos : {};
     return {
@@ -1914,6 +2009,10 @@
     BG_PATTERN_META,
     HONEYCOMB_STYLES,
     CURSOR_WALLPAPERS,
+    STATIC_BG_PATTERNS,
+    EXCLUSIVE_ANIMATED_PATTERNS,
+    WALLPAPER_LAYER_SETTING_KEYS,
+    PATTERN_COMPATIBILITY,
     RAIN_DIRECTIONS,
     WAVE_DIRECTIONS,
     COMET_DIRECTIONS,
@@ -1955,6 +2054,20 @@
     getCustomVibe,
     createDefaultCustomVibes,
     healBgPattern,
+    createDefaultWallpaper2,
+    normalizeWallpaper2,
+    healWallpaper2Compatibility,
+    vibePresetHasDualWallpaper,
+    resolvePresetWallpaper2,
+    syncBuiltInPresetWallpaper2,
+    applyVibePresetCos,
+    buildWallpaperLayerCos,
+    resolveWallpaper2Layer,
+    isPatternStatic,
+    isPatternAnimated,
+    isExclusiveAnimated,
+    canPairWallpaperPatterns,
+    getCompatibleWallpaper2Patterns,
     coerceCustomVibes,
     normalizeCosmetics,
     snapshotCosmetics,
@@ -1982,6 +2095,7 @@
     resolveWallpaperColors,
     resolveWallpaperCanvasInk,
     applyWallpaperVarsToRoot,
+    applyWallpaper2VarsToRoot,
     resolveVignetteCosmetics,
     buildWallpaperVignetteOverlay,
     buildWallpaperVignetteMask,
