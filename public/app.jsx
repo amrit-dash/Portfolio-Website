@@ -1487,6 +1487,9 @@ window.applyWallpaperCosmetics = function applyWallpaperCosmetics(root, cos, ton
     root.style.setProperty('--wp-size', Math.round(56 - (intense / 100) * 44) + 'px');
     root.style.setProperty('--wp-field-size', Math.round(480 - (intense / 100) * 360) + 'px');
   }
+  if (schema.applyWallpaper2VarsToRoot) {
+    schema.applyWallpaper2VarsToRoot(root, cos, tonedAccent);
+  }
 };
 
 /* Canvas + CSS-anim wallpaper layer — cosmos, matrix rain, aurora, particles, morphgeo, waves. */
@@ -1498,7 +1501,7 @@ function hexToRgb(hex) {
   } catch (e) { return { r: 200, g: 232, b: 86 }; }
 }
 
-function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity, animSpeed, randomness, theme, cos }) {
+function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity, animSpeed, randomness, theme, cos, layerClass, layerZ }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const propsRef = useRef({});
@@ -3054,21 +3057,22 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
       {isCanvas && (
         <canvas
           ref={canvasRef}
-          className="wp-canvas"
+          className={'wp-canvas' + (layerClass ? ' ' + layerClass : '')}
           aria-hidden="true"
           data-theme={theme || 'dark'}
           data-wallpaper={pattern}
-          style={{ opacity: canvasOpacity }}
+          style={{ opacity: canvasOpacity, zIndex: layerZ == null ? 0 : layerZ }}
         />
       )}
       {isCssAnim && (
         <div
           key={animLayerKey}
-          className={'wp-anim wp-anim--' + pattern}
+          className={'wp-anim wp-anim--' + pattern + (layerClass ? ' ' + layerClass : '')}
           aria-hidden="true"
           data-theme={theme || 'dark'}
           data-anim-paused={animPaused ? 'true' : undefined}
           style={{
+            zIndex: layerZ == null ? 0 : layerZ,
             '--wp-opacity': String(alpha),
             '--wp-intense': String((intensity == null ? 50 : intensity) / 100),
             '--wp-anim-dur': wp.animDur,
@@ -3235,7 +3239,8 @@ function App() {
       'cursorEffectRippleCount', 'cursorEffectRippleSpeed',
       'cursorEffectCometDirection', 'cursorEffectCometIntensity', 'cursorEffectCometSpeed',
       'cursorRingLag', 'uiGlassOpacity',
-      'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection', 'glow', 'radius'].forEach((k) => {
+      'wallpaperUseAccent', 'wallpaperColor', 'vignetteIntensity', 'vignetteDirection', 'glow', 'radius',
+      'wallpaper2'].forEach((k) => {
         if (merged[k] !== undefined) next[k] = merged[k];
       });
     setTweak(next);
@@ -3313,7 +3318,14 @@ function App() {
     ? tonedAccent
     : (wpCos.wallpaperColor || wpCos.accent);
   const wpMeta = (_SCHEMA.BG_PATTERN_META || {})[wpCos.bgPattern || 'grid'] || {};
-  const heavyWallpaperAnim = !!wpMeta.animated && !uiCos.wallpaperAnimPaused;
+  const w2Layer = _SCHEMA.resolveWallpaper2Layer ? _SCHEMA.resolveWallpaper2Layer(wpCos, tonedAccent) : null;
+  const w2Meta = w2Layer ? ((_SCHEMA.BG_PATTERN_META || {})[w2Layer.pattern] || {}) : {};
+  const heavyWallpaperAnim = (!!wpMeta.animated && !uiCos.wallpaperAnimPaused)
+    || (!!w2Layer && !!w2Meta.animated && !w2Layer.cos.wallpaperAnimPaused);
+  const w2Tint = w2Layer
+    ? (w2Layer.cos.wallpaperUseAccent !== false ? tonedAccent : (w2Layer.cos.wallpaperColor || tonedAccent))
+    : null;
+  const w2Static = !!(w2Layer && w2Layer.static);
 
   return (
     <ContentCtx.Provider value={liveContent}>
@@ -3329,6 +3341,22 @@ function App() {
         theme={theme}
         cos={wpCos}
       />
+      {w2Static && <div className="wp-static-2" aria-hidden="true" data-bg2={w2Layer.pattern} />}
+      {w2Layer && w2Layer.animated && (
+        <AnimatedWallpaper
+          pattern={w2Layer.pattern}
+          color={w2Tint}
+          accentColor={tonedAccent}
+          brightness={w2Layer.cos.wallpaperBrightness == null ? 50 : w2Layer.cos.wallpaperBrightness}
+          intensity={w2Layer.cos.wallpaperIntensity == null ? 50 : w2Layer.cos.wallpaperIntensity}
+          animSpeed={w2Layer.cos.wallpaperAnimSpeed == null ? 50 : w2Layer.cos.wallpaperAnimSpeed}
+          randomness={w2Layer.cos.wallpaperRandomness == null ? 40 : w2Layer.cos.wallpaperRandomness}
+          theme={theme}
+          cos={w2Layer.cos}
+          layerClass="wp-layer-2"
+          layerZ={1}
+        />
+      )}
       {booted &&
       <div className="os-root" data-comment-anchor="e902a98e34-div-780-7">
         <MenuBar
