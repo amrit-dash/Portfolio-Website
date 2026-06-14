@@ -2459,7 +2459,7 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
       const pat = getProps().pattern;
       if (pat === 'cosmos') seedStars();
       else if (pat === 'matrixrain') seedColumns();
-      else if (pat === 'rain') seedRain();
+      else if (pat === 'rain' || pat === 'thunderstorm') seedRain();
       else if (pat === 'binarystream') seedBinary();
       else if (pat === 'nebula') seedNebula();
       else if (pat === 'circuits') seedCircuits();
@@ -2898,6 +2898,65 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
           ctx.arc(b.x, b.y, rad, 0, Math.PI * 2);
           ctx.fill();
         });
+      } else if (activePattern === 'thunderstorm') {
+        const dt = lastFrame ? Math.min(48, now - lastFrame) : 16;
+        lastFrame = now;
+
+        const stormAlpha = aBase * (0.1 + intenseNorm() * 0.14);
+        const stormGrd = ctx.createLinearGradient(0, 0, 0, h);
+        stormGrd.addColorStop(0, `rgba(${colors.r},${colors.g},${colors.b},${stormAlpha * 0.42})`);
+        stormGrd.addColorStop(0.35, `rgba(${colors.r},${colors.g},${colors.b},${stormAlpha * 0.12})`);
+        stormGrd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = stormGrd;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.lineCap = 'round';
+        const wp = getProps().wp;
+        const fallbackVx = wp.rainVecX != null ? wp.rainVecX : 0;
+        const fallbackVy = wp.rainVecY != null ? wp.rainVecY : 1;
+        rainDrops.forEach((d) => {
+          const vx = d.vx != null ? d.vx : fallbackVx;
+          const vy = d.vy != null ? d.vy : fallbackVy;
+          d.x += vx * d.speed * sm;
+          d.y += vy * d.speed * sm;
+          const m = d.len + 20;
+          const offBottom = d.y > h + m;
+          const offLeft = d.x < -m && vx < 0;
+          const offRight = d.x > w + m && vx > 0;
+          if (offBottom || offLeft || offRight) resetRainDrop(d);
+          ctx.strokeStyle = `rgba(${colors.r},${colors.g},${colors.b},${aBase * (0.55 + intenseNorm() * 0.35)})`;
+          ctx.lineWidth = d.w;
+          ctx.beginPath();
+          ctx.moveTo(d.x, d.y);
+          ctx.lineTo(d.x + vx * d.len, d.y + vy * d.len);
+          ctx.stroke();
+        });
+
+        if (lightningFlash > 0) lightningFlash = Math.max(0, lightningFlash - dt / 340);
+        if (boltFade > 0) boltFade = Math.max(0, boltFade - dt / 520);
+
+        if (nextStrikeGap == null) nextStrikeGap = computeStrikeGap();
+        const overdue = now - lastLightning > nextStrikeGap * 1.8;
+        const strikeChance = Math.min(0.88, chaosLerp(0.1 + intenseNorm() * 0.38, 0.72, randPct()));
+        if (now - lastLightning > nextStrikeGap && (Math.random() < strikeChance || overdue)) {
+          lastLightning = now;
+          nextStrikeGap = computeStrikeGap();
+          const flashBoost = 0.75 + lightningStrikeCount() * 0.08;
+          lightningFlash = Math.min(1, flashBoost);
+          boltFade = 1;
+          lightningBolts = spawnLightningStrike();
+        }
+
+        if (lightningFlash > 0) {
+          ctx.save();
+          const flashAlpha = colors.flash * lightningFlash * aBase * (0.85 + intenseNorm() * 0.35);
+          ctx.fillStyle = `rgba(${colors.hi[0]},${colors.hi[1]},${colors.hi[2]},${flashAlpha})`;
+          ctx.fillRect(0, 0, w, h);
+          drawLightningBolts(colors, aBase, lightningFlash);
+          ctx.restore();
+        } else if (boltFade > 0) {
+          drawLightningBolts(colors, aBase, boltFade * 0.55);
+        }
       } else if (activePattern === 'lightning') {
         const dt = lastFrame ? Math.min(48, now - lastFrame) : 16;
         lastFrame = now;
@@ -2984,8 +3043,8 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
         : '')
     : pattern;
 
-  const canvasOpacity = (theme === 'light' && (pattern === 'nebula' || pattern === 'rain' || pattern === 'matrixrain'))
-    ? Math.min(1, alpha * (pattern === 'rain' ? 1.08 : pattern === 'matrixrain' ? 1.06 : 1.1))
+  const canvasOpacity = (theme === 'light' && (pattern === 'nebula' || pattern === 'rain' || pattern === 'thunderstorm' || pattern === 'matrixrain'))
+    ? Math.min(1, alpha * (pattern === 'rain' || pattern === 'thunderstorm' ? 1.08 : pattern === 'matrixrain' ? 1.06 : 1.1))
     : alpha;
 
   if (!active) return null;
