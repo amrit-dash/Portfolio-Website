@@ -1589,13 +1589,31 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
       }
       return base;
     };
-    const rainDropTilt = () => {
+    const rainDropVelocity = () => {
       const p = getProps();
-      const baseTilt = p.wp.rainTilt != null ? p.wp.rainTilt : 1.5;
+      const detVx = p.wp.rainVecX != null ? p.wp.rainVecX : 0;
+      const detVy = p.wp.rainVecY != null ? p.wp.rainVecY : 1;
       const r = randAmt();
-      const chaosTilt = (Math.random() - 0.5) * 28;
-      if (r >= 0.98) return chaosTilt;
-      return chaosLerp(baseTilt, chaosTilt, randPct());
+      if (r >= 0.98) {
+        const angle = (Math.random() - 0.5) * Math.PI * 0.9;
+        return { vx: Math.sin(angle) * 0.85, vy: Math.abs(Math.cos(angle)) + 0.2 };
+      }
+      if ((p.wp.rainDirection || 'down') === 'down') {
+        const vxVar = (Math.random() - 0.5) * (0.22 + randPct() * 0.38);
+        const chaosVx = (Math.random() - 0.5) * 1.4;
+        return {
+          vx: vary(chaosLerp(vxVar, chaosVx, randPct()), 0.35),
+          vy: 1,
+        };
+      }
+      const chaosAngle = (Math.random() - 0.5) * Math.PI * 0.55;
+      const chaosVx = detVx + Math.sin(chaosAngle) * 0.35;
+      const chaosVy = Math.max(0.35, detVy + (Math.random() - 0.5) * 0.18);
+      const cLen = Math.hypot(chaosVx, chaosVy) || 1;
+      return {
+        vx: vary(chaosLerp(detVx, chaosVx / cLen, randPct()), 0.35),
+        vy: Math.max(0.35, vary(chaosLerp(detVy, chaosVy / cLen, randPct()), 0.25)),
+      };
     };
     const cometVelocity = () => {
       const p = getProps();
@@ -1681,17 +1699,36 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
     let boltFade = 0;
     let lightningBolts = [];
 
+    const resetRainDrop = (d) => {
+      const vx = d.vx != null ? d.vx : 0;
+      const margin = d.len + Math.random() * 40 * (1 + randAmt());
+      d.y = -margin;
+      if (vx < -0.12) d.x = w * (0.25 + Math.random() * 0.85);
+      else if (vx > 0.12) d.x = Math.random() * w * 0.85;
+      else d.x = Math.random() * w;
+      if (randAmt() > 0.08) {
+        d.speed = vary(3.5 + Math.random() * (6 + intenseNorm() * 4), 0.45);
+        if (randAmt() > 0.25) {
+          const vel = rainDropVelocity();
+          d.vx = vel.vx;
+          d.vy = vel.vy;
+        }
+      }
+    };
+
     const seedRain = () => {
       rainDrops = [];
       const n = getProps().wp.rainDropCount || 120;
       for (let i = 0; i < n; i++) {
+        const vel = rainDropVelocity();
         rainDrops.push({
           x: Math.random() * w,
           y: Math.random() * h,
           len: 6 + Math.random() * (14 + intenseNorm() * 12),
           speed: vary(3.5 + Math.random() * (6 + intenseNorm() * 4), 0.45),
           w: 0.5 + Math.random() * (0.9 + intenseNorm() * 0.6),
-          tilt: rainDropTilt(),
+          vx: vel.vx,
+          vy: vel.vy,
         });
       }
     };
@@ -2438,7 +2475,7 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
     const syncSeed = () => {
       const p = getProps();
       const sig = [
-        p.pattern, p.randomness, p.wp.starCount, p.wp.starScale, p.wp.columnCount, p.wp.rainDropCount, p.wp.rainTilt,
+        p.pattern, p.randomness, p.wp.starCount, p.wp.starScale, p.wp.columnCount, p.wp.rainDropCount, p.wp.rainVecX, p.wp.rainVecY,
         p.wp.binaryRowCount, p.wp.numberFormat, p.wp.binaryFontPx, p.wp.nebulaBlobCount,
         p.wp.circuitPathCount, p.wp.circuitCellSize,
         p.wp.cometDirection, p.wp.cometDensity, p.wp.rainDirection,
@@ -2798,22 +2835,24 @@ function AnimatedWallpaper({ pattern, color, accentColor, brightness, intensity,
         });
       } else if (activePattern === 'rain') {
         ctx.lineCap = 'round';
+        const wp = getProps().wp;
+        const fallbackVx = wp.rainVecX != null ? wp.rainVecX : 0;
+        const fallbackVy = wp.rainVecY != null ? wp.rainVecY : 1;
         rainDrops.forEach((d) => {
-          d.y += d.speed * sm;
-          if (d.y > h + d.len) {
-            d.y = -d.len - Math.random() * 40 * (1 + randAmt());
-            d.x = Math.random() * w;
-            if (randAmt() > 0.08) {
-              d.speed = vary(3.5 + Math.random() * (6 + intenseNorm() * 4), 0.45);
-              if (randAmt() > 0.25) d.tilt = rainDropTilt();
-            }
-          }
-          const tilt = d.tilt != null ? d.tilt : (getProps().wp.rainTilt != null ? getProps().wp.rainTilt : 1.5);
+          const vx = d.vx != null ? d.vx : fallbackVx;
+          const vy = d.vy != null ? d.vy : fallbackVy;
+          d.x += vx * d.speed * sm;
+          d.y += vy * d.speed * sm;
+          const m = d.len + 20;
+          const offBottom = d.y > h + m;
+          const offLeft = d.x < -m && vx < 0;
+          const offRight = d.x > w + m && vx > 0;
+          if (offBottom || offLeft || offRight) resetRainDrop(d);
           ctx.strokeStyle = `rgba(${colors.r},${colors.g},${colors.b},${aBase * (0.55 + intenseNorm() * 0.35)})`;
           ctx.lineWidth = d.w;
           ctx.beginPath();
           ctx.moveTo(d.x, d.y);
-          ctx.lineTo(d.x + tilt, d.y + d.len);
+          ctx.lineTo(d.x + vx * d.len, d.y + vy * d.len);
           ctx.stroke();
         });
       } else if (activePattern === 'binarystream') {
