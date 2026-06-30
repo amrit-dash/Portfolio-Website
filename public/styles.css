@@ -2145,6 +2145,7 @@ html[data-theme="dark"][data-boot="active"] body::after {
   .dual-col { grid-template-columns: 1fr; }
   .contact-grid { grid-template-columns: 1fr; }
   .menubar__items { display: none; }
+  .menubar__right .menubar__clock { display: none; }
   .bot-popout { display: none !important; }
 }
 @media (max-width: 540px) {
