@@ -445,8 +445,81 @@ function CvThemeTip({ theme, nonce, onDismiss }) {
     </div>);
 }
 
-function MenuBar({ theme, onToggleTheme, active, cvThemeTipNonce, onCvThemeTipDismiss }) {
+function scrollHeroBotIntoView(focusInput) {
+  const root = document.querySelector('.os-root');
+  const bot = document.querySelector('.hero__bot .console') || document.querySelector('.hero__bot');
+  if (!root || !bot) return;
+
+  // Cancel any in-flight smooth scroll so position math is stable.
+  const frozenTop = root.scrollTop;
+  const prevBehavior = root.style.scrollBehavior;
+  root.style.scrollBehavior = 'auto';
+  root.scrollTop = frozenTop;
+  root.style.scrollBehavior = prevBehavior;
+
+  const rootRect = root.getBoundingClientRect();
+  const botRect = bot.getBoundingClientRect();
+  const botTop = frozenTop + (botRect.top - rootRect.top);
+  const botHeight = bot.offsetHeight || botRect.height;
+  const maxScroll = Math.max(0, root.scrollHeight - root.clientHeight);
+  let target;
+  if (botHeight >= root.clientHeight - 24) {
+    target = botTop - 12;
+  } else {
+    target = botTop - (root.clientHeight - botHeight) / 2;
+  }
+  target = Math.max(0, Math.min(target, maxScroll));
+
+  root.scrollTo({ top: target, behavior: 'smooth' });
+
+  if (!focusInput) return;
+  const focusInputEl = () => {
+    const inp = document.querySelector('.hero__bot .console__input input');
+    if (!inp) return;
+    try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); }
+  };
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    focusInputEl();
+  };
+  if (typeof document !== 'undefined' && 'onscrollend' in document.createElement('div')) {
+    root.addEventListener('scrollend', finish, { once: true });
+  }
+  setTimeout(finish, 800);
+}
+
+function scrollToSection(id) {
+  const root = document.querySelector('.os-root');
+  const el = document.getElementById(id);
+  if (!root || !el) return;
+  const rootRect = root.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const target = root.scrollTop + (elRect.top - rootRect.top) - 12;
+  root.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+  try { history.replaceState(null, '', '#' + id); } catch (e) { location.hash = id; }
+  try { window.dispatchEvent(new CustomEvent('amritos:scroll-sync')); } catch (e) { }
+}
+
+function useMaxWidth(px) {
+  const query = `(max-width: ${px}px)`;
+  const [match, setMatch] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia(query).matches
+  ));
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatch(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return match;
+}
+
+function MenuBar({ theme, onToggleTheme, active, cvThemeTipNonce, onCvThemeTipDismiss, onBotClick, botPanelOpen, onBotPanelClose, botIcon, botIconColor, botPanelInputRef }) {
   const now = useTime();
+  const botBtnRef = useRef(null);
   const t = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const d = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   const items = [
@@ -457,29 +530,36 @@ function MenuBar({ theme, onToggleTheme, active, cvThemeTipNonce, onCvThemeTipDi
     { id: 'contact', label: 'contact' }];
 
   return (
+    <>
     <header className="menubar" data-comment-anchor="25c503c02a-header-216-5">
       <div className="menubar__logo">
-        <a href="#intro" className="pixel-home" title="Back to top" aria-label="Back to top">
+        <a
+          href="#intro"
+          className="pixel-home"
+          title="Back to top"
+          aria-label="Back to top"
+          onClick={(e) => { e.preventDefault(); scrollToSection('intro'); }}>
           <span className="pixel-mark" data-comment-anchor="32ef46f7b4-span-70-9"><Icon name="home" size={11} /></span>
         </a>
         <span>amrit.os</span>
       </div>
       <nav className="menubar__items">
         {items.map((it) =>
-          <a key={it.id} href={'#' + it.id} className={active === it.id ? 'active' : ''}>{it.label}</a>
+          <a
+            key={it.id}
+            href={'#' + it.id}
+            className={active === it.id ? 'active' : ''}
+            onClick={(e) => { e.preventDefault(); scrollToSection(it.id); }}>{it.label}</a>
         )}
       </nav>
       <div className="menubar__right">
         <button
-          className="pill pill--btn"
+          ref={botBtnRef}
+          className={'pill pill--btn pill--bot' + (botPanelOpen ? ' pill--bot-active' : '')}
           title="Chat with amrit-bot"
           data-comment-anchor="dafd2ad3a1-span-229-9"
-          onClick={() => {
-            const root = document.querySelector('.os-root');
-            const bot = document.querySelector('.hero__bot');
-            if (root && bot) root.scrollTo({ top: bot.offsetTop - 80, behavior: 'smooth' });
-            setTimeout(() => { const inp = document.querySelector('.console__input input'); if (inp) inp.focus(); }, 600);
-          }}>
+          onClick={onBotClick}
+          aria-expanded={botPanelOpen || undefined}>
           <span className="dot" /> amrit-bot</button>
         <span className="menubar__clock">{d}  ·  {t}</span>
         <div className="menubar__theme-wrap">
@@ -489,7 +569,15 @@ function MenuBar({ theme, onToggleTheme, active, cvThemeTipNonce, onCvThemeTipDi
           </button>
         </div>
       </div>
-    </header>);
+    </header>
+    <BotPanel
+      open={botPanelOpen}
+      anchorRef={botBtnRef}
+      botIcon={botIcon}
+      botIconColor={botIconColor}
+      inputRef={botPanelInputRef}
+      onClose={onBotPanelClose} />
+    </>);
 
 }
 
@@ -679,27 +767,20 @@ function WorkCard() {
 
 }
 
-function AmritBotConsole({ botIcon, botIconColor }) {
+const BotSessionCtx = React.createContext(null);
+
+function BotSessionProvider({ children }) {
   const MAX_MSG = 10;
   const trim = (msgs) => msgs.length > MAX_MSG ? msgs.slice(msgs.length - MAX_MSG) : msgs;
   const [thread, setThread] = useState([]);
-  const [phase, setPhase] = useState('intro'); // intro | scripted | idle
+  const [phase, setPhase] = useState('intro');
   const [scriptIdx, setScriptIdx] = useState(0);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
-  const bodyRef = useRef(null);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [thread, thinking]);
-
-  // Intro sequence then scripted Q&A cycling
   useEffect(() => {
     if (phase !== 'intro') return;
     const intro = BOT_INTRO.map((text, i) => ({ type: 'bot', text, delay: i === 0 ? 600 : 600 }));
-
     let t = 0;
     const timers = intro.map((m, i) => {
       t += m.delay;
@@ -711,12 +792,10 @@ function AmritBotConsole({ botIcon, botIconColor }) {
     return () => timers.forEach(clearTimeout);
   }, [phase]);
 
-  // After intro, cycle scripted Q&A
   useEffect(() => {
     if (phase !== 'scripted') return;
     const item = BOT_SCRIPT[scriptIdx % BOT_SCRIPT.length];
     const delay = scriptIdx === 0 ? 7500 : 10000;
-    // Pick a random variation if arrays are provided
     const pick = (v) => Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] : v;
     const q = pick(item.qs || item.q);
     const a = pick(item.as || item.a);
@@ -733,8 +812,8 @@ function AmritBotConsole({ botIcon, botIconColor }) {
   }, [phase, scriptIdx]);
 
   const runCommand = useCallback((cmd) => {
-    setPhase('idle'); // stop auto-cycle once user interacts
-    if (cmd !== 'clear') logEvent('bot:chat', { command: cmd }); // slash commands count as bot chats
+    setPhase('idle');
+    if (cmd !== 'clear') logEvent('bot:chat', { command: cmd });
     setThread((prev) => [...prev, { from: 'user', body: '/' + cmd }]);
     setThinking(true);
     setTimeout(() => {
@@ -777,7 +856,6 @@ function AmritBotConsole({ botIcon, botIconColor }) {
     if (!q) return;
     setPhase('idle');
     setInput('');
-    // Slash-commands shortcut — runCommand adds the user message itself
     if (q.startsWith('/')) {
       runCommand(q.slice(1).trim());
       return;
@@ -799,8 +877,40 @@ function AmritBotConsole({ botIcon, botIconColor }) {
     }
   }, [input, runCommand]);
 
+  const value = useMemo(() => ({
+    thread, thinking, input, setInput, sendInput, runCommand, setThread,
+  }), [thread, thinking, input, sendInput, runCommand]);
+
   return (
-    <div className="console" data-comment-anchor="107d543fe3-div-108-5">
+    <BotSessionCtx.Provider value={value}>
+      {children}
+    </BotSessionCtx.Provider>);
+}
+
+function useBotSession() {
+  return React.useContext(BotSessionCtx);
+}
+
+function AmritBotConsole({ botIcon, botIconColor, inputRef, className }) {
+  const session = useBotSession();
+  const bodyRef = useRef(null);
+  const thread = session ? session.thread : [];
+  const thinking = session ? session.thinking : false;
+  const input = session ? session.input : '';
+  const setInput = session ? session.setInput : () => {};
+  const sendInput = session ? session.sendInput : () => {};
+  const runCommand = session ? session.runCommand : () => {};
+  const setThread = session ? session.setThread : () => {};
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [thread, thinking]);
+
+  if (!session) return null;
+
+  return (
+    <div className={'console' + (className ? ' ' + className : '')} data-comment-anchor="107d543fe3-div-108-5">
       <div className="console__head">
         <span className="console__avatar"><BotAvatarIcon icon={botIcon} size={24} iconColor={botIconColor} /></span>
         <div>
@@ -815,9 +925,6 @@ function AmritBotConsole({ botIcon, botIconColor }) {
       <div className="console__body" ref={bodyRef} data-comment-anchor="9ae4af3e04-div-552-7">
         {thread.map((m, i) =>
           m.from === 'bot' ?
-            // Slash-commands store React elements (StatsCard, LinksCard, …) as
-            // body; only string bodies (LLM/Q&A replies) go through the inline
-            // markdown renderer — otherwise String(element) prints "[object Object]".
             <BotMsg key={i}>{typeof m.body === 'string' ? renderMd(m.body) : m.body}</BotMsg> :
             <UserMsg key={i}>{m.body}</UserMsg>
         )}
@@ -826,7 +933,10 @@ function AmritBotConsole({ botIcon, botIconColor }) {
 
       <div className="console__chips" data-comment-anchor="e4fa8aa953-div-515-7">
         {QUICK_PROMPTS.map((p) =>
-          <button key={p.id} className="console__chip" onClick={() => runCommand(p.id)}>
+          <button
+            key={p.id}
+            className={'console__chip' + (p.id === 'stats' ? ' console__chip--hide-mobile' : '')}
+            onClick={() => runCommand(p.id)}>
             /{p.label}
           </button>
         )}
@@ -837,6 +947,7 @@ function AmritBotConsole({ botIcon, botIconColor }) {
         onSubmit={(e) => { e.preventDefault(); sendInput(); }}>
         <span className="console__prompt">›</span>
         <input
+          ref={inputRef}
           type="text"
           placeholder="ask amrit-bot anything..."
           value={input}
@@ -846,7 +957,70 @@ function AmritBotConsole({ botIcon, botIconColor }) {
         </button>
       </form>
     </div>);
+}
 
+function BotPanel({ open, anchorRef, botIcon, botIconColor, onClose, inputRef }) {
+  const [pos, setPos] = useState(null);
+  const popoutRef = useRef(null);
+
+  const updatePos = useCallback(() => {
+    const btn = anchorRef && anchorRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    setPos({ top: r.bottom + 20 });
+  }, [anchorRef]);
+
+  useEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    updatePos();
+    const root = document.querySelector('.os-root');
+    window.addEventListener('resize', updatePos);
+    root && root.addEventListener('scroll', updatePos, { passive: true });
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      root && root.removeEventListener('scroll', updatePos);
+    };
+  }, [open, updatePos]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e) => {
+      const popout = popoutRef.current;
+      const btn = anchorRef && anchorRef.current;
+      if (popout && popout.contains(e.target)) return;
+      if (btn && btn.contains(e.target)) return;
+      onClose();
+    };
+    const t = setTimeout(() => {
+      document.addEventListener('pointerdown', onPointerDown, true);
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [open, onClose, anchorRef]);
+
+  if (!open || !pos) return null;
+
+  return (
+    <div
+      ref={popoutRef}
+      className="bot-popout"
+      role="dialog"
+      aria-label="amrit-bot chat"
+      style={{ top: pos.top }}>
+      <AmritBotConsole botIcon={botIcon} botIconColor={botIconColor} inputRef={inputRef} className="console--panel" />
+    </div>);
 }
 
 /* =====================================================
@@ -3296,6 +3470,35 @@ function App() {
   }, []);
 
   const navActive = active === 'expertise' ? 'about' : active;
+  const inIntro = active === 'intro';
+  const isMobile = useMaxWidth(980);
+  const [botPanelOpen, setBotPanelOpen] = useState(false);
+  const botPanelInputRef = useRef(null);
+  const useHeroBot = isMobile || inIntro;
+
+  useEffect(() => {
+    if (botPanelOpen && useHeroBot) setBotPanelOpen(false);
+  }, [botPanelOpen, useHeroBot]);
+
+  const focusBotInput = useCallback((inPanel) => {
+    setTimeout(() => {
+      const sel = inPanel ? '.bot-popout .console__input input' : '.hero__bot .console__input input';
+      const inp = document.querySelector(sel);
+      if (inp) inp.focus();
+    }, inPanel ? 80 : 520);
+  }, []);
+
+  const handleBotClick = useCallback(() => {
+    if (useHeroBot) {
+      setBotPanelOpen(false);
+      scrollHeroBotIntoView(true);
+    } else if (botPanelOpen) {
+      setBotPanelOpen(false);
+    } else {
+      setBotPanelOpen(true);
+      focusBotInput(true);
+    }
+  }, [useHeroBot, botPanelOpen, focusBotInput]);
 
   // CV: pick the theme-matching variant so the file mirrors the page they came from.
   // Sources from content.media so admin uploads replace the link without code changes.
@@ -3358,13 +3561,20 @@ function App() {
         />
       )}
       {booted &&
+      <BotSessionProvider>
       <div className="os-root" data-comment-anchor="e902a98e34-div-780-7">
         <MenuBar
           theme={theme}
           active={navActive}
           cvThemeTipNonce={cvThemeTipNonce}
           onCvThemeTipDismiss={dismissCvThemeTip}
-          onToggleTheme={() => chooseTheme(theme === 'dark' ? 'light' : 'dark')} />
+          onToggleTheme={() => chooseTheme(theme === 'dark' ? 'light' : 'dark')}
+          onBotClick={handleBotClick}
+          botPanelOpen={botPanelOpen && !useHeroBot}
+          onBotPanelClose={() => setBotPanelOpen(false)}
+          botIcon={uiCos.botIcon}
+          botIconColor={uiCos.botIconColor}
+          botPanelInputRef={botPanelInputRef} />
 
         <Hero botIcon={uiCos.botIcon} botIconColor={uiCos.botIconColor} />
         <AboutWindow cvUrl={cvUrl} cvVariant={cvVariant} cvFileName={cvFileName} onCvDownloaded={showCvThemeTip} />
@@ -3373,7 +3583,8 @@ function App() {
         <ProjectsDesktop />
         <ContactWindow />
         <Dock />
-      </div>}
+      </div>
+      </BotSessionProvider>}
       {TweaksPanel &&
         <TweaksPanel title="amrit.os tweaks">
           <TweakSection label="Theme" />
