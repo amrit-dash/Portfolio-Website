@@ -937,18 +937,62 @@ function useReveal() {
   // so re-renders don't cycle the observer. This hook is kept for compat but is a no-op.
 }
 
+function sectionScrollTop(el, root) {
+  const elRect = el.getBoundingClientRect();
+  const rootRect = root.getBoundingClientRect();
+  return root.scrollTop + (elRect.top - rootRect.top);
+}
+
 function useActiveSection(ids) {
   const [active, setActive] = useState(ids[0]);
   useEffect(() => {
-    const els = ids.map(id => document.getElementById(id)).filter(Boolean);
-    if (!els.length) return;
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) setActive(e.target.id);
-      });
-    }, { rootMargin: '-30% 0px -55% 0px', threshold: 0.1 });
-    els.forEach(el => io.observe(el));
-    return () => io.disconnect();
+    let raf = 0;
+    let detach = () => {};
+    const bind = () => {
+      detach();
+      const root = document.querySelector('.os-root');
+      if (!root) return false;
+      const update = () => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(() => {
+          const sections = ids
+            .map((id) => ({ id, el: document.getElementById(id) }))
+            .filter((s) => s.el);
+          if (!sections.length) return;
+          const line = root.scrollTop + root.clientHeight * 0.32;
+          let current = sections[0].id;
+          for (const s of sections) {
+            if (sectionScrollTop(s.el, root) <= line) current = s.id;
+          }
+          setActive(current);
+        });
+      };
+      root.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('hashchange', update);
+      window.addEventListener('resize', update);
+      window.addEventListener('amritos:scroll-sync', update);
+      update();
+      detach = () => {
+        cancelAnimationFrame(raf);
+        root.removeEventListener('scroll', update);
+        window.removeEventListener('hashchange', update);
+        window.removeEventListener('resize', update);
+        window.removeEventListener('amritos:scroll-sync', update);
+      };
+      return true;
+    };
+    if (!bind()) {
+      const onReady = () => { bind(); };
+      window.addEventListener('amritos:content-ready', onReady);
+      const mo = new MutationObserver(() => { if (bind()) mo.disconnect(); });
+      mo.observe(document.body, { childList: true, subtree: true });
+      return () => {
+        detach();
+        mo.disconnect();
+        window.removeEventListener('amritos:content-ready', onReady);
+      };
+    }
+    return () => detach();
   }, [ids.join(',')]);
   return active;
 }
