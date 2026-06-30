@@ -706,9 +706,11 @@ html[data-theme="dark"][data-boot="active"] body::after {
   margin: 0 auto;
   padding-left: 32px;
   padding-right: 32px;
+  min-width: 0;
 }
 .hero__intro {
   position: relative;
+  min-width: 0;
 }
 .hero__handle {
   font-family: var(--font-mono);
@@ -811,12 +813,16 @@ html[data-theme="dark"][data-boot="active"] body::after {
 /* ---------- AmritBot Console ---------- */
 .hero__bot {
   width: 100%;
-  display: flex; justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
 }
 .console {
   position: relative;
   width: 100%;
   max-width: 460px;
+  min-width: 0;
   margin: 0 auto;
   height: 520px;
   border: 1px solid var(--line);
@@ -841,6 +847,8 @@ html[data-theme="dark"][data-boot="active"] body::after {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
+  min-width: 0;
+  max-width: 100%;
 }
 .console__avatar {
   width: 42px; height: 42px;
@@ -906,6 +914,8 @@ html[data-theme="dark"][data-boot="active"] body::after {
 
 .console__body {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   padding: 16px 14px;
   overflow-y: auto;
   display: flex; flex-direction: column;
@@ -1061,10 +1071,15 @@ html[data-theme="dark"][data-boot="active"] body::after {
   padding: 12px 14px;
   border-top: 1px dashed var(--line-2);
   align-items: center;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
 }
 .console__chips::-webkit-scrollbar { display: none; }
@@ -1111,6 +1126,9 @@ html[data-theme="dark"][data-boot="active"] body::after {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px 14px;
   border-top: 1px solid var(--line);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .console__prompt {
   color: var(--accent);
@@ -2106,7 +2124,10 @@ html[data-theme="dark"][data-boot="active"] body::after {
     padding-top: 64px;
     min-height: auto;
     padding-bottom: 60px;
+    min-width: 0;
   }
+  .hero > * { min-width: 0; }
+  .hero__role { max-width: 100%; }
   .hero__bot { max-width: 100%; }
   .console { max-width: 100%; height: 520px; }
   /* single column + min-width:0 so nowrap children (the meta row) can't force
@@ -2158,7 +2179,11 @@ html[data-theme="dark"][data-boot="active"] body::after {
 }
 @media (max-width: 540px) {
   .section { padding: 80px 16px 40px; }
-  .hero { padding-left: 16px; padding-right: 16px; }
+  .hero {
+    padding-left: 16px;
+    padding-right: 16px;
+    min-width: 0;
+  }
   .expertise-grid { grid-template-columns: 1fr; }
   .expertise-card:last-child:nth-child(odd) {
     grid-column: auto;
