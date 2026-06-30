@@ -935,7 +935,7 @@ function AmritBotConsole({ botIcon, botIconColor, inputRef, className }) {
         {QUICK_PROMPTS.map((p) =>
           <button
             key={p.id}
-            className={'console__chip' + (p.id === 'stats' ? ' console__chip--hide-mobile' : '')}
+            className="console__chip"
             onClick={() => runCommand(p.id)}>
             /{p.label}
           </button>

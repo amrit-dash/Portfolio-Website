@@ -1055,13 +1055,21 @@ html[data-theme="dark"][data-boot="active"] body::after {
 
 /* Quick prompt chips below messages */
 .console__chips {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
   padding: 12px 14px;
   border-top: 1px dashed var(--line-2);
   align-items: center;
-  justify-content: center;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.console__chips::-webkit-scrollbar { display: none; }
 .console__chip {
+  flex: 0 0 auto;
   border: 1px solid var(--line-2);
   color: var(--fg-dim);
   font-family: var(--font-mono);
@@ -2161,7 +2169,6 @@ html[data-theme="dark"][data-boot="active"] body::after {
   .menubar__right .pill:not(.pill--bot) { display: none; }
   .menubar__right .pill--bot { display: inline-flex; }
   .console { height: 520px; }
-  .console__chip--hide-mobile { display: none; }
 }
 
 /* ---------- Selection ---------- */
