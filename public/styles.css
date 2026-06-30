@@ -290,6 +290,11 @@ ul { margin: 0; padding: 0; list-style: none; }
   background: color-mix(in oklab, var(--accent) 12%, transparent);
   color: var(--accent);
 }
+.menubar__right .pill--bot-active {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .menubar__right .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 .menubar__right .icon-btn {
   width: 26px; height: 26px;
@@ -820,6 +825,7 @@ html[data-theme="dark"][data-boot="active"] body::after {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  scroll-margin: 16px;
 }
 .console::before {
   /* subtle ambient accent glow */
@@ -1070,6 +1076,26 @@ html[data-theme="dark"][data-boot="active"] body::after {
   color: var(--accent);
   border-color: var(--accent);
   background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+/* ---------- Bot popout (floating window below header button) ---------- */
+.bot-popout {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  width: min(460px, calc(100vw - 32px));
+  z-index: 10001;
+  animation: botPopoutIn .2s ease;
+  transform-origin: top right;
+}
+@keyframes botPopoutIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bot-popout .console--panel {
+  width: 100%;
+  max-width: 100%;
+  height: min(520px, calc(100vh - 80px));
 }
 
 /* Input row */
@@ -2074,7 +2100,7 @@ html[data-theme="dark"][data-boot="active"] body::after {
     padding-bottom: 60px;
   }
   .hero__bot { max-width: 100%; }
-  .console { max-width: 100%; height: 460px; }
+  .console { max-width: 100%; height: 520px; }
   /* single column + min-width:0 so nowrap children (the meta row) can't force
      the grid wider than the viewport and bleed past the clipped .os-root */
   .about-grid { grid-template-columns: 1fr; min-width: 0; }
@@ -2119,6 +2145,7 @@ html[data-theme="dark"][data-boot="active"] body::after {
   .dual-col { grid-template-columns: 1fr; }
   .contact-grid { grid-template-columns: 1fr; }
   .menubar__items { display: none; }
+  .bot-popout { display: none !important; }
 }
 @media (max-width: 540px) {
   .section { padding: 80px 16px 40px; }
@@ -2130,8 +2157,10 @@ html[data-theme="dark"][data-boot="active"] body::after {
     justify-self: stretch;
   }
   .window__body { padding: 18px; }
-  .menubar__right .pill { display: none; }
-  .console { height: 420px; }
+  .menubar__right .pill:not(.pill--bot) { display: none; }
+  .menubar__right .pill--bot { display: inline-flex; }
+  .console { height: 520px; }
+  .console__chip--hide-mobile { display: none; }
 }
 
 /* ---------- Selection ---------- */
