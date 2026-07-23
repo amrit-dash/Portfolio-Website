@@ -40,7 +40,7 @@ const cp = (rel, destDir, destName) => {
 // ---- Public portfolio (dist/site) ----
 // data.jsx + firebase-* are shared between both targets.
 const shared = ['data.jsx', 'firebase-config.js', 'firebase-init.js'];
-['index.html', 'app.jsx', 'md.jsx', 'tweaks-panel.jsx', 'styles.css', 'shared-schema.js', 'assets', ...shared].forEach((f) => cp(f, site));
+['index.html', 'app.jsx', 'md.jsx', 'tweaks-panel.jsx', 'styles.css', 'shared-schema.js', 'assets', 'google328d5e92062bd713.html', ...shared].forEach((f) => cp(f, site));
 
 // ---- Admin console (dist/admin) ----
 cp('admin.html', admin, 'index.html');   // admin entry → index.html
