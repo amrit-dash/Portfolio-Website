@@ -47,6 +47,7 @@ cp('admin.html', admin, 'index.html');   // admin entry → index.html
 cp('admin', admin, 'admin');             // admin/*.jsx + admin.css
 cp('md.jsx', admin);                     // shared markdown renderer (plain script, not text/babel)
 cp('shared-schema.js', admin);           // plain-JS global used by the agent UI
+cp('google328d5e92062bd713.html', admin); // Google Search Console ownership verification
 shared.forEach((f) => cp(f, admin));
 
 // ---- Keep the backend's shared-schema copy in lockstep with the source ----
