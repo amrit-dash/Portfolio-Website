@@ -338,7 +338,11 @@ function BootSequence({ onDone }) {
   // Logo hold — then transition to fade. Skip/auto-advance handled below.
   useEffect(() => {
     if (phase !== 'logo') return;
-    const HOLD = 1900;   // visible "press any key" window
+    // Visible "press any key" window. This is the single largest contributor to
+    // LCP: the splash is opaque and full-bleed, so the hero underneath cannot
+    // count as a contentful paint until it clears. Trimmed 1900 -> 1200; still
+    // long enough to read as a deliberate beat rather than a flicker.
+    const HOLD = 1200;
     const t = setTimeout(() => setPhase('fading'), HOLD);
     return () => clearTimeout(t);
   }, [phase]);
