@@ -624,7 +624,14 @@ async function uploadToStorage(path, fileOrDataUrl, contentType) {
   if (!storageReady()) throw new Error('Sign in required to upload (Storage).');
   const ref = window.fb.storage.ref().child('public/' + path);
   let snap;
-  if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
+  if (typeof fileOrDataUrl === 'string') {
+    // Only data URLs carry bytes. Any other string (an https:// download URL,
+    // say) would go through put() as a raw string, upload with a non-image
+    // content type and be refused by the Storage rules as storage/unauthorized
+    // — an error that looks like a permissions problem but isn't one.
+    if (!fileOrDataUrl.startsWith('data:')) {
+      throw new Error('uploadToStorage needs a File/Blob or a data: URL, got a plain string.');
+    }
     snap = await ref.putString(fileOrDataUrl, 'data_url');
   } else {
     snap = await ref.put(fileOrDataUrl, contentType ? { contentType } : undefined);

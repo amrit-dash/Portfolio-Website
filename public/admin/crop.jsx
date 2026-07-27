@@ -18,8 +18,9 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
   const imgRef = useRef(null);
   const [stageW, setStageW] = useState(640);
   const [nat, setNat] = useState(null);          // {w,h} natural size
-  const [zoom, setZoom] = useState(1);            // 1..4
+  const [zoom, setZoom] = useState(1);            // minZoom..4
   const [off, setOff] = useState({ x: 0, y: 0 }); // image top-left in stage coords
+  const [saveErr, setSaveErr] = useState(null);
   const drag = useRef(null);
 
   // measure stage width
@@ -132,8 +133,16 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
       }
       onSave(url);
     } catch (err) {
-      // tainted canvas (cross-origin source) — fall back to original
-      onSave(src);
+      // Almost always a tainted canvas. This used to call onSave(src), which on
+      // the Re-crop path handed an https:// Storage URL to the uploader as if
+      // it were image bytes; it went up with a non-image content type and the
+      // Storage rules — correctly — answered storage/unauthorized. Never pass a
+      // non-data URL on to be uploaded. Surface it instead.
+      setSaveErr(
+        (err && err.name === 'SecurityError')
+          ? 'Could not read this image back (cross-origin). Use Replace to upload the file again.'
+          : ((err && err.message) || 'Could not encode the crop.')
+      );
     }
   };
 
@@ -149,8 +158,15 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
         <div className="modal__bd">
           <div ref={stageRef} className="cropstage" onPointerDown={onPointerDown} onWheel={onWheel}>
             <span className="cropbadge">{aw} × {ah}px · drag to reposition</span>
-            {/* hidden measuring image always rendered to get natural dims */}
-            <img ref={imgRef} src={src} alt="" onLoad={onImgLoad}
+            {/* hidden measuring image always rendered to get natural dims.
+                crossOrigin is essential on the Re-crop path: `src` is then a
+                Firebase Storage https URL, and drawing a cross-origin image
+                onto a canvas without it taints the canvas, so toDataURL throws
+                and we silently fall back to re-uploading the URL string as if
+                it were image bytes. The bucket already answers GET with
+                access-control-allow-origin: * (see storage.cors.json), so
+                requesting CORS costs nothing and keeps the canvas clean. */}
+            <img ref={imgRef} src={src} alt="" onLoad={onImgLoad} crossOrigin="anonymous"
               style={nat ? { width: dw + 'px', height: dh + 'px', transform: `translate(${off.x}px, ${off.y}px)` } : { opacity: 0 }} />
             {nat && <div className="cropframe" style={{ left: frame.x, top: frame.y, width: frame.w, height: frame.h }} />}
           </div>
@@ -168,7 +184,9 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
             Output locked to <b style={{ color: 'var(--fg)' }}>{aw}×{ah}px</b> — the exact size this asset renders at on the site.
             Drag the image or scroll to zoom; the lime frame is what gets saved.
             {nat && minZoom < 0.999 && <> This image isn{'\''}t the same shape as the frame — <b style={{ color: 'var(--fg)' }}>Fit whole image</b> keeps all of it and leaves the rest transparent.</>}
+            {nat && minZoom >= 0.999 && <> This image is already exactly the frame{'\''}s shape, so <b style={{ color: 'var(--fg)' }}>Fit</b> and <b style={{ color: 'var(--fg)' }}>Fill</b> have nothing to do — you can only zoom in. To widen back out, use <b style={{ color: 'var(--fg)' }}>Replace</b> with the original file: Re-crop reads the saved copy, which was already cropped.</>}
           </p>
+          {saveErr && <p className="helptext" style={{ marginTop: 8, color: 'var(--bad, #e66)' }}>⚠ {saveErr}</p>}
         </div>
         <div className="modal__ft">
           <span className="helptext mono">{nat ? `source ${nat.w}×${nat.h}` : 'loading…'}</span>
@@ -204,6 +222,15 @@ function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'im
 
   const onCropped = async (dataUrl) => {
     setRaw(null); setErr(null);
+    // Belt and braces alongside the CropModal fix: only ever hand encoded image
+    // bytes to Storage. Anything else (notably an https:// URL that slipped
+    // through) would upload with a non-image content type and be rejected by
+    // the rules as storage/unauthorized, which reads as a login problem when it
+    // is really a payload problem.
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      setErr('Crop produced no image data — nothing was uploaded.');
+      return;
+    }
     // Trust what the canvas actually produced, not what we asked for: toDataURL
     // silently falls back to PNG when a format is unsupported, and a .webp
     // filename holding PNG bytes would be served with the wrong content type.
