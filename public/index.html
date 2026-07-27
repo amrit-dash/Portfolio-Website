@@ -4,16 +4,84 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Amrit Dash · amrit.os</title>
-  <meta name="description" content="Portfolio of Amrit Dash — Software Engineer specializing in automation, Flutter and Google Cloud. Reimagined as a retro operating system." />
+  <meta name="description" content="Portfolio of Amrit Dash — AI &amp; Automation Engineer in Bangalore. Process automation at scale, RAG and agentic AI on Google Cloud, and Flutter apps. Reimagined as a retro operating system." />
+  <link rel="canonical" href="https://amritdash.web.app/" />
+  <meta name="theme-color" content="#0c0d0a" />
 
-  <!-- Fonts -->
+  <!-- Social / unfurl. Previously absent entirely, so every share of this URL
+       rendered as a bare link. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="amrit.os" />
+  <meta property="og:url" content="https://amritdash.web.app/" />
+  <meta property="og:title" content="Amrit Dash · amrit.os" />
+  <meta property="og:description" content="AI &amp; Automation Engineer in Bangalore. Process automation at scale, RAG and agentic AI on Google Cloud, and Flutter apps — as a retro operating system." />
+  <meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/amrit-dash-portfolio.firebasestorage.app/o/public%2Fsite%2Fassets%2Fabout-photo.jpg?alt=media&amp;token=bc76e276-1a4c-4aec-bbb7-4b283c1c7113" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Amrit Dash · amrit.os" />
+  <meta name="twitter:description" content="AI &amp; Automation Engineer in Bangalore. Process automation at scale, RAG and agentic AI on Google Cloud, and Flutter apps." />
+  <meta name="twitter:image" content="https://firebasestorage.googleapis.com/v0/b/amrit-dash-portfolio.firebasestorage.app/o/public%2Fsite%2Fassets%2Fabout-photo.jpg?alt=media&amp;token=bc76e276-1a4c-4aec-bbb7-4b283c1c7113" />
+
+  <!-- Structured data. The page content itself arrives from Firestore at
+       runtime, so this is the only machine-readable description a non-JS
+       consumer can rely on. Keep it in sync with DEFAULT_HERO / DEFAULT_ABOUT
+       in data.jsx and with /llms.txt. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Amrit Dash",
+    "url": "https://amritdash.web.app/",
+    "jobTitle": "AI & Automation Engineer",
+    "description": "Five years shipping process automation at scale — Make.com, Google Apps Script, Zapier, n8n and Twilio. Builds RAG systems and agentic AI workflows on Google Cloud and Firebase, and ships Flutter apps for Android and iOS.",
+    "address": { "@type": "PostalAddress", "addressLocality": "Bangalore", "addressCountry": "IN" },
+    "knowsAbout": [
+      "Process automation", "Make.com", "Google Apps Script", "Zapier", "n8n",
+      "Twilio", "Retrieval-augmented generation", "Agentic AI", "Google Cloud",
+      "Firebase", "Flutter"
+    ],
+    "worksFor": { "@type": "Organization", "name": "Contour Education" }
+  }
+  </script>
+
+  <!-- Fonts — split in two.
+       (1) Blocking: only the three families the default type ramp actually uses
+           (--font-body / --font-mono / --font-display in styles.css :root).
+           Newsreader is requested WITHOUT the `opsz` axis: asking for the
+           6..72 range makes Google serve the full two-axis variable font
+           (~135 KB per face); pinning to the default optical size serves
+           static instances at roughly a third of that. Weight 300 is dropped —
+           nothing in styles.css asks for it.
+       (2) Non-blocking: the alternate families reachable through the tweaks
+           panel / published cosmetics (data-type + data-heading, styles.css
+           ~L101-129 and ~L2764-2772). media="print" keeps this out of the
+           critical path; the woff2 files themselves are only fetched if a rule
+           actually matches, so visitors on the default theme pay nothing.
+
+       Neither link blocks render. Both families already ship display=swap, so
+       fallback text was always going to paint first — and the whole swap
+       happens underneath the opaque static shell and boot splash, so it is
+       never visible. Blocking on it only delayed first paint. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=VT323&family=Roboto+Slab:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Press+Start+2P&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap"
+        rel="preload" as="style" onload="this.rel='stylesheet'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" /></noscript>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=VT323&family=Roboto+Slab:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Press+Start+2P&family=Syne:wght@500;600;700;800&display=swap"
+        rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=VT323&family=Roboto+Slab:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Press+Start+2P&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" /></noscript>
 
-  <!-- First-paint cosmetics: theme + wallpaper + vignette before boot splash paints.
-       Mirrors data.jsx applyCosmeticsToRoot but runs synchronously in <head>. -->
-  <script src="shared-schema.js"></script>
+  <!-- First-paint cosmetics: theme + accent before the boot splash paints.
+       Mirrors data.jsx applyCosmeticsToRoot but runs synchronously in <head>.
+
+       shared-schema.js used to load synchronously right here, which made ~19 KB
+       of minified script render-blocking on every visit. It now loads deferred
+       with the other app scripts. Everything below that needs it is already
+       guarded by an `if (schema.X)`, so it degrades to theme + accent + bg
+       pattern only — all of which this script computes on its own from
+       localStorage. The wallpaper and vignette vars it would have set are
+       applied a moment later by data.jsx (`window.applyCosmeticsToRoot`, called
+       at load), and the gap is invisible: the static shell and then the boot
+       splash are both opaque and full-bleed. -->
   <script>
     (function () {
       var root = document.documentElement;
@@ -77,24 +145,102 @@
 </head>
 <body style="font-family: &quot;Space Grotesk&quot;">
 
-  <div id="root"></div>
+  <!-- Static shell inside #root.
+
+       The whole page is Firestore-backed and client-rendered, so before this
+       existed a plain fetch of / returned exactly one line of human-readable
+       text (the <title>). Crawlers, text browsers, LLM agents and link
+       unfurlers all saw an empty document.
+
+       ReactDOM.createRoot(...).render() replaces these children on mount, so
+       this is purely the pre-hydration view. It is deliberately styled to look
+       like the boot splash it gets swapped for (.boot is position:fixed,
+       inset:0, opaque, z-index 5000) so the handover reads as continuous
+       rather than as a flash of unstyled content. The critical CSS is inlined
+       below so it paints without waiting on styles.css.
+
+       Keep the copy in sync with DEFAULT_HERO / DEFAULT_ABOUT in data.jsx and
+       with /llms.txt. -->
+  <style>
+    #static-shell {
+      position: fixed; inset: 0; z-index: 4000;
+      display: grid; place-items: center;
+      padding: 24px;
+      background: #0c0d0a; color: #9a9a90;
+      font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+      font-size: 13px; line-height: 1.6;
+    }
+    html[data-theme="light"] #static-shell { background: #f4f4ec; color: #55564c; }
+    #static-shell > div { width: min(720px, 86vw); }
+    #static-shell h1 { font-size: clamp(24px, 5vw, 38px); margin: 0 0 6px; font-weight: 500; color: #e8e8e0; }
+    html[data-theme="light"] #static-shell h1 { color: #16170f; }
+    #static-shell .tag { color: #c8e856; letter-spacing: .22em; font-size: 11px; text-transform: uppercase; }
+    #static-shell h2 { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; margin: 22px 0 6px; color: #c8e856; font-weight: 500; }
+    #static-shell ul { margin: 0; padding-left: 18px; }
+    #static-shell a { color: inherit; }
+  </style>
+  <div id="root">
+    <div id="static-shell">
+      <div>
+        <div class="tag">user@amrit.os ~ %</div>
+        <h1>Amrit Dash.</h1>
+        <p>
+          AI &amp; Automation Engineer in Bangalore, India. Five years shipping
+          process automation at scale — Make.com, Google Apps Script, Zapier,
+          n8n and Twilio. Building RAG systems and agentic AI workflows on
+          Google Cloud and Firebase, and shipping Flutter apps for Android and
+          iOS. Stand-up comedy as a full-time side hustle.
+        </p>
+
+        <h2>Experience</h2>
+        <ul>
+          <li><b>Now</b> — Contour Education. Automating student operations: onboarding, class allocation, attendance and parent-student comms. 100+ workflows live.</li>
+          <li><b>Then</b> — Axelerant. Business Automation Engineer: employee onboarding, appraisals and offboarding across Make, Zapier and Zoho.</li>
+          <li><b>Before</b> — HighRadius. Cash App Automation consultant; took four enterprise clients live and shipped ASAP, an Apps Script toolkit still in company-wide production.</li>
+        </ul>
+
+        <h2>Sections</h2>
+        <ul>
+          <li><a href="#about">About</a> — background and career timeline</li>
+          <li><a href="#expertise">Expertise</a> — tooling and stack</li>
+          <li><a href="#work">Work</a> — professional history</li>
+          <li><a href="#projects">Projects</a> — case studies</li>
+          <li><a href="#contact">Contact</a> — get in touch</li>
+        </ul>
+
+        <p><a href="/llms.txt">/llms.txt</a> — plain-text summary for agents.</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Firebase (compat) — powers live content, the bot proxy and analytics.
-       Must load before firebase-init.js and the app scripts. -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="firebase-init.js"></script>
+       Must load before firebase-init.js and the app scripts.
+
+       Only app + firestore ship here. The public portfolio never signs anyone
+       in and never touches Storage directly (images arrive as plain download
+       URLs inside the Firestore content), so auth-compat and storage-compat
+       were pure dead weight: ~53 KB gzipped of blocking script, and merely
+       constructing firebase.auth() also pulled in __/auth/iframe.js (~95 KB)
+       plus apis.google.com's gapi_iframes bundle (~35 KB) from two extra
+       origins. admin.html still loads all four — that's where auth lives.
+
+       Everything below is deferred: these are parser-blocking otherwise, and
+       Lighthouse attributed ~3.4 s of render-blocking time to this chain on
+       throttled mobile. defer preserves execution order, so
+       app → firestore → config → init → React → app scripts still holds. -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script defer src="firebase-config.js"></script>
+  <script defer src="firebase-init.js"></script>
 
   <!-- React -->
-  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script defer src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script defer src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script defer src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-  <!-- App scripts (Babel JSX). Order matters: data → md → tweaks shell → app.
-       shared-schema.js already loaded in <head> for first-paint cosmetics. -->
+  <!-- App scripts (Babel JSX). Order matters: schema → data → md → tweaks shell → app.
+       shared-schema.js leads: data.jsx reads window.SHARED_SCHEMA at load time. -->
+  <script defer src="shared-schema.js"></script>
   <script type="text/babel" data-presets="env,react" src="data.jsx"></script>
   <script src="md.jsx"></script>
   <script type="text/babel" data-presets="env,react" src="tweaks-panel.jsx"></script>
