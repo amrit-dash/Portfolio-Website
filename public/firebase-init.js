@@ -13,8 +13,13 @@
   }
 
   const app = firebase.initializeApp(window.FIREBASE_CONFIG);
-  const auth = firebase.auth();
   const db = firebase.firestore();
+  // auth and storage are admin-only. The public portfolio deliberately omits
+  // those two compat bundles from its <script> list, so probe instead of
+  // assuming — firebase.auth is simply undefined there. Both stay null on the
+  // site; callers already null-check (see app.jsx `window.fb.auth &&`).
+  let auth = null;
+  try { auth = firebase.auth(); } catch (e) { /* auth SDK not loaded on this page */ }
   let storage = null;
   try { storage = firebase.storage(); } catch (e) { /* storage SDK not loaded on this page */ }
 
@@ -22,7 +27,7 @@
   const useEmu = isLocal && new URLSearchParams(location.search).get('emu') === '1';
   if (useEmu) {
     try {
-      auth.useEmulator('http://localhost:9099', { disableWarnings: true });
+      if (auth) auth.useEmulator('http://localhost:9099', { disableWarnings: true });
       db.useEmulator('localhost', 8080);
       if (storage) storage.useEmulator('localhost', 9199);
       window.FUNCTIONS_BASE = 'http://localhost:5001/' + window.FIREBASE_CONFIG.projectId + '/asia-south1';
@@ -49,7 +54,7 @@
 
   window.fb = {
     app, auth, db, storage,
-    googleProvider: () => new firebase.auth.GoogleAuthProvider(),
+    googleProvider: () => new firebase.auth.GoogleAuthProvider(), // admin only — auth-compat required
     FieldValue: firebase.firestore.FieldValue,
     serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp(),
   };
