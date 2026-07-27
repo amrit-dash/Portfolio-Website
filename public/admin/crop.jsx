@@ -104,10 +104,21 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
     canvas.width = aw; canvas.height = ah;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
+    // JPEG has no alpha, so a transparent source would composite onto white
+    // without this. WebP and PNG both keep the alpha channel.
     if (outputType === 'image/jpeg') { ctx.fillStyle = '#0c0d0a'; ctx.fillRect(0, 0, aw, ah); }
     try {
       ctx.drawImage(imgRef.current, sx, sy, sW, sH, 0, 0, aw, ah);
-      const url = canvas.toDataURL(outputType, 0.92);
+      let url = canvas.toDataURL(outputType, 0.92);
+      // Every current browser encodes WebP, but if one refuses, toDataURL
+      // returns PNG — which for a photo is far bigger than the JPEG we used to
+      // produce. Fall back explicitly rather than silently regressing.
+      if (outputType === 'image/webp' && !url.startsWith('data:image/webp')) {
+        ctx.fillStyle = '#0c0d0a';
+        ctx.fillRect(0, 0, aw, ah);
+        ctx.drawImage(imgRef.current, sx, sy, sW, sH, 0, 0, aw, ah);
+        url = canvas.toDataURL('image/jpeg', 0.92);
+      }
       onSave(url);
     } catch (err) {
       // tainted canvas (cross-origin source) — fall back to original
@@ -156,7 +167,7 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
    The cropped result is uploaded to Firebase Storage and the field stores the
    download URL (never a giant data-URL — that would blow the content doc's 1MB
    limit). `storageKey` namespaces the file, e.g. "projects/rx-thumb". */
-function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'image/jpeg', onChange, storageKey }) {
+function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'image/webp', onChange, storageKey }) {
   const { AdminIcon, Btn, Field, fileToDataURL, uploadToStorage, storageReady } = window.ADMIN_UI;
   const [raw, setRaw] = useState(null);     // freshly selected data url, awaiting crop
   const [over, setOver] = useState(false);
@@ -175,7 +186,11 @@ function ImageSlot({ label, value, target, hint, previewW = 90, outputType = 'im
 
   const onCropped = async (dataUrl) => {
     setRaw(null); setErr(null);
-    const ext = outputType === 'image/png' ? 'png' : 'jpg';
+    // Trust what the canvas actually produced, not what we asked for: toDataURL
+    // silently falls back to PNG when a format is unsupported, and a .webp
+    // filename holding PNG bytes would be served with the wrong content type.
+    const actualType = (dataUrl.match(/^data:([^;,]+)/) || [, outputType])[1];
+    const ext = actualType === 'image/png' ? 'png' : actualType === 'image/webp' ? 'webp' : 'jpg';
     const key = (storageKey || (label || 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '-' + Date.now() + '.' + ext;
     if (!storageReady()) {
       setErr('Sign in to upload images to Storage.');
