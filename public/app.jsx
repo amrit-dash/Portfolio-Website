@@ -1110,7 +1110,11 @@ function AboutWindow({ cvUrl, cvVariant, cvFileName, onCvDownloaded }) {
                   </div>
                 ) : null}
                 <div className="about-photo">
-                  <img src={a.photo || 'assets/about-photo.jpg'} alt="Amrit Dash" />
+                  {/* Below the fold on every viewport — the LCP element is the hero
+                      role line, not this. Eager-loading it put ~1 MB on the critical
+                      path. .about-photo pins aspect-ratio 4/5 so lazy costs no CLS. */}
+                  <img src={a.photo || 'assets/about-photo.jpg'} alt="Amrit Dash"
+                    loading="lazy" decoding="async" fetchpriority="low" />
                 </div>
               </div>
               <div className="about-meta" data-reveal data-reveal-delay="1">
@@ -1338,7 +1342,11 @@ function FolderIcon({ project, onOpen }) {
   return (
     <button className="folder-icon" onClick={handleClick} aria-label={'Open ' + project.title} title={project.title}>
       <div className="folder-icon__art">
-        <img src={project.image} alt="" />
+        {/* Renders at a fixed 68x54 (styles.css .folder-icon__art img). Declaring
+            it here matches the CSS box and keeps the grid stable while lazy
+            thumbs stream in. */}
+        <img src={project.image} alt="" width="68" height="54"
+          loading="lazy" decoding="async" fetchpriority="low" />
         {project.directLink &&
           <span className="folder-icon__ext-badge" title="Opens external link">↗</span>
         }
@@ -1376,7 +1384,7 @@ function ProjectModal({ project, onClose }) {
         </div>
         <div className="project-modal__body">
           <div className="project-modal__art" data-comment-anchor="3dd5f705f5-div-805-11">
-            <img src={project.gallery || project.image} alt={project.title} />
+            <img src={project.gallery || project.image} alt={project.title} decoding="async" />
           </div>
           <div className="project-modal__info">
             <div className="project-modal__cat">{project.cat}</div>
@@ -1585,7 +1593,8 @@ function BotAvatarIcon({ icon, size = 24, iconColor = 'white' }) {
       }} />
     );
   }
-  return <img src={src} width={size} height={size} className="bot-avatar-img" alt="" />;
+  return <img src={src} width={size} height={size} className="bot-avatar-img" alt=""
+    loading="lazy" decoding="async" />;
 }
 
 /* TWEAK_DEFAULTS is the base for the host-editable Tweaks panel; it's merged
