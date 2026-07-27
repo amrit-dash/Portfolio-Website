@@ -88,3 +88,6 @@ functions/node_modules/
 
 # build output (assembled at deploy)
 dist/
+
+# Local output of scripts/optimize-images.mjs — regenerate, do not commit.
+tmp/

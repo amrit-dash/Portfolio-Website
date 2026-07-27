@@ -15,7 +15,8 @@
     "deploy:site": "bash scripts/deploy-site.sh",
     "deploy:admin": "bash scripts/deploy-admin.sh",
     "deploy:backend": "bash scripts/deploy-backend.sh",
-    "deploy:hosting": "npm run build && firebase deploy --only hosting:amritdash,hosting:amritos-admin --project amrit-dash-portfolio"
+    "deploy:hosting": "npm run build && firebase deploy --only hosting:amritdash,hosting:amritos-admin --project amrit-dash-portfolio",
+    "optimize:images": "node scripts/optimize-images.mjs"
   },
   "dependencies": {
     "firebase-tools": "^14.7.0"
