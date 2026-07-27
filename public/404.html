@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>404 · amrit.os</title>
+  <!-- Deliberately self-contained: no styles.css, no fonts, no JS. This page
+       exists so unmatched paths return a real 404 instead of the app shell at
+       200, which is what the old catch-all rewrite produced. -->
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100vh;
+      display: grid; place-items: center;
+      background: #0c0d0a; color: #e8e8e0;
+      font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+      text-align: center; padding: 24px;
+    }
+    .code { color: #c8e856; font-size: 12px; letter-spacing: .3em; }
+    h1 { font-size: clamp(28px, 6vw, 44px); margin: 12px 0 8px; font-weight: 500; }
+    p { color: #9a9a90; margin: 0 0 24px; font-size: 14px; }
+    a {
+      color: #0c0d0a; background: #c8e856; text-decoration: none;
+      padding: 10px 18px; border-radius: 6px; font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="code">ERR_NO_SUCH_PATH</div>
+    <h1>404</h1>
+    <p>That route isn't mounted on this machine.</p>
+    <a href="/">cd&nbsp;~</a>
+  </main>
+</body>
+</html>

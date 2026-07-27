@@ -1,0 +1,22 @@
+# https://amritdash.web.app/robots.txt
+# Everything on the portfolio is public. The admin console lives on a separate
+# host (amritos-admin.web.app) which sends X-Robots-Tag: noindex, nofollow.
+
+User-agent: *
+Allow: /
+
+# Crawl-friendly to AI agents on purpose — see /llms.txt for a text summary
+# that does not require executing JavaScript.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://amritdash.web.app/sitemap.xml

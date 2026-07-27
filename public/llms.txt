@@ -1,0 +1,50 @@
+# Amrit Dash — amrit.os
+
+> Portfolio of Amrit Dash, an AI & Automation Engineer based in Bangalore,
+> India, presented as a retro operating system. This file exists because the
+> site renders client-side; it gives agents and text-only clients the same
+> information without executing JavaScript.
+
+## Profile
+
+- **Name:** Amrit Dash
+- **Role:** AI & Automation Engineer
+- **Location:** Bangalore, India (GMT+5:30)
+- **Site:** https://amritdash.web.app/
+
+Five years shipping process automation at scale — Make.com, Google Apps Script,
+Zapier, n8n and Twilio. Builds RAG systems and agentic AI workflows on Google
+Cloud and Firebase, and ships Flutter apps for Android and iOS. Stand-up comedy
+as a full-time side hustle.
+
+## Experience
+
+- **Now — Contour Education.** Automating student operations: onboarding, class
+  allocation, attendance and parent-student comms. 100+ workflows live across
+  Make.com, Zapier, n8n and Apps Script.
+- **Then — Axelerant.** Business Automation Engineer. End-to-end flows for
+  employee onboarding, appraisals and offboarding across Make, Zapier and Zoho.
+- **Before — HighRadius.** Cash App Automation consultant. Took four enterprise
+  clients live, then shipped ASAP, an Apps Script toolkit still in production
+  company-wide.
+- **On the side.** Stand-up comedy — weekend shows at comedy clubs across
+  Bangalore.
+
+## Sections
+
+The site is one page with hash-addressed sections:
+
+- [Intro](https://amritdash.web.app/#intro): headline and quick links.
+- [About](https://amritdash.web.app/#about): background and career timeline.
+- [Expertise](https://amritdash.web.app/#expertise): tooling and stack.
+- [Work](https://amritdash.web.app/#work): professional history.
+- [Projects](https://amritdash.web.app/#projects): project case studies.
+- [Contact](https://amritdash.web.app/#contact): how to get in touch.
+
+## Notes for agents
+
+- Content is served from Firestore at runtime, so a plain HTTP fetch of `/`
+  returns an app shell plus a static summary block. Prefer this file for text.
+- The site hosts `amrit-bot`, a chat assistant that answers questions about
+  Amrit's work. It is interactive UI only — there is no public chat API.
+- `https://amritos-admin.web.app/` is a private admin console. Do not crawl it.
