@@ -41,15 +41,26 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
     return { w: fw, h: fh, x: (stageW - fw) / 2, y: (STAGE_H - fh) / 2 };
   })();
 
+  // zoom 1 = "fill the frame" (the old floor). A square source in a wider frame
+  // can only fill it by losing its top and bottom, so allow zooming below 1
+  // down to the point where the whole image fits — the leftover space stays
+  // transparent in WebP and reads as the folder's own background on the site.
   const baseScale = nat ? Math.max(frame.w / nat.w, frame.h / nat.h) : 1;
+  const fitScale = nat ? Math.min(frame.w / nat.w, frame.h / nat.h) : 1;
+  const minZoom = nat ? fitScale / baseScale : 1;
   const scale = baseScale * zoom;
   const dw = nat ? nat.w * scale : 0;
   const dh = nat ? nat.h * scale : 0;
 
   const clampOff = useCallback((o, dW, dH) => {
-    const minX = frame.x + frame.w - dW, maxX = frame.x;
-    const minY = frame.y + frame.h - dH, maxY = frame.y;
-    return { x: Math.min(maxX, Math.max(minX, o.x)), y: Math.min(maxY, Math.max(minY, o.y)) };
+    // Larger than the frame: pan, but never past an edge. Smaller than the
+    // frame (only reachable now that zoom can go below 1): pin to centre, since
+    // there is no meaningful pan and the old min/max would invert.
+    const centreX = frame.x + (frame.w - dW) / 2;
+    const centreY = frame.y + (frame.h - dH) / 2;
+    const x = dW <= frame.w ? centreX : Math.min(frame.x, Math.max(frame.x + frame.w - dW, o.x));
+    const y = dH <= frame.h ? centreY : Math.min(frame.y, Math.max(frame.y + frame.h - dH, o.y));
+    return { x, y };
   }, [frame.x, frame.y, frame.w, frame.h]);
 
   const onImgLoad = (e) => {
@@ -91,7 +102,7 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
   const onWheel = (e) => {
     if (!nat) return;
     e.preventDefault();
-    setZoom((z) => Math.min(4, Math.max(1, z - e.deltaY * 0.0015)));
+    setZoom((z) => Math.min(4, Math.max(minZoom, z - e.deltaY * 0.0015)));
   };
 
   const doSave = () => {
@@ -145,11 +156,18 @@ function CropModal({ src, target, title, outputType = 'image/jpeg', onCancel, on
           </div>
           <div className="zoomrow">
             <AdminIcon name="image" size={14} />
-            <input className="rng" type="range" min="1" max="4" step="0.01" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
+            {/* step="any": minZoom is a computed fraction, so a fixed step would
+                make the thumb snap to min + n*step and never sit exactly on 1. */}
+            <input className="rng" type="range" min={minZoom} max="4" step="any" value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))} />
             <span className="lbl">{Math.round(zoom * 100)}%</span>
+            <Btn sm kind="ghost" onClick={() => setZoom(minZoom)} disabled={!nat || zoom <= minZoom + 0.001}>Fit whole image</Btn>
+            <Btn sm kind="ghost" onClick={() => setZoom(1)} disabled={!nat || Math.abs(zoom - 1) < 0.001}>Fill frame</Btn>
           </div>
           <p className="helptext" style={{ marginTop: 12 }}>
-            Output locked to <b style={{ color: 'var(--fg)' }}>{aw}×{ah}px</b> — the exact size this asset renders at on the site. Drag the image or scroll to zoom; the lime frame is what gets saved.
+            Output locked to <b style={{ color: 'var(--fg)' }}>{aw}×{ah}px</b> — the exact size this asset renders at on the site.
+            Drag the image or scroll to zoom; the lime frame is what gets saved.
+            {nat && minZoom < 0.999 && <> This image isn{'\''}t the same shape as the frame — <b style={{ color: 'var(--fg)' }}>Fit whole image</b> keeps all of it and leaves the rest transparent.</>}
           </p>
         </div>
         <div className="modal__ft">

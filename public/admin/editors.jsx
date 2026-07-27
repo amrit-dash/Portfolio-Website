@@ -177,9 +177,15 @@ const VIBE_CATEGORIES = (_SCHEMA.VIBE_CATEGORIES) || [
   { id: 'bold', label: 'Bold & experimental' },
 ];
 
+/* Crop targets. The aspect here must match the box the site actually renders
+   into, or the crop gets applied twice — once here, then again by the CSS.
+   projThumb was 480x360 (4:3) while .folder-icon__art img is 68x54, so a sliver
+   was being trimmed a second time at display; 408x324 is exactly 6x that box.
+   Gallery keeps a generous size: .project-modal__art img uses object-fit
+   contain, so the modal shows the whole thing and never crops. */
 const TARGETS = {
   aboutPhoto: { w: 720, h: 880 },
-  projThumb: { w: 480, h: 360 },
+  projThumb: { w: 408, h: 324 },
   projGallery: { w: 1280, h: 800 },
 };
 
